@@ -43,6 +43,10 @@ class FilesystemStorage(ProblemRepository, SubmissionRepository, AttemptReposito
         self.root_dir = Path(root_dir)
         self.root_dir.mkdir(parents=True, exist_ok=True)
 
+    def health(self) -> bool:
+        """Filesystem tier is healthy when its knowledge root directory exists."""
+        return self.root_dir.is_dir()
+
     def _get_problem_dir(self, slug: str) -> Path:
         p_dir = self.root_dir / slug
         p_dir.mkdir(parents=True, exist_ok=True)

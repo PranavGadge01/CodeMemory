@@ -56,6 +56,14 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
     def __del__(self) -> None:
         self.close()
 
+    def health(self) -> bool:
+        """Verify the DuckDB connection can execute a trivial query."""
+        try:
+            row = self.conn.execute("SELECT 1").fetchone()
+        except Exception:
+            return False
+        return bool(row) and row[0] == 1
+
     def _init_tables(self) -> None:
         """Create tables if they do not exist."""
         self.conn.execute(

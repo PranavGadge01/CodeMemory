@@ -33,6 +33,10 @@ class ParquetStorage(ProblemRepository, SubmissionRepository, AttemptRepository)
         self.attempts_path = self.data_dir / "attempts.parquet"
         self.submissions_path = self.data_dir / "submissions.parquet"
 
+    def health(self) -> bool:
+        """Parquet tier is healthy when its data directory is usable."""
+        return self.data_dir.is_dir()
+
     def sync_all(self, problems: Sequence[Problem]) -> None:
         """Overwrite Parquet tables with latest complete domain problem records."""
         prob_rows: list[dict] = []

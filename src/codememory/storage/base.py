@@ -34,6 +34,11 @@ class ProblemRepository(ABC):
         """Delete problem by ID."""
         pass
 
+    @abstractmethod
+    def health(self) -> bool:
+        """Return True if this repository is healthy and able to serve requests."""
+        pass
+
 
 class SubmissionRepository(ABC):
     """Abstract interface for Submission persistence operations."""

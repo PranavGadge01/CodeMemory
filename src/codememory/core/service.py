@@ -442,18 +442,19 @@ class CodeMemoryService:
         import time
         results: dict[str, Any] = {}
 
-        # Storage layer
+        # Storage layer: health is probed through the storage abstraction,
+        # which delegates to each coordinated tier (DuckDB primary + Parquet +
+        # Filesystem). The service never reaches into repository internals.
         try:
-            count = len(self.storage.list_all())
-            results["storage"] = {"status": "ok", "problems": count}
+            tier_health = self.storage.tier_health()
+            results["storage"] = {
+                "status": "ok" if self.storage.health() else "error",
+                "problems": len(self.storage.list_all()),
+                "tiers": ", ".join(f"{tier}={'ok' if ok else 'error'}" for tier, ok in tier_health.items()),
+            }
+            results["duckdb"] = {"status": "ok" if tier_health.get("duckdb") else "error"}
         except Exception as e:
             results["storage"] = {"status": "error", "detail": str(e)}
-
-        # DuckDB
-        try:
-            self.storage.duckdb_repo.query("SELECT 1")
-            results["duckdb"] = {"status": "ok"}
-        except Exception as e:
             results["duckdb"] = {"status": "error", "detail": str(e)}
 
         # AI provider

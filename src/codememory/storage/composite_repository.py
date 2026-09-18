@@ -53,6 +53,18 @@ class CompositeStorage(ProblemRepository, SubmissionRepository, AttemptRepositor
         """List all problems from DuckDB storage."""
         return self.duckdb_repo.list_all()
 
+    def health(self) -> bool:
+        """Return True only when every coordinated storage tier is healthy."""
+        return all(self.tier_health().values())
+
+    def tier_health(self) -> dict[str, bool]:
+        """Return the health of each coordinated storage tier."""
+        return {
+            "duckdb": self.duckdb_repo.health(),
+            "parquet": self.parquet_repo.health(),
+            "filesystem": self.fs_repo.health(),
+        }
+
     def delete(self, problem_id: str) -> bool:
         """Delete problem from all storage tiers."""
         prob = self.get_by_id(problem_id)
