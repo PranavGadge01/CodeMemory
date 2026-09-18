@@ -1,6 +1,7 @@
 """Domain enumeration types for CodeMemory."""
 
 from enum import Enum
+from typing import Any
 
 
 class SubmissionStatus(str, Enum):
