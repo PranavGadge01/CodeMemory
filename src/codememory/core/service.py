@@ -1,0 +1,488 @@
+"""Core application service API for CodeMemory."""
+
+from pathlib import Path
+from typing import Any, Sequence
+
+from codememory.analytics.analytics_models import AnalyticsOverview
+from codememory.analytics.analytics_service import AnalyticsService
+from codememory.analytics.insights import InsightsGenerator
+from codememory.analytics.pattern_analyzer import PatternAnalysisResult, PatternAnalyzer
+from codememory.domain.enums import DifficultyLevel, NoteType, Platform, SubmissionStatus
+from codememory.domain.exceptions import ProblemNotFoundError
+from codememory.domain.models import Attempt, Problem, ProblemNote, SolutionAnalysis, Submission, generate_slug
+from codememory.exporters.knowledge_exporter import KnowledgeExporter
+from codememory.ingestion.importer import ImportService, ImportSummary
+from codememory.revision.revision_models import RevisionQueueItem, RevisionScoreBreakdown, RevisionWeights
+from codememory.revision.revision_service import RevisionService
+from codememory.search.search_service import SearchService
+from codememory.storage.composite_repository import CompositeStorage
+from codememory.ai.fallback_provider import HeuristicAIProvider
+from codememory.ai.evolution_service import EvolutionService, EvolutionSummary
+from codememory.ai.analyzer import AICodeAnalyzer
+from codememory.ai.memory_service import MemoryService as AIMemoryService
+from codememory.ai.models import SubmissionAnalysis, SolutionEvolution
+from codememory.memory.service import MemoryService as MemoryEngineService
+from codememory.search.semantic_search import LocalSemanticSearchEngine, SemanticSearchResult
+from codememory.patterns.my_patterns_service import MyPatternsService, PersonalPatternSummary
+from codememory.graph.knowledge_graph import KnowledgeGraphBuilder, KnowledgeGraph
+
+
+class CodeMemoryService:
+    """Master application service orchestrating storage, ingestion, search, analytics, revision, AI analysis, and knowledge graph."""
+
+    def __init__(
+        self,
+        base_dir: str | Path = "data",
+        knowledge_dir: str | Path = "knowledge",
+        db_path: str | Path = "data/codememory.duckdb",
+    ):
+        # Ensure base directories exist before storage layer initializes
+        Path(base_dir).mkdir(parents=True, exist_ok=True)
+        Path(knowledge_dir).mkdir(parents=True, exist_ok=True)
+        self.storage = CompositeStorage(base_dir=base_dir, knowledge_dir=knowledge_dir, db_path=db_path)
+        self.import_service = ImportService(storage=self.storage)
+        self.exporter = KnowledgeExporter(output_dir=knowledge_dir)
+        self.analytics_service = AnalyticsService(storage=self.storage)
+        self.search_service = SearchService(storage=self.storage)
+        self.pattern_analyzer = PatternAnalyzer(analytics_service=self.analytics_service)
+        self.revision_service = RevisionService(storage=self.storage, analytics_service=self.analytics_service)
+        self.insights_generator = InsightsGenerator(analytics_service=self.analytics_service, pattern_analyzer=self.pattern_analyzer)
+        
+        # Phase 5, 6, & 7 services
+        self.ai_provider = HeuristicAIProvider()
+        self.evolution_service = EvolutionService(ai_provider=self.ai_provider)
+        self.ai_analyzer = AICodeAnalyzer(provider=self.ai_provider, cache_dir=base_dir)
+        self.memory_service = AIMemoryService(storage=self.storage, search_service=self.search_service, ai_provider=self.ai_provider)
+        self.memory_engine = MemoryEngineService(storage=self.storage, base_dir=base_dir, ai_analyzer=self.ai_analyzer)
+        self.semantic_search_engine = LocalSemanticSearchEngine()
+        self.my_patterns_service = MyPatternsService()
+        self.knowledge_graph_builder = KnowledgeGraphBuilder()
+
+    # 1. Problem operations
+    def add_problem(
+        self,
+        title: str,
+        difficulty: str | DifficultyLevel = DifficultyLevel.UNKNOWN,
+        topics: list[str] | None = None,
+        url: str | None = None,
+        platform: str | Platform = Platform.LEETCODE,
+        statement: str | None = None,
+        slug: str | None = None,
+    ) -> Problem:
+        """Create and save a new problem."""
+        p_slug = slug or generate_slug(title)
+        diff = DifficultyLevel.parse(difficulty) if isinstance(difficulty, str) else difficulty
+
+        problem = Problem(
+            title=title,
+            slug=p_slug,
+            difficulty=diff,
+            platform=platform,
+            url=url,
+            topics=topics or [],
+            statement=statement,
+        )
+        return self.storage.save(problem)
+
+    def get_problem(self, identifier: str) -> Problem:
+        """Retrieve problem by ID or slug."""
+        prob = self.storage.get_by_slug(identifier) or self.storage.get_by_id(identifier)
+        if not prob:
+            raise ProblemNotFoundError(identifier)
+        return prob
+
+    def list_problems(self) -> Sequence[Problem]:
+        """List all stored problems."""
+        return self.storage.list_all()
+
+    # 2. Submission & Attempt operations
+    def add_submission(
+        self,
+        problem_identifier: str,
+        code: str,
+        language: str = "python",
+        status: str | SubmissionStatus = SubmissionStatus.UNKNOWN,
+        runtime_ms: float | None = None,
+        memory_mb: float | None = None,
+        error_message: str | None = None,
+        reasoning: str | None = None,
+    ) -> tuple[Problem, Submission]:
+        """Add code submission to a problem, automatically creating attempts."""
+        prob = self.get_problem(problem_identifier)
+        sub_status = SubmissionStatus.parse(status) if isinstance(status, str) else status
+
+        sub = Submission(
+            problem_id=prob.id,
+            code=code,
+            language=language,
+            status=sub_status,
+            runtime_ms=runtime_ms,
+            memory_mb=memory_mb,
+            error_message=error_message,
+        )
+
+        # Attach to latest attempt or create new one
+        target_attempt = None
+        if prob.attempts:
+            last_att = prob.attempts[-1]
+            if not last_att.is_accepted and last_att.status == sub_status:
+                target_attempt = last_att
+
+        if not target_attempt:
+            att_num = len(prob.attempts) + 1
+            target_attempt = Attempt(
+                problem_id=prob.id,
+                attempt_number=att_num,
+                approach_summary=f"Attempt {att_num}",
+                reasoning=reasoning,
+                status=sub_status,
+            )
+            prob.attempts.append(target_attempt)
+        elif reasoning and not target_attempt.reasoning:
+            target_attempt.reasoning = reasoning
+
+        sub.attempt_id = target_attempt.id
+        target_attempt.submissions.append(sub)
+
+        if sub_status == SubmissionStatus.ACCEPTED:
+            target_attempt.status = SubmissionStatus.ACCEPTED
+
+        updated_prob = self.storage.save(prob)
+        return updated_prob, sub
+
+    def get_submission(self, submission_id: str) -> Submission | None:
+        """Find submission by ID across all problems."""
+        for prob in self.list_problems():
+            for attempt in prob.attempts:
+                for sub in attempt.submissions:
+                    if sub.id == submission_id:
+                        return sub
+        return None
+
+    def list_attempts(self, problem_identifier: str) -> Sequence[Attempt]:
+        """List all attempts for a problem."""
+        prob = self.get_problem(problem_identifier)
+        return sorted(prob.attempts, key=lambda a: a.attempt_number)
+
+    def add_attempt(
+        self,
+        problem_identifier: str,
+        approach_summary: str,
+        reasoning: str | None = None,
+        time_complexity: str = "O(N)",
+        space_complexity: str = "O(1)",
+        mistakes: list[str] | None = None,
+    ) -> Attempt:
+        """Create a new attempt with detailed solution analysis."""
+        prob = self.get_problem(problem_identifier)
+        att_num = len(prob.attempts) + 1
+
+        analysis = SolutionAnalysis(
+            approach_name=approach_summary,
+            time_complexity=time_complexity,
+            space_complexity=space_complexity,
+        )
+
+        attempt = Attempt(
+            problem_id=prob.id,
+            attempt_number=att_num,
+            approach_summary=approach_summary,
+            reasoning=reasoning,
+            mistakes=mistakes or [],
+            analysis=analysis,
+        )
+
+        prob.attempts.append(attempt)
+        self.storage.save(prob)
+        return attempt
+
+    def add_note(
+        self,
+        problem_identifier: str,
+        content: str,
+        note_type: str | NoteType = NoteType.GENERAL,
+        attempt_id: str | None = None,
+    ) -> ProblemNote:
+        """Add learning note or intuition to a problem."""
+        prob = self.get_problem(problem_identifier)
+        nt = NoteType(note_type) if isinstance(note_type, str) and note_type in NoteType.__members__.values() else NoteType.GENERAL
+
+        note = ProblemNote(
+            problem_id=prob.id,
+            attempt_id=attempt_id,
+            content=content,
+            note_type=nt,
+        )
+        prob.notes.append(note)
+        self.storage.save(prob)
+        return note
+
+    # 3. History Reconstruction Concept
+    def get_problem_history(self, problem_identifier: str) -> dict[str, Any]:
+        """Reconstruct chronological evolution history of a problem."""
+        prob = self.get_problem(problem_identifier)
+        history_events: list[dict[str, Any]] = []
+
+        all_submissions: list[tuple[Attempt, Submission]] = []
+        for attempt in prob.attempts:
+            for sub in attempt.submissions:
+                all_submissions.append((attempt, sub))
+
+        # Sort all submissions chronologically
+        all_submissions.sort(key=lambda item: item[1].submitted_at)
+
+        best_runtime: float | None = None
+        best_memory: float | None = None
+        accepted_count = 0
+
+        for idx, (attempt, sub) in enumerate(all_submissions, 1):
+            if sub.status == SubmissionStatus.ACCEPTED:
+                accepted_count += 1
+                if sub.runtime_ms is not None:
+                    best_runtime = sub.runtime_ms if best_runtime is None else min(best_runtime, sub.runtime_ms)
+                if sub.memory_mb is not None:
+                    best_memory = sub.memory_mb if best_memory is None else min(best_memory, sub.memory_mb)
+
+            history_events.append(
+                {
+                    "step": idx,
+                    "attempt_number": attempt.attempt_number,
+                    "attempt_approach": attempt.approach_summary,
+                    "submitted_at": sub.submitted_at.isoformat(),
+                    "language": sub.language,
+                    "status": sub.status.value,
+                    "runtime_ms": sub.runtime_ms,
+                    "memory_mb": sub.memory_mb,
+                    "code_snippet": sub.code[:150] + ("..." if len(sub.code) > 150 else ""),
+                    "reasoning": attempt.reasoning,
+                }
+            )
+
+        return {
+            "problem_id": prob.id,
+            "title": prob.title,
+            "slug": prob.slug,
+            "difficulty": prob.difficulty.value,
+            "total_attempts": len(prob.attempts),
+            "total_submissions": len(all_submissions),
+            "accepted_submissions": accepted_count,
+            "best_runtime_ms": best_runtime,
+            "best_memory_mb": best_memory,
+            "latest_accepted_solution": prob.latest_accepted_submission.code if prob.latest_accepted_submission else None,
+            "timeline": history_events,
+        }
+
+    # 4. Ingestion & Exporter wrappers
+    def import_data(self, path: str | Path) -> ImportSummary:
+        """Import data from file or directory."""
+        p = Path(path)
+        if p.is_dir():
+            return self.import_service.import_directory(p)
+        return self.import_service.import_file(p)
+
+    def export_knowledge(self) -> list[Path]:
+        """Export all problems into Git-friendly knowledge markdown directory."""
+        problems = list(self.list_problems())
+        return self.exporter.export_all(problems)
+
+    # 5. Search, Revision, and Insights API
+    def search(
+        self,
+        query: str | None = None,
+        topics: list[str] | str | None = None,
+        difficulty: str | DifficultyLevel | None = None,
+        language: str | None = None,
+        status: str | SubmissionStatus | None = None,
+        from_date: Any = None,
+        to_date: Any = None,
+        min_attempts: int | None = None,
+        max_attempts: int | None = None,
+        solved: bool | None = None,
+    ) -> list[Problem]:
+        """Multi-criteria search engine wrapper."""
+        return self.search_service.search(
+            query=query,
+            topics=topics,
+            difficulty=difficulty,
+            language=language,
+            status=status,
+            from_date=from_date,
+            to_date=to_date,
+            min_attempts=min_attempts,
+            max_attempts=max_attempts,
+            solved=solved,
+        )
+
+    def get_revision_queue(self, limit: int = 10, topic: str | None = None, weights: RevisionWeights | None = None) -> list[RevisionQueueItem]:
+        """Fetch prioritized revision queue."""
+        return self.revision_service.get_revision_queue(limit=limit, topic=topic, weights=weights)
+
+    def get_due_problems(self, threshold_days: int = 7, limit: int = 10) -> list[RevisionQueueItem]:
+        """Fetch problems due for review."""
+        return self.revision_service.get_due_problems(threshold_days=threshold_days, limit=limit)
+
+    def mark_reviewed(self, problem_identifier: str, notes: str | None = None) -> Problem:
+        """Mark a problem as reviewed."""
+        return self.revision_service.mark_reviewed(problem_identifier=problem_identifier, notes=notes)
+
+    def get_problem_priority(self, problem_identifier: str, weights: RevisionWeights | None = None) -> RevisionScoreBreakdown:
+        """Get priority score breakdown for a problem."""
+        return self.revision_service.get_problem_priority(problem_identifier=problem_identifier, weights=weights)
+
+    def analyze_patterns(self, unpracticed_days_threshold: int = 14) -> PatternAnalysisResult:
+        """Analyze personal problem-solving patterns."""
+        return self.pattern_analyzer.analyze(unpracticed_days_threshold=unpracticed_days_threshold)
+
+    def generate_insights(self) -> list[str]:
+        """Generate deterministic natural language insights."""
+        return self.insights_generator.generate_insights()
+
+    # 6. Analytics summary
+    def get_analytics_summary(self) -> dict[str, Any]:
+        """Compute system-wide DSA problem solving statistics."""
+        overview = self.analytics_service.get_overview()
+        diff_stats = self.analytics_service.get_difficulty_statistics()
+        difficulty_counts = {ds.difficulty: ds.total_problems for ds in diff_stats}
+
+        return {
+            "total_problems": overview.total_problems,
+            "difficulty_breakdown": difficulty_counts,
+            "total_attempts": overview.total_attempts,
+            "total_submissions": overview.total_submissions,
+            "accepted_submissions": overview.accepted_problems,
+            "overall_acceptance_rate_pct": overview.overall_acceptance_rate_pct,
+            "avg_attempts_per_solved": overview.avg_attempts_per_solved_problem,
+            "first_attempt_acceptance_rate_pct": overview.first_attempt_acceptance_rate_pct,
+        }
+
+    # 7. Phase 5 Intelligent & Semantic API
+    def get_solution_evolution(self, problem_identifier: str) -> EvolutionSummary:
+        """Get chronological evolution summary and narrative across attempts for a problem."""
+        prob = self.get_problem(problem_identifier)
+        submissions: list[Submission] = []
+        for attempt in prob.attempts:
+            submissions.extend(attempt.submissions)
+        return self.evolution_service.generate_evolution(prob, submissions)
+
+    def semantic_search(self, query: str, top_k: int = 10) -> list[SemanticSearchResult]:
+        """Perform semantic TF-IDF query search matching problem titles, concepts, notes, and mistakes."""
+        problems = list(self.list_problems())
+        submissions: list[Submission] = []
+        for prob in problems:
+            for attempt in prob.attempts:
+                submissions.extend(attempt.submissions)
+
+        self.semantic_search_engine.index_dataset(problems, submissions)
+        return self.semantic_search_engine.search(query, top_k=top_k)
+
+    def get_personal_patterns(self) -> PersonalPatternSummary:
+        """Compute actionable long-term personal DSA pattern summary."""
+        problems = list(self.list_problems())
+        submissions: list[Submission] = []
+        for prob in problems:
+            for attempt in prob.attempts:
+                submissions.extend(attempt.submissions)
+        return self.my_patterns_service.analyze_patterns(problems, submissions)
+
+    def get_knowledge_graph(self) -> KnowledgeGraph:
+        """Construct lightweight DSA relationship graph mapping topics, problems, approaches, and mistakes."""
+        problems = list(self.list_problems())
+        submissions: list[Submission] = []
+        for prob in problems:
+            for attempt in prob.attempts:
+                submissions.extend(attempt.submissions)
+        return self.knowledge_graph_builder.build_graph(problems, submissions)
+
+    def analyze_submission(self, submission_id: str, force_refresh: bool = False) -> SubmissionAnalysis:
+        """Perform AI code analysis for a submission using cached identity checks."""
+        problems = self.list_problems()
+        target_sub = None
+        target_prob = None
+        prev_sub = None
+
+        for prob in problems:
+            all_subs = []
+            for att in sorted(prob.attempts, key=lambda a: a.attempt_number):
+                all_subs.extend(att.submissions)
+            
+            for idx, sub in enumerate(all_subs):
+                if sub.id == submission_id:
+                    target_sub = sub
+                    target_prob = prob
+                    if idx > 0:
+                        prev_sub = all_subs[idx - 1]
+                    break
+            if target_sub:
+                break
+
+        if not target_sub or not target_prob:
+            raise ValueError(f"Submission ID '{submission_id}' not found.")
+
+        return self.ai_analyzer.analyze_submission(
+            submission=target_sub,
+            problem=target_prob,
+            previous_submission=prev_sub,
+            force_refresh=force_refresh,
+        )
+
+    def analyze_solution_evolution_ai(self, problem_identifier: str, force_refresh: bool = False) -> SolutionEvolution:
+        """Perform multi-attempt AI solution evolution analysis for a problem."""
+        prob = self.get_problem(problem_identifier)
+        submissions: list[Submission] = []
+        for attempt in sorted(prob.attempts, key=lambda a: a.attempt_number):
+            submissions.extend(attempt.submissions)
+        return self.ai_analyzer.analyze_evolution(prob, submissions, force_refresh=force_refresh)
+
+    def ask_codememory(self, question: str) -> dict[str, Any]:
+        """Ask natural language question grounded in personal CodeMemory records."""
+        return self.memory_service.ask_codememory(question)
+
+    def health_check(self) -> dict[str, Any]:
+        """Run per-component health check and return status report."""
+        import time
+        results: dict[str, Any] = {}
+
+        # Storage layer
+        try:
+            count = len(self.storage.list_all())
+            results["storage"] = {"status": "ok", "problems": count}
+        except Exception as e:
+            results["storage"] = {"status": "error", "detail": str(e)}
+
+        # DuckDB
+        try:
+            self.storage.duckdb_repo.query("SELECT 1")
+            results["duckdb"] = {"status": "ok"}
+        except Exception as e:
+            results["duckdb"] = {"status": "error", "detail": str(e)}
+
+        # AI provider
+        try:
+            provider_name = type(self.ai_provider).__name__
+            results["ai_provider"] = {"status": "ok", "provider": provider_name}
+        except Exception as e:
+            results["ai_provider"] = {"status": "error", "detail": str(e)}
+
+        # Memory engine
+        try:
+            mem_stats = self.memory_engine.get_memory_stats()
+            results["memory_engine"] = {
+                "status": "ok",
+                "documents": mem_stats.get("total_documents", 0),
+                "vectors": mem_stats.get("indexed_vectors", 0),
+            }
+        except Exception as e:
+            results["memory_engine"] = {"status": "error", "detail": str(e)}
+
+        # Search service
+        try:
+            self.search_service.search(query=None)
+            results["search"] = {"status": "ok"}
+        except Exception as e:
+            results["search"] = {"status": "error", "detail": str(e)}
+
+        results["timestamp"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        results["overall"] = "ok" if all(
+            v.get("status") == "ok" for k, v in results.items() if isinstance(v, dict) and "status" in v
+        ) else "degraded"
+        return results

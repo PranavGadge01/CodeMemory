@@ -1,0 +1,3 @@
+Submission ID,Problem Title,Difficulty,Language,Status,Runtime,Memory,Timestamp,Topics,Code
+2001,Valid Parentheses,Easy,python3,Accepted,28 ms,16.5 MB,1700300000,"String, Stack","class Solution:\n    def isValid(self, s: str) -> bool:\n        st = []\n        m = {')': '(', '}': '{', ']': '['}\n        for c in s:\n            if c in m:\n                if not st or st.pop() != m[c]: return False\n            else: st.append(c)\n        return not st"
+2002,Merge Two Sorted Lists,Easy,cpp,Time Limit Exceeded,N/A,N/A,1700400000,"Linked List, Recursion","struct ListNode { int val; ListNode *next; };\nclass Solution { public: ListNode* mergeTwoLists(ListNode* list1, ListNode* list2) { while(true){} } };"

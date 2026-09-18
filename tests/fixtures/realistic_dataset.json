@@ -1,0 +1,167 @@
+[
+  {
+    "title": "Two Sum",
+    "difficulty": "Easy",
+    "topics": ["Array", "Hash Table"],
+    "language": "python",
+    "code": "class Solution:\n    def twoSum(self, nums, target):\n        for i in range(len(nums)):\n            for j in range(i+1, len(nums)):\n                if nums[i]+nums[j]==target:\n                    return [i,j]",
+    "timestamp": "2024-01-10T09:00:00Z",
+    "status": "Wrong Answer",
+    "runtime": null,
+    "memory": null
+  },
+  {
+    "title": "Two Sum",
+    "difficulty": "Easy",
+    "topics": ["Array", "Hash Table"],
+    "language": "python",
+    "code": "class Solution:\n    def twoSum(self, nums, target):\n        seen = {}\n        for i, n in enumerate(nums):\n            diff = target - n\n            if diff in seen:\n                return [seen[diff], i]\n            seen[n] = i",
+    "timestamp": "2024-01-10T10:00:00Z",
+    "status": "Accepted",
+    "runtime": "45 ms",
+    "memory": "16.4 MB"
+  },
+  {
+    "title": "Best Time to Buy and Sell Stock",
+    "difficulty": "Easy",
+    "topics": ["Array", "Dynamic Programming", "Greedy"],
+    "language": "python",
+    "code": "class Solution:\n    def maxProfit(self, prices):\n        min_price = float('inf')\n        max_profit = 0\n        for p in prices:\n            min_price = min(min_price, p)\n            max_profit = max(max_profit, p - min_price)\n        return max_profit",
+    "timestamp": "2024-01-11T09:00:00Z",
+    "status": "Accepted",
+    "runtime": "58 ms",
+    "memory": "23.1 MB"
+  },
+  {
+    "title": "Valid Parentheses",
+    "difficulty": "Easy",
+    "topics": ["Stack", "String"],
+    "language": "java",
+    "code": "class Solution {\n    public boolean isValid(String s) {\n        Stack<Character> stack = new Stack<>();\n        for (char c : s.toCharArray()) {\n            if (c == '(' || c == '[' || c == '{') stack.push(c);\n            else if (stack.isEmpty()) return false;\n            else if (c == ')' && stack.pop() != '(') return false;\n            else if (c == ']' && stack.pop() != '[') return false;\n            else if (c == '}' && stack.pop() != '{') return false;\n        }\n        return stack.isEmpty();\n    }\n}",
+    "timestamp": "2024-01-12T10:00:00Z",
+    "status": "Accepted",
+    "runtime": "3 ms",
+    "memory": "40.2 MB"
+  },
+  {
+    "title": "Merge Intervals",
+    "difficulty": "Medium",
+    "topics": ["Array", "Sorting"],
+    "language": "python",
+    "code": "class Solution:\n    def merge(self, intervals):\n        intervals.sort()\n        res = [intervals[0]]\n        for s, e in intervals[1:]:\n            if s > res[-1][1]:\n                res.append([s, e])\n        return res",
+    "timestamp": "2024-01-13T09:00:00Z",
+    "status": "Wrong Answer",
+    "runtime": null,
+    "memory": null
+  },
+  {
+    "title": "Merge Intervals",
+    "difficulty": "Medium",
+    "topics": ["Array", "Sorting"],
+    "language": "python",
+    "code": "class Solution:\n    def merge(self, intervals):\n        intervals.sort()\n        res = [intervals[0]]\n        for s, e in intervals[1:]:\n            if s <= res[-1][1]:\n                res[-1][1] = max(res[-1][1], e)\n            else:\n                res.append([s, e])\n        return res",
+    "timestamp": "2024-01-13T11:00:00Z",
+    "status": "Accepted",
+    "runtime": "72 ms",
+    "memory": "18.3 MB"
+  },
+  {
+    "title": "Longest Substring Without Repeating Characters",
+    "difficulty": "Medium",
+    "topics": ["Hash Table", "String", "Sliding Window"],
+    "language": "python",
+    "code": "class Solution:\n    def lengthOfLongestSubstring(self, s):\n        seen = set()\n        left = 0\n        max_len = 0\n        for right, c in enumerate(s):\n            while c in seen:\n                seen.remove(s[left])\n                left += 1\n            seen.add(c)\n            max_len = max(max_len, right - left + 1)\n        return max_len",
+    "timestamp": "2024-01-15T09:00:00Z",
+    "status": "Accepted",
+    "runtime": "55 ms",
+    "memory": "14.8 MB"
+  },
+  {
+    "title": "3Sum",
+    "difficulty": "Medium",
+    "topics": ["Array", "Two Pointers", "Sorting"],
+    "language": "python",
+    "code": "class Solution:\n    def threeSum(self, nums):\n        nums.sort()\n        res = []\n        for i in range(len(nums) - 2):\n            if i > 0 and nums[i] == nums[i-1]:\n                continue\n            l, r = i+1, len(nums)-1\n            while l < r:\n                total = nums[i] + nums[l] + nums[r]\n                if total == 0:\n                    res.append([nums[i], nums[l], nums[r]])\n                    while l < r and nums[l] == nums[l+1]: l += 1\n                    while l < r and nums[r] == nums[r-1]: r -= 1\n                    l += 1; r -= 1\n                elif total < 0: l += 1\n                else: r -= 1\n        return res",
+    "timestamp": "2024-01-16T09:00:00Z",
+    "status": "Time Limit Exceeded",
+    "runtime": null,
+    "memory": null
+  },
+  {
+    "title": "3Sum",
+    "difficulty": "Medium",
+    "topics": ["Array", "Two Pointers", "Sorting"],
+    "language": "python",
+    "code": "class Solution:\n    def threeSum(self, nums):\n        nums.sort()\n        res = []\n        for i in range(len(nums) - 2):\n            if nums[i] > 0: break\n            if i > 0 and nums[i] == nums[i-1]: continue\n            l, r = i+1, len(nums)-1\n            while l < r:\n                total = nums[i] + nums[l] + nums[r]\n                if total == 0:\n                    res.append([nums[i], nums[l], nums[r]])\n                    while l < r and nums[l] == nums[l+1]: l += 1\n                    while l < r and nums[r] == nums[r-1]: r -= 1\n                    l += 1; r -= 1\n                elif total < 0: l += 1\n                else: r -= 1\n        return res",
+    "timestamp": "2024-01-16T14:00:00Z",
+    "status": "Accepted",
+    "runtime": "320 ms",
+    "memory": "20.1 MB"
+  },
+  {
+    "title": "Coin Change",
+    "difficulty": "Medium",
+    "topics": ["Dynamic Programming", "Breadth-First Search", "Array"],
+    "language": "python",
+    "code": "class Solution:\n    def coinChange(self, coins, amount):\n        dp = [float('inf')] * (amount + 1)\n        dp[0] = 0\n        for i in range(1, amount + 1):\n            for c in coins:\n                if c <= i:\n                    dp[i] = min(dp[i], dp[i - c] + 1)\n        return dp[amount] if dp[amount] != float('inf') else -1",
+    "timestamp": "2024-01-18T09:00:00Z",
+    "status": "Accepted",
+    "runtime": "1120 ms",
+    "memory": "14.6 MB"
+  },
+  {
+    "title": "Number of Islands",
+    "difficulty": "Medium",
+    "topics": ["Depth-First Search", "Breadth-First Search", "Graph", "Matrix"],
+    "language": "python",
+    "code": "class Solution:\n    def numIslands(self, grid):\n        if not grid: return 0\n        count = 0\n        def dfs(r, c):\n            if r < 0 or c < 0 or r >= len(grid) or c >= len(grid[0]) or grid[r][c] == '0': return\n            grid[r][c] = '0'\n            for dr, dc in [(0,1),(0,-1),(1,0),(-1,0)]: dfs(r+dr, c+dc)\n        for r in range(len(grid)):\n            for c in range(len(grid[0])):\n                if grid[r][c] == '1':\n                    dfs(r, c); count += 1\n        return count",
+    "timestamp": "2024-01-20T09:00:00Z",
+    "status": "Accepted",
+    "runtime": "189 ms",
+    "memory": "17.5 MB"
+  },
+  {
+    "title": "Word Search",
+    "difficulty": "Medium",
+    "topics": ["Array", "Backtracking", "Depth-First Search", "Matrix"],
+    "language": "cpp",
+    "code": "class Solution {\npublic:\n    bool exist(vector<vector<char>>& board, string word) {\n        int m = board.size(), n = board[0].size();\n        function<bool(int,int,int)> dfs = [&](int r, int c, int idx) -> bool {\n            if (idx == word.size()) return true;\n            if (r < 0 || r >= m || c < 0 || c >= n || board[r][c] != word[idx]) return false;\n            char tmp = board[r][c]; board[r][c] = '#';\n            bool found = dfs(r+1,c,idx+1) || dfs(r-1,c,idx+1) || dfs(r,c+1,idx+1) || dfs(r,c-1,idx+1);\n            board[r][c] = tmp;\n            return found;\n        };\n        for (int r = 0; r < m; r++)\n            for (int c = 0; c < n; c++)\n                if (dfs(r, c, 0)) return true;\n        return false;\n    }\n};",
+    "timestamp": "2024-01-22T09:00:00Z",
+    "status": "Accepted",
+    "runtime": "245 ms",
+    "memory": "9.1 MB"
+  },
+  {
+    "title": "Binary Search",
+    "difficulty": "Easy",
+    "topics": ["Array", "Binary Search"],
+    "language": "python",
+    "code": "class Solution:\n    def search(self, nums, target):\n        lo, hi = 0, len(nums)\n        while lo < hi:\n            mid = (lo + hi) // 2\n            if nums[mid] == target: return mid\n            elif nums[mid] < target: lo = mid + 1\n            else: hi = mid - 1\n        return -1",
+    "timestamp": "2024-01-24T09:00:00Z",
+    "status": "Wrong Answer",
+    "runtime": null,
+    "memory": null
+  },
+  {
+    "title": "Binary Search",
+    "difficulty": "Easy",
+    "topics": ["Array", "Binary Search"],
+    "language": "python",
+    "code": "class Solution:\n    def search(self, nums, target):\n        lo, hi = 0, len(nums) - 1\n        while lo <= hi:\n            mid = (lo + hi) // 2\n            if nums[mid] == target: return mid\n            elif nums[mid] < target: lo = mid + 1\n            else: hi = mid - 1\n        return -1",
+    "timestamp": "2024-01-24T10:30:00Z",
+    "status": "Accepted",
+    "runtime": "38 ms",
+    "memory": "15.1 MB"
+  },
+  {
+    "title": "Median of Two Sorted Arrays",
+    "difficulty": "Hard",
+    "topics": ["Array", "Binary Search", "Divide and Conquer"],
+    "language": "python",
+    "code": "class Solution:\n    def findMedianSortedArrays(self, nums1, nums2):\n        A, B = nums1, nums2\n        if len(A) > len(B): A, B = B, A\n        m, n = len(A), len(B)\n        lo, hi = 0, m\n        while lo <= hi:\n            i = (lo + hi) // 2\n            j = (m + n + 1) // 2 - i\n            maxLeftA = float('-inf') if i == 0 else A[i-1]\n            minRightA = float('inf') if i == m else A[i]\n            maxLeftB = float('-inf') if j == 0 else B[j-1]\n            minRightB = float('inf') if j == n else B[j]\n            if maxLeftA <= minRightB and maxLeftB <= minRightA:\n                if (m + n) % 2 == 0:\n                    return (max(maxLeftA, maxLeftB) + min(minRightA, minRightB)) / 2\n                else:\n                    return max(maxLeftA, maxLeftB)\n            elif maxLeftA > minRightB: hi = i - 1\n            else: lo = i + 1\n        return 0.0",
+    "timestamp": "2024-01-26T09:00:00Z",
+    "status": "Accepted",
+    "runtime": "52 ms",
+    "memory": "16.9 MB"
+  }
+]

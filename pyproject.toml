@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "codememory"
+version = "0.1.0"
+description = "Local-first personal DSA knowledge engine"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+authors = [
+    {name = "CodeMemory Developer"}
+]
+keywords = ["dsa", "leetcode", "knowledge-base", "duckdb", "parquet", "pydantic", "local-first"]
+dependencies = [
+    "pydantic>=2.0.0",
+    "duckdb>=1.0.0",
+    "polars>=1.0.0",
+    "pyarrow>=14.0.0",
+    "rich>=13.0.0",
+    "streamlit>=1.30.0",
+    "plotly>=5.18.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.1.0"
+]
+
+[project.scripts]
+codememory = "codememory.cli.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --tb=short"
