@@ -32,6 +32,10 @@
   --color-accent-pressed: #e8910f;
   --color-accent-soft: rgba(255, 161, 22, 0.12);
   --color-accent-border: rgba(255, 161, 22, 0.3);
+  /* The accent used where it appears as *text* on a surface. Identical to the
+     accent in the dark theme, darkened for light surfaces by the overrides
+     below. */
+  --color-accent-ink: #ffa116;
 
   /* Semantic — state only, never decorative */
   --color-success: #3ecf8e;
@@ -47,6 +51,24 @@
   --color-easy: #3ecf8e;
   --color-medium: #ffa116;
   --color-hard: #ff5c5c;
+
+  /* Marks — chart and graph strokes that have to invert with the theme.
+     Kept as tokens rather than hardcoded rgba() so both themes read clearly
+     without duplicating the chart components. */
+  --color-chart-grid: rgba(255, 255, 255, 0.09);
+  --color-chart-line: rgba(255, 255, 255, 0.22);
+  --color-chart-bar: rgba(255, 255, 255, 0.1);
+  --color-graph-edge: rgba(255, 255, 255, 0.11);
+  --color-graph-edge-active: rgba(255, 161, 22, 0.6);
+  --color-graph-node-topic: rgba(255, 255, 255, 0.55);
+  --color-heatmap-empty: rgba(255, 255, 255, 0.045);
+
+  /* Primary button — the inverted CTA. White on the dark canvas, inverted to
+     near-black on a light one so it always reads as the strongest action. */
+  --color-btn-primary: #ffffff;
+  --color-btn-primary-hover: #e6e6e9;
+  --color-btn-primary-pressed: #d6d6da;
+  --color-btn-primary-fg: #07080a;
 
   /* Typography */
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
@@ -275,4 +297,75 @@
     opacity: 1;
     transform: none;
   }
+}
+
+/* ------------------------------------------------------------------ *
+ * Light theme
+ *
+ * Dark is the CodeMemory default; light is the same ladder inverted, not a
+ * second design. The theme tokens above are emitted into @layer theme, so
+ * these overrides sit outside any layer and always win when <html> carries
+ * the `light` class. Only surface, border, text and mark colours move — the
+ * layout, type, spacing, radius and the orange identity are untouched.
+ * ------------------------------------------------------------------ */
+html.light {
+  color-scheme: light;
+
+  --color-canvas: #ffffff;
+  --color-surface: #fafafb;
+  --color-surface-elevated: #f3f4f6;
+  --color-surface-card: #eceef0;
+  --color-surface-hover: #e3e6ea;
+  --color-surface-active: #d9dde2;
+
+  --color-border: rgba(9, 11, 14, 0.1);
+  --color-border-soft: rgba(9, 11, 14, 0.06);
+  --color-border-strong: rgba(9, 11, 14, 0.16);
+
+  --color-text-primary: #15181d;
+  --color-text-secondary: #4b5158;
+  --color-text-muted: #6c7279;
+  --color-text-faint: #8b9198;
+  --color-text-disabled: #aab0b7;
+
+  /* The brand orange stays as a fill; as text on a light surface it drops to
+     a burnt orange that keeps the identity at a legible contrast. */
+  --color-accent-ink: #b45306;
+
+  --color-chart-grid: rgba(9, 11, 14, 0.08);
+  --color-chart-line: rgba(9, 11, 14, 0.26);
+  --color-chart-bar: rgba(9, 11, 14, 0.1);
+  --color-graph-edge: rgba(9, 11, 14, 0.14);
+  --color-graph-edge-active: rgba(180, 83, 6, 0.7);
+  --color-graph-node-topic: rgba(9, 11, 14, 0.55);
+  --color-heatmap-empty: rgba(9, 11, 14, 0.055);
+
+  --color-btn-primary: #15181d;
+  --color-btn-primary-hover: #2a2e34;
+  --color-btn-primary-pressed: #0d0f12;
+  --color-btn-primary-fg: #f7f7f8;
+
+  --shadow-floating: 0 8px 32px -14px rgba(20, 24, 29, 0.2);
+}
+
+html.light .bg-grid {
+  background-image:
+    linear-gradient(to right, rgba(9, 11, 14, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(9, 11, 14, 0.045) 1px, transparent 1px);
+}
+
+html.light .bg-dots {
+  background-image: radial-gradient(rgba(9, 11, 14, 0.07) 1px, transparent 1px);
+}
+
+/* Theme toggle — the visible icon follows the <html> class, so the control
+   needs no client state and renders correctly during hydration. */
+.theme-icon-light {
+  display: none;
+}
+html.light .theme-icon-dark {
+  display: none;
+}
+html.light .theme-icon-light {
+  display: block;
 }

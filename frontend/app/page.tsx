@@ -274,7 +274,7 @@ export default function HomePage() {
               title="Your problems, connected"
               description="Every problem links to the topics it uses, the approaches you tried, the languages you reached for, and the mistakes you made. Select a node to follow the thread."
               id="knowledge-heading"
-              icon={<Network className="h-4 w-4 text-accent" aria-hidden="true" />}
+              icon={<Network className="h-4 w-4 text-accent-ink" aria-hidden="true" />}
             />
 
             <Reveal delay={60} className="mt-10">
@@ -297,7 +297,7 @@ export default function HomePage() {
               title="It also tells you what to revisit"
               description="A deterministic priority score weighs difficulty, failure history, recency and topic weakness — so the queue is explainable, not magical."
               id="revision-heading"
-              icon={<RotateCw className="h-4 w-4 text-accent" aria-hidden="true" />}
+              icon={<RotateCw className="h-4 w-4 text-accent-ink" aria-hidden="true" />}
             />
 
             <Reveal delay={60} className="mt-10">
@@ -338,7 +338,7 @@ export default function HomePage() {
                             aria-hidden="true"
                           />
                         </span>
-                        <span className="w-8 text-right font-technical-sm text-accent tabular-nums">
+                        <span className="w-8 text-right font-technical-sm text-accent-ink tabular-nums">
                           {item.priorityScore.toFixed(1)}
                         </span>
                       </span>
@@ -399,7 +399,7 @@ function cnStat(accent?: boolean): string {
     "font-technical",
     "text-lg",
     "tabular-nums",
-    accent ? "text-accent" : "text-text-primary",
+    accent ? "text-accent-ink" : "text-text-primary",
   ].join(" ");
 }
 

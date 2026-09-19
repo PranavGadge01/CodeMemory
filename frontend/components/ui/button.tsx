@@ -7,8 +7,9 @@ import { cn } from "@/lib/utils";
  *
  * White is the default primary — orange is an identity accent, not the colour
  * of every action, so `accent` is reserved for the handful of moments where
- * the brand should carry the action. All variants share the same tactile
- * 1 → 0.97 → 1 press from the motion system.
+ * the brand should carry the action. The primary fill and its foreground come
+ * from tokens so the inverted CTA stays legible in either theme. All variants
+ * share the same tactile 1 → 0.97 → 1 press from the motion system.
  */
 const buttonVariants = cva(
   [
@@ -27,7 +28,8 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: "bg-white text-black hover:bg-white/90",
+        primary:
+          "bg-btn-primary text-btn-primary-fg hover:bg-btn-primary-hover active:bg-btn-primary-pressed",
         accent:
           "bg-accent text-black hover:bg-accent-hover active:bg-accent-pressed",
         outline:

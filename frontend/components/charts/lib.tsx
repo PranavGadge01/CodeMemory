@@ -12,8 +12,9 @@ import { cn } from "@/lib/utils";
 
 export const CHART_COLORS = {
   accent: "var(--color-accent)",
-  muted: "rgba(255,255,255,0.22)",
-  faint: "rgba(255,255,255,0.09)",
+  muted: "var(--color-chart-line)",
+  faint: "var(--color-chart-grid)",
+  bar: "var(--color-chart-bar)",
   success: "var(--color-success)",
   warning: "var(--color-warning)",
   error: "var(--color-error)",
@@ -29,20 +30,25 @@ export function ChartSvg({
   viewBox,
   role = "img",
   label,
+  height,
 }: {
   children: React.ReactNode;
   className?: string;
   viewBox: string;
   role?: "img" | "presentation";
   label?: string;
+  /** Pin the rendered height in px. Without it the viewBox's aspect ratio
+      decides the height from the container width. */
+  height?: number;
 }) {
   return (
     <svg
-      className={cn("block h-auto w-full", className)}
+      className={cn("block w-full", height ? undefined : "h-auto", className)}
       viewBox={viewBox}
       role={role}
       aria-label={label}
       preserveAspectRatio="none"
+      style={height ? { height } : undefined}
     >
       {children}
     </svg>

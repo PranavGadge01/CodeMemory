@@ -5,6 +5,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Wordmark } from "@/components/system/logo";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/home/theme-toggle";
 
 const NAV_LINKS = [
   { label: "Product", href: "/#product" },
@@ -48,6 +49,7 @@ export function SiteNav() {
         </div>
 
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           <Button variant="ghost" size="sm" asChild>
             <Link href="/auth/sign-in">Sign in</Link>
           </Button>

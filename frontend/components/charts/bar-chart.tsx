@@ -10,13 +10,22 @@ export interface BarDatum {
 }
 
 /**
+ * Width of the chart's design space, in the same units as the viewBox. The
+ * viewBox keeps a wide, shallow aspect ratio and the rendered height is
+ * pinned by the `height` prop, so a `preserveAspectRatio="none"` reflow only
+ * stretches the chart horizontally — the axis typography stays at a constant
+ * px size and weekly labels never collide, whatever the container width.
+ */
+const VIEW_WIDTH = 560;
+
+/**
  * Compact column chart. Submissions per week, solved per month — any series
  * where the count is the story and the label is a period.
  */
 export function BarChart({
   data,
   className,
-  height = 140,
+  height = 160,
   formatValue = (value) => String(value),
   emphasizedOnly = false,
 }: {
@@ -36,21 +45,21 @@ export function BarChart({
   const top = ticks[ticks.length - 1] ?? max;
 
   const y = scaleLinear([0, top], [innerHeight + padTop, padTop]);
-  const usable = 100 - padLeft;
-  const slot = usable / Math.max(1, data.length);
-  const barWidth = Math.min(slot * 0.62, 14);
+  const slot = (VIEW_WIDTH - padLeft) / Math.max(1, data.length);
+  const barWidth = Math.min(slot * 0.5, 18);
 
   return (
     <ChartSvg
       className={className}
-      viewBox={`0 0 100 ${height}`}
+      viewBox={`0 0 ${VIEW_WIDTH} ${height}`}
+      height={height}
       label={`Bar chart. ${data.map((d) => `${d.label}: ${d.value}`).join(", ")}`}
     >
       <GridLines
         values={ticks}
         y={y}
         x0={padLeft}
-        x1={100}
+        x1={VIEW_WIDTH}
         format={formatValue}
       />
       {data.map((datum, index) => {
@@ -65,17 +74,17 @@ export function BarChart({
               width={barWidth}
               height={rectHeight}
               rx={1.5}
-              fill={isEmphasized ? CHART_COLORS.accent : "rgba(255,255,255,0.10)"}
+              fill={isEmphasized ? CHART_COLORS.accent : CHART_COLORS.bar}
               opacity={isEmphasized ? 0.9 : 1}
             >
               {datum.hint ? <title>{datum.hint}</title> : null}
             </rect>
             <text
               x={centerX}
-              y={height - 8}
+              y={height - 7}
               textAnchor="middle"
               className="fill-text-faint font-mono"
-              fontSize={7.5}
+              fontSize={10}
             >
               {datum.label}
             </text>

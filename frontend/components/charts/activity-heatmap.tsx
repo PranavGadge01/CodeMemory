@@ -91,7 +91,7 @@ export function ActivityHeatmap({
 
 /** Every cell is reachable without colour — the tooltip carries the numbers. */
 function cellFill(value: number, max: number): string {
-  if (value === 0) return "rgba(255,255,255,0.045)";
+  if (value === 0) return "var(--color-heatmap-empty)";
   const ratio = Math.min(1, value / Math.max(1, max));
   if (ratio < 0.25) return "rgba(255,161,22,0.16)";
   if (ratio < 0.5) return "rgba(255,161,22,0.32)";
