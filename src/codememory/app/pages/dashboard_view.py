@@ -115,59 +115,57 @@ def render_dashboard_page() -> None:
                 st.markdown("---")
 
     # LeetCode Account Status Widget (below main grid)
-    _render_account_status_widget()
+    _render_account_status_widget(service)
 
 
-def _render_account_status_widget() -> None:
-    """Render a compact LeetCode Account Status card on the dashboard."""
+def _render_account_status_widget(service) -> None:
+    """Render a compact LeetCode Account Status card on the dashboard.
+
+    Reads state from the canonical ``service.leetcode`` status surface so the
+    dashboard can never disagree with the Settings page.
+    """
     try:
-        from codememory.connectors.account.service import AccountService
-
-        account_service = AccountService()
-        conn = account_service.get_connection("LeetCode")
+        status = service.leetcode.status()
     except Exception:
         return
 
     st.markdown("---")
     st.subheader("🔗 LeetCode Account")
 
-    if conn and conn.status.value == "Connected":
-        meta = conn.metadata or {}
-        solved = meta.get("solved_all", 0)
-        last_sync = conn.last_sync_at.strftime("%b %d, %H:%M UTC") if conn.last_sync_at else "Never"
-        sync_status = conn.last_sync_status.value if conn.last_sync_status else "—"
-
-        status_color = "#22C55E" if sync_status == "Success" else "#F59E0B" if sync_status == "Partial" else "#94A3B8"
-
-        st.markdown(
-            f"""
-            <div style="background: linear-gradient(135deg, rgba(34,197,94,0.06) 0%, rgba(56,189,248,0.04) 100%);
-                        border: 1px solid rgba(34,197,94,0.2); border-radius: 12px; padding: 16px 20px;">
-                <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                    <span style="font-size:1.3rem;">🟢</span>
-                    <span style="font-size:0.95rem; font-weight:700; color:#F8FAFC;">
-                        {conn.display_name or conn.username}
-                    </span>
-                </div>
-                <div style="font-size:0.8rem; color:#94A3B8; line-height:1.8;">
-                    Solved on LC: <strong style="color:#4ADE80;">{solved}</strong><br/>
-                    Last Sync: <strong style="color:#F8FAFC;">{last_sync}</strong><br/>
-                    Status: <strong style="color:{status_color};">{sync_status}</strong>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        if meta.get("solved_easy") or meta.get("solved_medium") or meta.get("solved_hard"):
-            c1, c2, c3 = st.columns(3)
-            c1.metric("Easy", meta.get("solved_easy", 0))
-            c2.metric("Medium", meta.get("solved_medium", 0))
-            c3.metric("Hard", meta.get("solved_hard", 0))
-
-    else:
+    if not status.connected:
         st.info(
             "💡 **LeetCode account not connected.**\n\n"
             "Go to **Settings** → **Connect Account** to sync your profile and submissions."
         )
+        return
+
+    last_sync = status.last_attempted_sync.strftime("%b %d, %H:%M UTC") if status.last_attempted_sync else "Never"
+    sync_state = status.sync_state.value
+    status_color = "#22C55E" if sync_state == "Success" else "#F59E0B" if sync_state == "Partial" else "#EF4444" if sync_state == "Failed" else "#94A3B8"
+
+    st.markdown(
+        f"""
+        <div style="background: linear-gradient(135deg, rgba(34,197,94,0.06) 0%, rgba(56,189,248,0.04) 100%);
+                    border: 1px solid rgba(34,197,94,0.2); border-radius: 12px; padding: 16px 20px;">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                <span style="font-size:1.3rem;">🟢</span>
+                <span style="font-size:0.95rem; font-weight:700; color:#F8FAFC;">
+                    {status.display_name or status.username}
+                </span>
+            </div>
+            <div style="font-size:0.8rem; color:#94A3B8; line-height:1.8;">
+                Solved on LC: <strong style="color:#4ADE80;">{status.solved_all if status.solved_all is not None else "—"}</strong><br/>
+                Last Sync: <strong style="color:#F8FAFC;">{last_sync}</strong><br/>
+                Status: <strong style="color:{status_color};">{sync_state}</strong>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    if status.solved_easy is not None or status.solved_medium is not None or status.solved_hard is not None:
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Easy", status.solved_easy or 0)
+        c2.metric("Medium", status.solved_medium or 0)
+        c3.metric("Hard", status.solved_hard or 0)
 

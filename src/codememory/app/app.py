@@ -82,15 +82,13 @@ def main() -> None:
             seed_sample_data(service)
             st.rerun()
 
-    # LeetCode Account Sidebar Indicator
+    # LeetCode Account Sidebar Indicator — read from the service status surface
+    # so it always agrees with Settings and the dashboard.
     st.sidebar.markdown("---")
     try:
-        from codememory.connectors.account.service import AccountService
-        _acct = AccountService().get_connection("LeetCode")
-        if _acct and _acct.status.value == "Connected":
-            st.sidebar.markdown(
-                f"🟢 **LC**: `@{_acct.username}`"
-            )
+        _lc_status = service.leetcode.status()
+        if _lc_status.connected:
+            st.sidebar.markdown(f"🟢 **LC**: `@{_lc_status.username}`")
         else:
             st.sidebar.markdown("🔗 *LC: Not connected*")
     except Exception:

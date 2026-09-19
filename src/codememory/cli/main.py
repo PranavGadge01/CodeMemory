@@ -1,6 +1,7 @@
 """Command Line Interface (CLI) for CodeMemory."""
 
 import argparse
+from datetime import timezone
 from pathlib import Path
 import sys
 
@@ -9,10 +10,133 @@ from rich.panel import Panel
 from rich.syntax import Syntax
 from rich.table import Table
 
+from codememory.connectors.account.models import SyncState
 from codememory.core.service import CodeMemoryService
 from codememory.domain.exceptions import CodeMemoryError
 
 console = Console()
+
+
+def _fmt_cli_timestamp(value) -> str:
+    """Render a sync timestamp as UTC text, or ``"Never"`` when absent."""
+    if value is None:
+        return "Never"
+    moment = value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    return moment.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
+
+def render_leetcode_status(console: Console, status) -> None:
+    """Render the LeetCode account/sync status for the CLI.
+
+    Mirrors the Settings page: connection state, sync state, last attempted and
+    successful sync, record counts, coverage/window, gap, and the fields the
+    public sync cannot supply. Nothing here can contain a secret — ``status``
+    is built by the service surface from scrubbed data.
+    """
+    if not status.connected:
+        console.print(Panel.fit(
+            "[bold yellow]LeetCode account is not connected.[/bold yellow]\n"
+            "Connect with: codememory leetcode connect <username>",
+            title="LeetCode Status",
+        ))
+        return
+
+    console.print(Panel.fit(
+        f"[bold green]Connected[/bold green] as [cyan]@{status.username}[/cyan]"
+        f"{' (' + status.display_name + ')' if status.display_name and status.display_name != status.username else ''}",
+        title="LeetCode Status",
+    ))
+
+    state = status.sync_state.value
+    state_color = {"Success": "green", "Partial": "yellow", "Failed": "red"}.get(state, "dim")
+    console.print(f"Sync state:        [{state_color}]{state}[/{state_color}]")
+    console.print(f"Last attempted:    {_fmt_cli_timestamp(status.last_attempted_sync)}")
+    console.print(f"Last successful:    [green]{_fmt_cli_timestamp(status.last_successful_sync)}[/green]")
+
+    if status.records_imported is not None or status.records_skipped is not None or status.records_failed is not None:
+        console.print(
+            f"Last sync records:  imported=[green]{status.records_imported if status.records_imported is not None else '-'}[/green]"
+            f"  skipped=[yellow]{status.records_skipped if status.records_skipped is not None else '-'}[/yellow]"
+            f"  failed=[red]{status.records_failed if status.records_failed is not None else '-'}[/red]"
+            f"  discovered=[cyan]{status.records_discovered if status.records_discovered is not None else '-'}[/cyan]"
+        )
+
+    if status.solved_all is not None:
+        console.print(
+            f"Solved on LeetCode: [green]{status.solved_all}[/green] "
+            f"(easy {status.solved_easy or 0} / medium {status.solved_medium or 0} / hard {status.solved_hard or 0})"
+        )
+
+    table = Table(show_header=True, header_style="bold blue", title="Sync Coverage")
+    table.add_column("Property", style="bold")
+    table.add_column("Value")
+    table.add_row("Coverage", status.coverage or "recent-window")
+    table.add_row("Window limit", str(status.window_limit) if status.window_limit is not None else "—")
+    table.add_row("Records in window", str(status.records_in_window) if status.records_in_window is not None else "—")
+    table.add_row("Window truncated", str(status.window_truncated) if status.window_truncated is not None else "—")
+    table.add_row(
+        "Gap detected",
+        "[red]yes[/red]" if status.gap_detected else ("[green]no[/green]" if status.gap_detected is not None else "—"),
+    )
+    table.add_row(
+        "Unavailable fields",
+        ", ".join(status.unavailable_fields) if status.unavailable_fields else "—",
+    )
+    console.print(table)
+
+    if status.gap_detected:
+        console.print(
+            "[bold yellow]Gap:[/bold yellow] submissions exist on LeetCode that fell outside the public "
+            "recent-submission window between syncs. They cannot be recovered by re-syncing — "
+            "import an export file for the missing range."
+        )
+    if status.unavailable_fields:
+        labels = {"code": "source code", "runtime_ms": "runtime", "memory_mb": "memory"}
+        missing = ", ".join(labels.get(f, f) for f in status.unavailable_fields)
+        console.print(
+            f"[dim]The public API supplies no {missing} for synced submissions; "
+            "import a dataset file if you need them.[/dim]"
+        )
+    if status.last_error:
+        console.print(f"[bold red]Last error:[/bold red] {status.last_error}")
+
+
+def render_leetcode_sync_result(console: Console, result) -> None:
+    """Render a sync outcome with its outcome state clearly distinguished.
+
+    No fabricated success: the exit code is decided by the caller from
+    ``result.status``, and the printed summary always names the state.
+    """
+    state = result.status.value
+    if state == "Success":
+        console.print("[bold green]LeetCode sync succeeded.[/bold green]")
+    elif state == "Partial":
+        console.print("[bold yellow]LeetCode sync completed partially.[/bold yellow]")
+    elif state == "Failed":
+        console.print("[bold red]LeetCode sync failed.[/bold red]")
+    else:
+        console.print(f"LeetCode sync finished in state '{state}'.")
+
+    console.print(
+        f"  • Discovered: [cyan]{result.records_discovered}[/cyan]"
+        f"  • Imported: [green]{result.records_added}[/green]"
+        f"  • Skipped: [yellow]{result.records_skipped}[/yellow]"
+        f"  • Failed: [red]{result.records_failed}[/red]"
+    )
+
+    details = result.details or {}
+    coverage = details.get("coverage", "recent-window")
+    console.print(
+        f"  • Coverage: [blue]{coverage}[/blue]"
+        f"  • Window: {details.get('records_in_window', result.records_discovered)}"
+        f"/{details.get('window_limit', '—')}"
+        f"  • Gap detected: {details.get('gap_detected', '—')}"
+    )
+    unavailable = details.get("unavailable_fields")
+    if unavailable:
+        console.print(f"  • Unavailable from public API: [dim]{', '.join(unavailable)}[/dim]")
+    if result.error_message:
+        console.print(f"  • Error: [red]{result.error_message}[/red]")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -87,9 +211,28 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("ui", help="Launch local interactive Streamlit web dashboard")
 
     # 16. LeetCode command
-    lc_parser = subparsers.add_parser("leetcode", help="LeetCode connector commands (import, preview, validate)")
-    lc_parser.add_argument("action", choices=["import", "preview", "validate"], help="Action: import, preview, or validate")
-    lc_parser.add_argument("path", type=str, help="Path to LeetCode exported JSON or CSV dataset file")
+    lc_parser = subparsers.add_parser(
+        "leetcode",
+        help="LeetCode account sync + dataset import commands (connect, sync, status, disconnect, import, preview, validate)",
+    )
+    lc_parser.add_argument(
+        "action",
+        choices=["connect", "sync", "status", "disconnect", "import", "preview", "validate"],
+        help="Account: connect <username> | sync | status | disconnect. Dataset: import | preview | validate <file>",
+    )
+    lc_parser.add_argument(
+        "path",
+        type=str,
+        nargs="?",
+        default=None,
+        help="LeetCode username (connect) or path to exported JSON/CSV dataset file (import, preview, validate)",
+    )
+    lc_parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Sync only: cap on recent submissions requested from LeetCode (default 20, the public API's practical bound)",
+    )
 
     # 17. Memory command (Phase 7)
     mem_parser = subparsers.add_parser("memory", help="Personal memory engine commands (index, rebuild, search, similar, mistakes, stats)")
@@ -397,41 +540,126 @@ def main(args: list[str] | None = None) -> None:
             subprocess.run(cmd)
 
         elif parsed.command == "leetcode":
-            from codememory.connectors.leetcode.importer import LeetCodeImporter
-            lc_importer = LeetCodeImporter(storage=service.storage)
-            target_path = Path(parsed.path)
+            from codememory.connectors.leetcode.errors import LeetCodeError
+            from codememory.connectors.leetcode.service import (
+                LeetCodeAccountError,
+                safe_error_message,
+            )
 
-            if parsed.action == "validate":
-                console.print(f"[bold blue]Validating LeetCode dataset '{target_path}'...[/bold blue]")
-                val = lc_importer.validate(target_path)
-                console.print(f"Total records read: [yellow]{val['total_records']}[/yellow]")
-                console.print(f"Valid records: [green]{val['valid_records']}[/green]")
-                console.print(f"Error count: [bold red]{val['error_count']}[/bold red]")
-                if val["errors"]:
-                    console.print("[bold red]Validation Errors:[/bold red]")
-                    for err in val["errors"][:5]:
-                        console.print(f" - {err}")
+            leetcode = service.leetcode
 
-            elif parsed.action == "preview":
-                console.print(f"[bold blue]Previewing LeetCode dataset import from '{target_path}'...[/bold blue]")
-                prev = lc_importer.preview_import(target_path)
-                console.print(f"Total read: [yellow]{prev['total_read']}[/yellow]")
-                console.print(f"Valid records: [green]{prev['valid_count']}[/green]")
-                console.print(f"Problems discovered: [cyan]{prev['problems_discovered']}[/cyan]")
-                console.print(f"Duplicates (skipped): [bold yellow]{prev['duplicate_count']}[/bold yellow]")
-                console.print(f"Errors found: [bold red]{prev['error_count']}[/bold red]")
+            if parsed.action == "connect":
+                username = (parsed.path or "").strip()
+                if not username:
+                    console.print(
+                        "[bold red]Usage:[/bold red] codememory leetcode connect <username>\n"
+                        "Provide your public LeetCode username. No password, cookie or token is accepted."
+                    )
+                    sys.exit(1)
 
-            elif parsed.action == "import":
-                console.print(f"[bold cyan]Importing LeetCode dataset from '{target_path}'...[/bold cyan]")
-                summary = lc_importer.import_file(target_path)
-                console.print(f"[bold green]LeetCode Import Complete![/bold green]")
-                console.print(f"  • Total Read: [cyan]{summary.total_read}[/cyan]")
-                console.print(f"  • Valid Records: [cyan]{summary.valid_count}[/cyan]")
-                console.print(f"  • Imported Submissions: [bold green]{summary.imported_count}[/bold green]")
-                console.print(f"  • Duplicates Skipped: [bold yellow]{summary.duplicate_count}[/bold yellow]")
-                console.print(f"  • Error Count: [bold red]{summary.error_count}[/bold red]")
-                if summary.imported_problems:
-                    console.print(f"  • Affected Problems ({len(summary.imported_problems)}): {', '.join(summary.imported_problems)}")
+                console.print(f"[bold blue]Validating public LeetCode profile for '{username}'...[/bold blue]")
+                try:
+                    conn = leetcode.connect(username)
+                except (ValueError, LeetCodeAccountError, LeetCodeError) as exc:
+                    console.print(f"[bold red]Could not connect:[/bold red] {safe_error_message(exc)}")
+                    sys.exit(1)
+
+                label = f" ({conn.display_name})" if conn.display_name and conn.display_name != conn.username else ""
+                console.print(f"[bold green]Connected to LeetCode account[/bold green] @{conn.username}{label}.")
+                console.print(
+                    "[dim]Only public profile metadata was stored — no password, session "
+                    "cookie or token is ever requested or kept.[/dim]"
+                )
+
+            elif parsed.action == "sync":
+                if not leetcode.is_connected():
+                    console.print(
+                        "[bold red]LeetCode account is not connected.[/bold red] "
+                        "Run: codememory leetcode connect <username>"
+                    )
+                    sys.exit(1)
+
+                console.print("[bold cyan]Syncing with LeetCode (public API)...[/bold cyan]")
+                try:
+                    result = leetcode.sync(limit=parsed.limit)
+                except Exception as exc:
+                    # The engine turns transport failures into a FAILED result, but
+                    # anything escaping it must still be reported safely and must
+                    # still fail the command — never a traceback, never exit 0.
+                    console.print(f"[bold red]LeetCode sync could not complete:[/bold red] {safe_error_message(exc)}")
+                    sys.exit(1)
+
+                render_leetcode_sync_result(console, result)
+
+                if result.status == SyncState.SUCCESS:
+                    sys.exit(0)
+                if result.status == SyncState.PARTIAL:
+                    sys.exit(2)
+                sys.exit(1)
+
+            elif parsed.action == "status":
+                status = leetcode.status()
+                render_leetcode_status(console, status)
+                # Exit code distinguishes the connection state for scripting:
+                # 0 = connected, 1 = no connected account.
+                sys.exit(0 if status.connected else 1)
+
+            elif parsed.action == "disconnect":
+                try:
+                    removed = leetcode.disconnect()
+                except Exception as exc:
+                    console.print(f"[bold red]Could not disconnect:[/bold red] {safe_error_message(exc)}")
+                    sys.exit(1)
+                if removed:
+                    console.print(
+                        "[bold green]LeetCode account disconnected.[/bold green] Connection and sync "
+                        "state were removed; all previously imported CodeMemory history is preserved."
+                    )
+                else:
+                    console.print("[yellow]No LeetCode account is connected — nothing to disconnect.[/yellow]")
+                sys.exit(0)
+
+            else:  # import / preview / validate — manual dataset fallback
+                from codememory.connectors.leetcode.importer import LeetCodeImporter
+                lc_importer = LeetCodeImporter(storage=service.storage)
+                target_path = Path(parsed.path) if parsed.path else None
+                if target_path is None:
+                    console.print(
+                        f"[bold red]Usage:[/bold red] codememory leetcode {parsed.action} <dataset-file>"
+                    )
+                    sys.exit(1)
+
+                if parsed.action == "validate":
+                    console.print(f"[bold blue]Validating LeetCode dataset '{target_path}'...[/bold blue]")
+                    val = lc_importer.validate(target_path)
+                    console.print(f"Total records read: [yellow]{val['total_records']}[/yellow]")
+                    console.print(f"Valid records: [green]{val['valid_records']}[/green]")
+                    console.print(f"Error count: [bold red]{val['error_count']}[/bold red]")
+                    if val["errors"]:
+                        console.print("[bold red]Validation Errors:[/bold red]")
+                        for err in val["errors"][:5]:
+                            console.print(f" - {err}")
+
+                elif parsed.action == "preview":
+                    console.print(f"[bold blue]Previewing LeetCode dataset import from '{target_path}'...[/bold blue]")
+                    prev = lc_importer.preview_import(target_path)
+                    console.print(f"Total read: [yellow]{prev['total_read']}[/yellow]")
+                    console.print(f"Valid records: [green]{prev['valid_count']}[/green]")
+                    console.print(f"Problems discovered: [cyan]{prev['problems_discovered']}[/cyan]")
+                    console.print(f"Duplicates (skipped): [bold yellow]{prev['duplicate_count']}[/bold yellow]")
+                    console.print(f"Errors found: [bold red]{prev['error_count']}[/bold red]")
+
+                elif parsed.action == "import":
+                    console.print(f"[bold cyan]Importing LeetCode dataset from '{target_path}'...[/bold cyan]")
+                    summary = lc_importer.import_file(target_path)
+                    console.print(f"[bold green]LeetCode Import Complete![/bold green]")
+                    console.print(f"  • Total Read: [cyan]{summary.total_read}[/cyan]")
+                    console.print(f"  • Valid Records: [cyan]{summary.valid_count}[/cyan]")
+                    console.print(f"  • Imported Submissions: [bold green]{summary.imported_count}[/bold green]")
+                    console.print(f"  • Duplicates Skipped: [bold yellow]{summary.duplicate_count}[/bold yellow]")
+                    console.print(f"  • Error Count: [bold red]{summary.error_count}[/bold red]")
+                    if summary.imported_problems:
+                        console.print(f"  • Affected Problems ({len(summary.imported_problems)}): {', '.join(summary.imported_problems)}")
 
         elif parsed.command == "memory":
             act = parsed.action

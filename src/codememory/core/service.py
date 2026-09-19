@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Sequence
+from typing import TYPE_CHECKING, Any, Optional, Sequence
 
 from codememory.analytics.analytics_models import AnalyticsOverview
 from codememory.analytics.analytics_service import AnalyticsService
@@ -36,6 +36,9 @@ from codememory.search.semantic_search import LocalSemanticSearchEngine, Semanti
 from codememory.patterns.my_patterns_service import MyPatternsService, PersonalPatternSummary
 from codememory.graph.knowledge_graph import KnowledgeGraphBuilder, KnowledgeGraph
 
+if TYPE_CHECKING:
+    from codememory.connectors.leetcode.service import LeetCodeAccountService
+
 
 class CodeMemoryService:
     """Master application service orchestrating storage, ingestion, search, analytics, revision, AI analysis, and knowledge graph."""
@@ -49,6 +52,8 @@ class CodeMemoryService:
         # Ensure base directories exist before storage layer initializes
         Path(base_dir).mkdir(parents=True, exist_ok=True)
         Path(knowledge_dir).mkdir(parents=True, exist_ok=True)
+        self.base_dir = Path(base_dir)
+        self.knowledge_dir = Path(knowledge_dir)
         self.storage = CompositeStorage(base_dir=base_dir, knowledge_dir=knowledge_dir, db_path=db_path)
         self.import_service = ImportService(storage=self.storage)
         self.exporter = KnowledgeExporter(output_dir=knowledge_dir)
@@ -67,6 +72,11 @@ class CodeMemoryService:
         self.semantic_search_engine = LocalSemanticSearchEngine()
         self.my_patterns_service = MyPatternsService()
         self.knowledge_graph_builder = KnowledgeGraphBuilder()
+
+        # Phase C account/sync surface. Lazily built: constructing it eagerly
+        # would pull the LeetCode transport into every service instantiation,
+        # including processes that never touch LeetCode.
+        self._leetcode_service: Optional["LeetCodeAccountService"] = None
 
     # 1. Problem operations
     def add_problem(
@@ -532,3 +542,23 @@ class CodeMemoryService:
             v.get("status") == "ok" for k, v in results.items() if isinstance(v, dict) and "status" in v
         ) else "degraded"
         return results
+
+    # 9. LeetCode account & sync surface
+
+    @property
+    def leetcode(self) -> "LeetCodeAccountService":
+        """Single service-level entry point for the LeetCode account/sync lifecycle.
+
+        Exposes ``connect``/``sync``/``status``/``disconnect`` so UI and CLI
+        consumers never touch the low-level LeetCode client. The underlying sync
+        engine and its Phase B contract are unchanged.
+        """
+        if self._leetcode_service is None:
+            from codememory.connectors.account.service import AccountService
+            from codememory.connectors.leetcode.service import LeetCodeAccountService
+
+            self._leetcode_service = LeetCodeAccountService(
+                app_service=self,
+                account_service=AccountService(data_dir=self.base_dir / "accounts"),
+            )
+        return self._leetcode_service
