@@ -36,7 +36,7 @@ export function ActivityHeatmap({
 
   return (
     <div className={cn("flex gap-3", className)}>
-      <div className="flex flex-col justify-between gap-1 pt-[14px] pb-1">
+      <div className="flex flex-col justify-between gap-1 pt-3.5 pb-1">
         {["Mon", "Wed", "Fri"].map((label) => (
           <span key={label} className="font-technical-sm text-text-faint">
             {label}

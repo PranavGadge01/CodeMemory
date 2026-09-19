@@ -98,7 +98,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         aria-hidden={mobileOpen ? "true" : undefined}
         className={cn(
           "hidden shrink-0 transition-[width] duration-ui ease-standard md:block",
-          collapsed ? "w-[56px]" : "w-[240px]",
+          collapsed ? "w-14" : "w-60",
         )}
       >
         <Sidebar collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />
@@ -125,7 +125,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             aria-label="Close navigation"
             onClick={() => setMobileOpen(false)}
           />
-          <div className="absolute left-0 top-0 h-full w-[280px] max-w-[85vw] border-r border-border bg-surface shadow-floating">
+          <div className="absolute left-0 top-0 h-full w-70 max-w-[85vw] border-r border-border bg-surface shadow-floating">
             <div className="flex items-center justify-between px-4 h-14 border-b border-border-soft">
               <span className="eyebrow">Navigate</span>
               <button
@@ -165,7 +165,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               )}
               aria-current={active ? "page" : undefined}
             >
-              <Icon className="h-[18px] w-[18px]" aria-hidden="true" strokeWidth={1.75} />
+              <Icon className="h-4.5 w-4.5" aria-hidden="true" strokeWidth={1.75} />
               <span className="text-[10px] font-medium leading-none">{item.label}</span>
             </Link>
           );
