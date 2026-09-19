@@ -10,7 +10,7 @@ import logging
 
 import streamlit as st
 
-from codememory.app.components import get_service
+from codememory.app.components import get_service, reset_service
 from codememory.connectors.leetcode.service import safe_error_message
 
 logger = logging.getLogger(__name__)
@@ -496,6 +496,11 @@ def render_settings_page() -> None:
                 if p.exists():
                     shutil.rmtree(p)
                 p.mkdir(parents=True, exist_ok=True)
+            # The cached service still holds a DuckDB handle pointing at the
+            # database that was just deleted. Retire it before the rerun, so the
+            # next render builds a service over the freshly created empty
+            # storage tree instead of reading and writing through a dead handle.
+            reset_service()
             st.session_state.pop("is_demo_data", None)
             st.success("🧹 All data cleared. CodeMemory has been reset to a fresh state.")
             st.rerun()

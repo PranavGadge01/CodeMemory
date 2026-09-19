@@ -13,8 +13,21 @@ class AccountService:
 
     def __init__(self, data_dir: str | Path = "data"):
         self.data_dir = Path(data_dir)
-        self.data_dir.mkdir(parents=True, exist_ok=True)
         self.file_path = self.data_dir / "account_connections.json"
+        self._ensure_dir()
+
+    def _ensure_dir(self) -> None:
+        """Create the connection store directory if it is absent.
+
+        The store is created on demand rather than assumed to exist: this
+        service is long-lived (it is cached behind the lazy
+        ``CodeMemoryService.leetcode`` surface) while the data tree beneath it
+        can be rebuilt at any time — the Settings "Clear All Data" action
+        removes ``data/`` and recreates only its top level. Recreating the
+        directory here keeps a stale service instance persisting connections
+        instead of failing with a ``FileNotFoundError`` on write.
+        """
+        self.data_dir.mkdir(parents=True, exist_ok=True)
 
     def _read_all(self) -> Dict[str, dict]:
         if not self.file_path.exists():
@@ -26,6 +39,7 @@ class AccountService:
             return {}
 
     def _write_all(self, data: Dict[str, dict]) -> None:
+        self._ensure_dir()
         with open(self.file_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, default=str)
 

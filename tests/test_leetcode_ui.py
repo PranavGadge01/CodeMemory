@@ -6,6 +6,7 @@ no network) plus direct unit tests of the page's pure formatting helpers.
 """
 
 import inspect
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
@@ -14,6 +15,7 @@ import pytest
 from streamlit.testing.v1 import AppTest
 
 from codememory.app.pages import settings_view
+from codememory.core.service import CodeMemoryService
 from codememory.connectors.account.models import SyncState, SyncStatus
 from codememory.connectors.leetcode.service import LeetCodeAccountError, LeetCodeAccountStatus
 
@@ -209,6 +211,77 @@ def test_connect_requires_a_username(page):
 
     assert any("valid LeetCode username" in (e.value or "") for e in app.error)
     assert leetcode.connect_calls == []
+
+
+@pytest.fixture
+def real_page(monkeypatch, tmp_path):
+    """Run the real Settings page against a real ``CodeMemoryService``.
+
+    Unlike :func:`page`, this does not stub ``service.leetcode``: it exercises
+    the whole persistence path the UI actually takes. The LeetCode transport is
+    mocked at the client boundary, and the process directory is moved to a
+    scratch tree so the page's relative ``data`` path can never reach the
+    developer's own data.
+    """
+
+    def run() -> tuple[AppTest, CodeMemoryService]:
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(
+            "codememory.connectors.leetcode.client.LeetCodeClient.fetch_user_profile",
+            lambda self, username: {
+                "username": username,
+                "real_name": username.title(),
+                "user_avatar": "https://leetcode.com/a.png",
+                "solved_all": 1,
+                "solved_easy": 1,
+                "solved_medium": 0,
+                "solved_hard": 0,
+                "ranking": 999,
+            },
+        )
+        service = CodeMemoryService()
+        monkeypatch.setattr(settings_view, "get_service", lambda: service)
+
+        runner = tmp_path / "run_settings_page.py"
+        runner.write_text(PAGE_RUNNER, encoding="utf-8")
+        return AppTest.from_file(str(runner)), service
+
+    return run
+
+
+def test_connect_persists_after_the_data_tree_was_cleared(real_page):
+    """The reported UI failure: connecting after "Clear All Data" rebuilt data/.
+
+    The page's ``service.leetcode`` surface is cached for the process, so its
+    account store directory disappears underneath it when the data tree is
+    rebuilt. Submitting a valid username must reconnect, not surface
+    ``[Errno 2] No such file or directory: 'data\\accounts\\...'``.
+    """
+    app, service = real_page()
+    app.run()
+    assert app.exception == []
+
+    store_dir = service.base_dir / "accounts"
+    assert store_dir.is_dir(), "the lazy surface created its account store"
+
+    # What the "Clear All Data" action leaves behind: data/ gone, then rebuilt
+    # as an empty top-level directory only.
+    import shutil
+
+    shutil.rmtree(service.base_dir)
+    service.base_dir.mkdir(parents=True, exist_ok=True)
+    assert not store_dir.exists()
+
+    app.text_input("lc_username_input").input("jaypatil1229")
+    app.button("btn_connect_account").click().run()
+
+    assert app.exception == []
+    account_file = store_dir / "account_connections.json"
+    assert account_file.is_file()
+    stored = json.loads(account_file.read_text(encoding="utf-8"))
+    assert stored["leetcode"]["username"] == "jaypatil1229"
+    # The rerun after a successful connect renders the connected account.
+    assert any("@jaypatil1229" in (m.value or "") for m in app.markdown)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

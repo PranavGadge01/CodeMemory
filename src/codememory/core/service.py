@@ -1,5 +1,6 @@
 """Core application service API for CodeMemory."""
 
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional, Sequence
@@ -38,6 +39,8 @@ from codememory.graph.knowledge_graph import KnowledgeGraphBuilder, KnowledgeGra
 
 if TYPE_CHECKING:
     from codememory.connectors.leetcode.service import LeetCodeAccountService
+
+logger = logging.getLogger(__name__)
 
 
 class CodeMemoryService:
@@ -542,6 +545,21 @@ class CodeMemoryService:
             v.get("status") == "ok" for k, v in results.items() if isinstance(v, dict) and "status" in v
         ) else "degraded"
         return results
+
+    def close_storage(self) -> None:
+        """Release the live storage resources this service instance holds.
+
+        Called when the instance is being retired — most importantly by "Clear
+        All Data", which deletes the storage tree out from under it. The DuckDB
+        connection it owns is registered process-wide by database path, so
+        unless it is unregistered here, the next service built against the same
+        path is handed this same dead handle and reads rows that no longer exist
+        on disk while its writes vanish.
+        """
+        try:
+            self.storage.close()
+        except Exception as exc:  # teardown must never block a rebuild
+            logger.warning("Failed to close storage while retiring a service: %s", exc)
 
     # 9. LeetCode account & sync surface
 

@@ -26,6 +26,40 @@ def get_service() -> CodeMemoryService:
         return _global_service_instance
 
 
+def reset_service() -> None:
+    """Retire the cached CodeMemoryService so the next caller builds a fresh one.
+
+    "Clear All Data" deletes the whole storage tree out from under the cached
+    service. That instance's DuckDB handle then points at a database file that
+    no longer exists: reads return rows that are gone from disk and writes
+    vanish, and — because the handle is registered process-wide by database
+    path — even a freshly built service would inherit it.
+
+    So the retired instance is asked to release its storage connection *before*
+    the caches are dropped, and both caches are then cleared: the Streamlit
+    resource cache for the running app and the module-level fallback used
+    outside a Streamlit runtime.
+    """
+    global _global_service_instance
+    # Close whichever instance is actually live first — it may be held by either
+    # cache, and clearing the caches without releasing its handle would leave the
+    # next service reading and writing through a connection to a deleted file.
+    retired = _global_service_instance
+    if retired is None:
+        try:
+            retired = _cached_service()
+        except Exception:
+            retired = None
+    if retired is not None:
+        retired.close_storage()
+    _global_service_instance = None
+    try:
+        _cached_service.clear()
+    except Exception:
+        # Outside a Streamlit runtime there is no resource cache to clear.
+        pass
+
+
 def apply_custom_css() -> None:
     """Inject custom CSS for premium developer UI aesthetics."""
     st.markdown(

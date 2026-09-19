@@ -125,15 +125,27 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
             taken.add(new_hash)
 
     def close(self) -> None:
-        """Close active DuckDB database connection."""
-        if hasattr(self, "conn") and self.conn:
-            try:
-                self.conn.close()
-            except Exception:
-                pass
-            finally:
-                if hasattr(self, "db_path"):
-                    _shared_duckdb_connections.pop(self.db_path, None)
+        """Close this instance's connection and drop it from the shared registry.
+
+        The registry is keyed by path and lives for the whole process, so a
+        handle left registered there is handed to a later ``DuckDBStorage``
+        instance — even after the database file has been deleted from disk,
+        which is exactly what "Clear All Data" does. A closing instance must
+        unregister its own handle, otherwise the next instance built against the
+        same path reads and writes through a connection to a file that no longer
+        exists.
+        """
+        if not (hasattr(self, "conn") and self.conn):
+            return
+        registered = _shared_duckdb_connections.get(self.db_path)
+        # Only unregister a handle this instance actually owns; a different
+        # instance may already have reopened the path underneath this one.
+        if registered is self.conn:
+            _shared_duckdb_connections.pop(self.db_path, None)
+        try:
+            self.conn.close()
+        except Exception:
+            pass
 
     def __del__(self) -> None:
         self.close()
@@ -212,11 +224,6 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
             );
         """
         )
-
-    def close(self) -> None:
-        """Close connection gracefully."""
-        if self.conn:
-            self.conn.close()
 
     def save(self, problem: Problem) -> Problem:
         """Upsert problem, attempts, submissions, and notes into DuckDB."""

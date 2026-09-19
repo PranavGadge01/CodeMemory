@@ -24,6 +24,14 @@ class CompositeStorage(ProblemRepository, SubmissionRepository, AttemptRepositor
         self.parquet_repo = ParquetStorage(data_dir=self.base_dir / "parquet")
         self.duckdb_repo = DuckDBStorage(db_path=db_path)
 
+    def close(self) -> None:
+        """Release the DuckDB connection this coordinator holds.
+
+        Only the DuckDB tier keeps a process-global handle; the filesystem and
+        Parquet tiers are stateless and need no teardown.
+        """
+        self.duckdb_repo.close()
+
     def save(self, problem: Problem) -> Problem:
         """Atomically persist problem across DuckDB, Parquet, and Filesystem."""
         # 1. Save in DuckDB
