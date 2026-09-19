@@ -18,11 +18,15 @@ class CompositeStorage(ProblemRepository, SubmissionRepository, AttemptRepositor
         base_dir: str | Path = "data",
         knowledge_dir: str | Path = "knowledge",
         db_path: str | Path = "data/codememory.duckdb",
+        *,
+        shared_duckdb_connection: bool = True,
     ):
         self.base_dir = Path(base_dir)
         self.fs_repo = FilesystemStorage(root_dir=knowledge_dir)
         self.parquet_repo = ParquetStorage(data_dir=self.base_dir / "parquet")
-        self.duckdb_repo = DuckDBStorage(db_path=db_path)
+        # A background sync worker passes shared_duckdb_connection=False so it
+        # gets its own DuckDB connection rather than the UI thread's pooled one.
+        self.duckdb_repo = DuckDBStorage(db_path=db_path, shared=shared_duckdb_connection)
 
     def close(self) -> None:
         """Release the DuckDB connection this coordinator holds.

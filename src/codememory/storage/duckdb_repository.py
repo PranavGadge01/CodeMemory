@@ -33,15 +33,28 @@ def _to_naive_utc(dt: datetime | None) -> datetime | None:
 
 
 class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
-    """DuckDB relational storage repository."""
+    """DuckDB relational storage repository.
 
-    def __init__(self, db_path: str | Path = "data/codememory.duckdb"):
+    Connections are normally pooled per database path for the process
+    (``shared=True``, the default). A background worker must ask for
+    ``shared=False`` instead: a single DuckDB connection is not safe for
+    concurrent use from two threads — interleaved statements corrupt each
+    other's result sets — while two separate connections to the same file are
+    serialised by DuckDB itself and are safe.
+    """
+
+    def __init__(
+        self,
+        db_path: str | Path = "data/codememory.duckdb",
+        *,
+        shared: bool = True,
+    ):
         self.db_path = str(db_path)
         if self.db_path != ":memory:":
             Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
 
         # 1. Reuse active connection in current process if available
-        if self.db_path in _shared_duckdb_connections:
+        if shared and self.db_path in _shared_duckdb_connections:
             try:
                 _shared_duckdb_connections[self.db_path].execute("SELECT 1")
                 self.conn = _shared_duckdb_connections[self.db_path]
@@ -56,7 +69,8 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
         # 2. Connect to disk file or fall back gracefully
         try:
             self.conn = duckdb.connect(self.db_path)
-            _shared_duckdb_connections[self.db_path] = self.conn
+            if shared:
+                _shared_duckdb_connections[self.db_path] = self.conn
             self._init_tables()
             self._repair_empty_submission_hashes()
         except duckdb.IOException:

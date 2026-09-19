@@ -183,11 +183,17 @@ def _handle_connect(leetcode, username: str) -> None:
     )
 
 
-def _handle_sync(leetcode) -> None:
-    """Run one sync and classify the result for display."""
+def _handle_sync(service) -> None:
+    """Run one sync through the scheduler's shared lock and classify the result.
+
+    Going through ``service.autosync.sync_now()`` rather than calling
+    ``service.leetcode.sync()`` directly means a manual sync and a scheduled one
+    can never run at the same time, and that the sync runs on the scheduler's
+    own connection instead of the one this render thread shares with the UI.
+    """
     with st.spinner("Syncing with LeetCode (public API)..."):
         try:
-            result = leetcode.sync()
+            result = service.autosync.sync_now()
         except Exception as exc:
             logger.warning("LeetCode sync failed: %s", exc)
             _store_outcome("error", f"❌ {safe_error_message(exc)}")
@@ -195,10 +201,10 @@ def _handle_sync(leetcode) -> None:
 
     style, message = _sync_result_message(result)
     notices = []
-    gap = _gap_explanation_for(leetcode.status())
+    gap = _gap_explanation_for(service.leetcode.status())
     if gap:
         notices.append(gap)
-    unavailable = _unavailable_fields_note(leetcode.status())
+    unavailable = _unavailable_fields_note(service.leetcode.status())
     if unavailable:
         notices.append(unavailable)
 
@@ -308,12 +314,99 @@ def _render_connected_account(status) -> None:
         st.warning(f"⚠️ Last sync error: {status.last_error}")
 
 
-def _render_account_actions(leetcode) -> None:
+def _fmt_duration(seconds: int) -> str:
+    """Render an interval in seconds as a short, human-readable duration."""
+    minutes = int(seconds) // 60
+    if minutes < 60:
+        return f"{minutes} min"
+    hours, remainder = divmod(minutes, 60)
+    if remainder == 0:
+        return f"{hours} h"
+    return f"{hours} h {remainder} min"
+
+
+def _render_autosync_section(service) -> None:
+    """Automatic background sync: enable/disable, interval, and worker state.
+
+    Every control here goes through ``service.autosync``. The worker is started
+    through the idempotent ``ensure_running()`` on every render, which is what
+    keeps a Streamlit rerun from spawning a second worker.
+    """
+    from codememory.connectors.leetcode.scheduler import (
+        MAX_INTERVAL_SECONDS,
+        MIN_INTERVAL_SECONDS,
+    )
+
+    scheduler = service.autosync
+    scheduler.ensure_running()
+    state = scheduler.status()
+
+    with st.expander("🔁 Automatic background sync", expanded=state.enabled):
+        st.markdown(
+            "Sync your recent LeetCode submissions on a timer in the background. "
+            "It runs the same public-API sync as **Sync Now**, on its own database "
+            "connection, so it never blocks or competes with this page. No "
+            "password, cookie or token is involved, and no data leaves your "
+            "machine beyond the public profile and recent-submission requests."
+        )
+
+        cols = st.columns([2, 1])
+        with cols[0]:
+            enabled = st.toggle("Enable automatic sync", value=state.enabled, key="lc_autosync_enabled")
+        with cols[1]:
+            minutes = st.number_input(
+                "Interval (minutes)",
+                min_value=MIN_INTERVAL_SECONDS // 60,
+                max_value=MAX_INTERVAL_SECONDS // 60,
+                value=max(MIN_INTERVAL_SECONDS // 60, state.interval_seconds // 60),
+                step=5,
+                key="lc_autosync_interval",
+                help=f"Clamped between {MIN_INTERVAL_SECONDS // 60} minutes and "
+                f"{MAX_INTERVAL_SECONDS // 60 // 60} hours, to stay polite toward the "
+                "public LeetCode endpoint.",
+            )
+
+        # A change is applied and then the page reruns, so the controls always
+        # reflect the persisted value rather than the uncommitted one.
+        if enabled != state.enabled:
+            scheduler.set_enabled(enabled)
+            if enabled:
+                _store_outcome(
+                    "success",
+                    f"🔁 Automatic LeetCode sync enabled — every {_fmt_duration(scheduler.interval_seconds)}.",
+                )
+            else:
+                _store_outcome("info", "🔁 Automatic LeetCode sync disabled. Sync will run only when you trigger it.")
+            return
+
+        applied = scheduler.set_interval(int(minutes) * 60)
+        if applied != state.interval_seconds:
+            _store_outcome("info", f"🔁 Automatic sync interval set to {_fmt_duration(applied)}.")
+            return
+
+        if state.running:
+            if state.waiting_for_account:
+                st.caption(
+                    "🟡 The scheduler is running but no LeetCode account is connected — "
+                    "it will start syncing as soon as you connect one above."
+                )
+            else:
+                st.caption(
+                    f"🟢 Running — next automatic sync around "
+                    f"**{_fmt_timestamp(state.next_run_at)}**."
+                )
+            if state.last_error:
+                st.caption(f"⚠️ Last automatic sync error: {state.last_error}")
+        else:
+            st.caption("⚪ Disabled — sync runs only when you trigger it manually.")
+
+
+def _render_account_actions(service, leetcode) -> None:
     """Sync and disconnect actions for a connected account."""
     act_col1, act_col2 = st.columns([1, 1])
     with act_col1:
         if st.button("🔄 Sync Now", type="primary", key="btn_sync_now"):
-            _handle_sync(leetcode)
+            _handle_sync(service)
 
     with act_col2:
         if st.button("🔌 Disconnect Account", key="btn_disconnect"):
@@ -421,9 +514,14 @@ def render_settings_page() -> None:
 
     if status.connected:
         _render_connected_account(status)
-        _render_account_actions(leetcode)
+        _render_account_actions(service, leetcode)
     else:
         _render_connect_form(leetcode)
+
+    # The scheduler is enabled independently of the account: you can turn it on
+    # first and connect afterwards. Rendered for both states so the toggle is
+    # always reachable.
+    _render_autosync_section(service)
 
     st.markdown("---")
 

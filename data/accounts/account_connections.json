@@ -1,0 +1,26 @@
+{
+  "leetcode": {
+    "provider": "LeetCode",
+    "username": "jaypatil1229",
+    "display_name": "Jay Patil",
+    "user_avatar": "https://assets.leetcode.com/users/uhO5kIdNdw/avatar_1773327199.png",
+    "status": "Connected",
+    "connected_at": "2026-09-19T09:48:39.523966Z",
+    "last_sync_at": null,
+    "last_sync_status": null,
+    "last_sync_error": null,
+    "capabilities": {
+      "profile_sync": true,
+      "progress_sync": true,
+      "recent_submissions": true,
+      "private_code_scraping": false
+    },
+    "metadata": {
+      "solved_all": 46,
+      "solved_easy": 27,
+      "solved_medium": 17,
+      "solved_hard": 2,
+      "ranking": 2885651
+    }
+  }
+}

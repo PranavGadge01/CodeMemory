@@ -51,13 +51,21 @@ class CodeMemoryService:
         base_dir: str | Path = "data",
         knowledge_dir: str | Path = "knowledge",
         db_path: str | Path = "data/codememory.duckdb",
+        *,
+        shared_duckdb_connection: bool = True,
     ):
         # Ensure base directories exist before storage layer initializes
         Path(base_dir).mkdir(parents=True, exist_ok=True)
         Path(knowledge_dir).mkdir(parents=True, exist_ok=True)
         self.base_dir = Path(base_dir)
         self.knowledge_dir = Path(knowledge_dir)
-        self.storage = CompositeStorage(base_dir=base_dir, knowledge_dir=knowledge_dir, db_path=db_path)
+        self._db_path = str(db_path)
+        self.storage = CompositeStorage(
+            base_dir=base_dir,
+            knowledge_dir=knowledge_dir,
+            db_path=db_path,
+            shared_duckdb_connection=shared_duckdb_connection,
+        )
         self.import_service = ImportService(storage=self.storage)
         self.exporter = KnowledgeExporter(output_dir=knowledge_dir)
         self.analytics_service = AnalyticsService(storage=self.storage)
@@ -65,7 +73,7 @@ class CodeMemoryService:
         self.pattern_analyzer = PatternAnalyzer(analytics_service=self.analytics_service)
         self.revision_service = RevisionService(storage=self.storage, analytics_service=self.analytics_service)
         self.insights_generator = InsightsGenerator(analytics_service=self.analytics_service, pattern_analyzer=self.pattern_analyzer)
-        
+
         # Phase 5, 6, & 7 services
         self.ai_provider = HeuristicAIProvider()
         self.evolution_service = EvolutionService(ai_provider=self.ai_provider)
@@ -80,6 +88,9 @@ class CodeMemoryService:
         # would pull the LeetCode transport into every service instantiation,
         # including processes that never touch LeetCode.
         self._leetcode_service: Optional["LeetCodeAccountService"] = None
+        # Phase E automatic sync. Also lazy, and deliberately *not* constructed
+        # here: a process that never opts in must never spawn a worker thread.
+        self._autosync: Optional["LeetCodeSyncScheduler"] = None
 
     # 1. Problem operations
     def add_problem(
@@ -555,11 +566,30 @@ class CodeMemoryService:
         unless it is unregistered here, the next service built against the same
         path is handed this same dead handle and reads rows that no longer exist
         on disk while its writes vanish.
+
+        The automatic sync worker is stopped first: it holds its own connection
+        into the same tree and must never outlive the service it belongs to.
         """
+        self.stop_autosync()
         try:
             self.storage.close()
         except Exception as exc:  # teardown must never block a rebuild
             logger.warning("Failed to close storage while retiring a service: %s", exc)
+
+    def stop_autosync(self) -> None:
+        """Stop this service's automatic sync worker, if one was ever started.
+
+        Retiring a service (notably through ``reset_service`` after "Clear All
+        Data") must not leave a worker thread syncing into a storage tree that
+        is about to be rebuilt. Safe to call when auto-sync was never used.
+        """
+        scheduler = self._autosync
+        if scheduler is None:
+            return
+        try:
+            scheduler.stop()
+        except Exception as exc:
+            logger.warning("Failed to stop LeetCode auto-sync worker: %s", exc)
 
     # 9. LeetCode account & sync surface
 
@@ -580,3 +610,23 @@ class CodeMemoryService:
                 account_service=AccountService(data_dir=self.base_dir / "accounts"),
             )
         return self._leetcode_service
+
+    @property
+    def autosync(self) -> "LeetCodeSyncScheduler":
+        """Optional background LeetCode sync scheduler (Phase E).
+
+        Lazily built so a process that never touches automatic sync never
+        spawns a worker thread. The scheduler runs each sync on a service of its
+        own with a *dedicated* DuckDB connection: the pooled connection the UI
+        thread uses is not safe for concurrent access, while two separate
+        connections to the same file are serialised by DuckDB.
+        """
+        if self._autosync is None:
+            from codememory.connectors.leetcode.scheduler import LeetCodeSyncScheduler
+
+            self._autosync = LeetCodeSyncScheduler(
+                base_dir=self.base_dir,
+                knowledge_dir=self.knowledge_dir,
+                db_path=self._db_path,
+            )
+        return self._autosync

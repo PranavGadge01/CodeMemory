@@ -217,8 +217,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     lc_parser.add_argument(
         "action",
-        choices=["connect", "sync", "status", "disconnect", "import", "preview", "validate"],
-        help="Account: connect <username> | sync | status | disconnect. Dataset: import | preview | validate <file>",
+        choices=["connect", "sync", "status", "disconnect", "autosync", "import", "preview", "validate"],
+        help="Account: connect <username> | sync | status | disconnect | autosync. Dataset: import | preview | validate <file>",
     )
     lc_parser.add_argument(
         "path",
@@ -232,6 +232,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=None,
         help="Sync only: cap on recent submissions requested from LeetCode (default 20, the public API's practical bound)",
+    )
+    lc_parser.add_argument(
+        "--interval",
+        type=int,
+        default=None,
+        help="autosync enable only: seconds between automatic syncs (clamped between 300 and 86400; default 3600)",
     )
 
     # 17. Memory command (Phase 7)
@@ -618,6 +624,56 @@ def main(args: list[str] | None = None) -> None:
                 else:
                     console.print("[yellow]No LeetCode account is connected — nothing to disconnect.[/yellow]")
                 sys.exit(0)
+
+            elif parsed.action == "autosync":
+                # Configuration only. A CLI process exits right after this, so it
+                # does not run the worker itself: the Streamlit app reads this
+                # persisted preference on startup and starts the scheduler then.
+                from codememory.connectors.leetcode.scheduler import (
+                    DEFAULT_INTERVAL_SECONDS,
+                    MAX_INTERVAL_SECONDS,
+                    MIN_INTERVAL_SECONDS,
+                )
+
+                scheduler = service.autosync
+                sub = (parsed.path or "").strip().lower()
+                if sub == "enable":
+                    applied = scheduler.set_interval(parsed.interval if parsed.interval is not None else DEFAULT_INTERVAL_SECONDS)
+                    scheduler.set_enabled(True)
+                    console.print(
+                        f"[bold green]Automatic LeetCode sync enabled[/bold green], every "
+                        f"{applied} seconds."
+                    )
+                    console.print(
+                        "[dim]The running web app picks this up on its next restart; "
+                        "a sync runs immediately when it starts.[/dim]"
+                    )
+                    sys.exit(0)
+                if sub == "disable":
+                    scheduler.set_enabled(False)
+                    console.print("[bold green]Automatic LeetCode sync disabled[/bold green].")
+                    sys.exit(0)
+                if sub in ("status", ""):
+                    state = scheduler.status()
+                    console.print(f"Automatic sync : {'[green]enabled[/green]' if state.enabled else '[dim]disabled[/dim]'}")
+                    console.print(f"Interval       : {state.interval_seconds} seconds")
+                    console.print(f"Worker running : {'yes' if state.running else 'no'}")
+                    if state.enabled and not leetcode.is_connected():
+                        console.print(
+                            "[yellow]No LeetCode account is connected — the scheduler "
+                            "waits and syncs nothing until you connect one.[/yellow]"
+                        )
+                    console.print(
+                        f"[dim]Bounds: {MIN_INTERVAL_SECONDS}–{MAX_INTERVAL_SECONDS} seconds. "
+                        "The app data directory stores this preference.[/dim]"
+                    )
+                    sys.exit(0)
+
+                console.print(
+                    "[bold red]Usage:[/bold red] codememory leetcode autosync "
+                    "<enable|disable|status> [--interval SECONDS]"
+                )
+                sys.exit(1)
 
             else:  # import / preview / validate — manual dataset fallback
                 from codememory.connectors.leetcode.importer import LeetCodeImporter

@@ -17,6 +17,7 @@ from streamlit.testing.v1 import AppTest
 from codememory.app.pages import settings_view
 from codememory.core.service import CodeMemoryService
 from codememory.connectors.account.models import SyncState, SyncStatus
+from codememory.connectors.leetcode.scheduler import AutosyncStatus
 from codememory.connectors.leetcode.service import LeetCodeAccountError, LeetCodeAccountStatus
 
 SECRET_COOKIE = "LEETCODE_SESSION=FAKE_SESSION_VALUE_123"
@@ -69,6 +70,45 @@ class FakeLeetCode:
         return was_connected
 
 
+class FakeAutosync:
+    """Stand-in for ``service.autosync``; auto-sync is off by default in tests.
+
+    ``sync_now`` delegates to the stubbed LeetCode surface, so a test still
+    controls the outcome of the page's manual sync through ``FakeLeetCode``.
+    """
+
+    interval_seconds = 3600
+
+    def __init__(self, leetcode: "FakeLeetCode") -> None:
+        self._leetcode = leetcode
+        self.ensure_running_calls = 0
+        self.sync_now_calls = 0
+
+    def ensure_running(self) -> None:
+        self.ensure_running_calls += 1
+
+    def status(self):
+        return AutosyncStatus(
+            enabled=False,
+            interval_seconds=self.interval_seconds,
+            running=False,
+            last_run_at=None,
+            next_run_at=None,
+            waiting_for_account=False,
+            last_error=None,
+        )
+
+    def set_enabled(self, enabled: bool) -> None:
+        pass
+
+    def set_interval(self, seconds):
+        return self.interval_seconds
+
+    def sync_now(self, limit=None, *, block=False) -> SyncStatus:
+        self.sync_now_calls += 1
+        return self._leetcode.sync(limit)
+
+
 @pytest.fixture
 def page(monkeypatch, tmp_path: Path):
     """Return a helper that runs the Settings page against a stubbed surface."""
@@ -77,7 +117,9 @@ def page(monkeypatch, tmp_path: Path):
         leetcode = FakeLeetCode()
         if status_overrides:
             leetcode.status_value = LeetCodeAccountStatus(**status_overrides)
-        service = SimpleNamespace(leetcode=leetcode, history=leetcode.history)
+        service = SimpleNamespace(
+            leetcode=leetcode, history=leetcode.history, autosync=FakeAutosync(leetcode)
+        )
         monkeypatch.setattr(settings_view, "get_service", lambda: service)
 
         runner = tmp_path / "run_settings_page.py"

@@ -36,6 +36,9 @@ service.leetcode.status()            # LeetCodeAccountStatus for display
 service.leetcode.disconnect()        # drop account state, keep history
 ```
 
+An optional timer can drive that same `sync()` call in the background, through
+`service.autosync` (see [Automatic background sync](#automatic-background-sync)).
+
 Neither the Streamlit pages nor the CLI construct the sync engine or the GraphQL
 client directly.
 
@@ -103,6 +106,29 @@ python -m codememory.cli.main leetcode status
 python -m codememory.cli.main leetcode disconnect
 ```
 
+### Automatic background sync
+
+The CLI configures the scheduler's persisted preference; the running web app
+picks it up on its next start (a CLI process exits, so it does not run the worker
+itself):
+
+```bash
+# Turn automatic sync on, every 15 minutes (clamped to 5 min – 24 h)
+python -m codememory.cli.main leetcode autosync enable --interval 900
+
+# Use the default interval of one hour
+python -m codememory.cli.main leetcode autosync enable
+
+# Turn it off
+python -m codememory.cli.main leetcode autosync disable
+
+# Show the configuration and whether the app's worker is running
+python -m codememory.cli.main leetcode autosync status
+```
+
+`enable` and `disable` exit `0`; an unrecognised subcommand exits `1`.
+
+
 Exit codes for scripting:
 
 | Command / outcome | Exit code |
@@ -152,13 +178,61 @@ Open **Settings → LeetCode Account Connection**:
    in window, truncation, gap detection and the fields the public API cannot
    supply.
 5. **Sync Now** runs one sync and reports `Success`, `Partial` or `Failed`
-   distinctly — a partial run is never displayed as success.
+   distinctly — a partial run is never displayed as success. It goes through the
+   scheduler's lock (see [Automatic background sync](#automatic-background-sync)),
+   so it cannot overlap a scheduled sync.
 6. **Disconnect Account** removes the connection and sync state and tells you
    your imported history has been preserved.
 
 A gap is always accompanied by an honest explanation: the missing submissions
 exist on LeetCode but are unreachable through the public recent-submission
 window, and re-syncing will not fetch them.
+
+### Automatic background sync
+
+**Settings → LeetCode Account Connection → Automatic background sync** lets the
+app sync on a timer instead of on demand. It is **off by default** and stays off
+until you turn it on; a process that never opts in never starts the worker.
+
+```python
+service.autosync.ensure_running()          # start it if it is enabled (idempotent)
+service.autosync.set_enabled(True)         # turn it on and start the worker
+service.autosync.set_interval(900)         # seconds; clamped to 5 min – 24 h
+service.autosync.sync_now()                # one manual sync through the same lock
+service.autosync.status()                  # enabled / interval / running / next run
+```
+
+What it does — and just as importantly, what it does not:
+
+- **It runs the same sync as Sync Now.** The scheduler adds no sync logic of its
+  own: it calls `service.leetcode.sync()` on a `CodeMemoryService` of its own and
+  reaches nothing else. No transport, no retry policy, no pagination, no
+  watermark handling — those stay in the sync engine.
+- **It syncs on its own DuckDB connection.** A single DuckDB connection is not
+  safe for concurrent use from two threads, so the worker builds its service with
+  `shared_duckdb_connection=False`. Two connections to the same file are
+  serialised by DuckDB itself, so a background sync never blocks the UI thread.
+- **It never overlaps itself or a manual sync.** One non-reentrant lock covers
+  both the scheduled ticks and `sync_now`, and it is released on `Success`,
+  `Partial`, `Failed` and on any exception. If a manual sync is in flight when a
+  tick is due, the tick is skipped rather than queued; if you click **Sync Now**
+  while one is running, you are told so instead of waiting.
+- **No account, no traffic.** Every tick first checks the local connection store.
+  With no connected account the tick does nothing — no request, no database
+  connection. Disconnecting therefore stops the scheduled traffic without
+  silently rewriting your preference.
+- **A failing tick does not stop the scheduler.** The outcome is logged and the
+  next interval gets another chance. Errors surfaced through `status()` are
+  scrubbed, like every other message in this integration.
+- **One worker, ever.** `start()` is idempotent and the scheduler is a lazy
+  per-service singleton, so repeated Streamlit reruns cannot stack or duplicate
+  workers. The worker is a daemon thread and stops when the service is retired —
+  notably by **Clear All Data**, which also deletes the preference file.
+
+The preference (`enabled`, `interval`) is stored as plain JSON at
+`data/leetcode_autosync.json`, written atomically; a missing or unreadable file
+always falls back to *disabled*. The interval is clamped between 5 minutes and
+24 hours to stay polite toward the unauthenticated endpoint.
 
 ### Dataset import
 
@@ -414,13 +488,20 @@ All data stays in your local `data/` directory.
    They are never fabricated. Import an export file when you need them.
 3. **Detected gaps are not recoverable by syncing**: if the window moves past the
    local watermark, the missing submissions are reported but cannot be fetched.
-4. **No background scheduling**: sync runs only when triggered from the UI or CLI.
+4. **Automatic sync is bounded by the same window**: a scheduled sync is exactly
+   the same public-API run as a manual one, so it can never recover a gap or
+   fetch older submissions — and it cannot sync at all while no account is
+   connected.
 5. **No problem statement import**: LeetCode problem statements are copyrighted and
    are not parsed from exported data. The `problem.md` description field will be
    empty unless you manually add it.
 6. **Code availability (import)**: submitted code is only included if your export
    tool captures it. Many LeetCode export tools capture only metadata.
 7. **CSV encoding**: CSV files must be UTF-8 encoded.
+8. **Auto-sync preference is per installation**: the preference lives in
+   `data/leetcode_autosync.json`, so "Clear All Data" removes it along with
+   everything else, and a running app does not pick up a preference changed from
+   the CLI until it restarts.
 
 ---
 
@@ -440,6 +521,20 @@ CodeMemoryService.leetcode  ← the only surface UI and CLI use
         ↓
 ImportService → CompositeStorage → Analytics / Search / Patterns / Revision
 ```
+
+Phase E adds one component beside that chain, and it adds *no* logic of its own —
+it only times the canonical call:
+
+```
+LeetCodeSyncScheduler (Phase E: enable/disable, interval, one worker thread)
+        │  calls service.leetcode.sync() and nothing else
+        ↓
+a CodeMemoryService of its own, built with shared_duckdb_connection=False
+```
+
+The scheduler owns no retry, backoff, timeout or pagination: a failing tick is
+logged and the next interval tries again, so transport hardening stays exactly
+where it already was.
 
 The transport client class in `src/codememory/connectors/leetcode/client.py`
 implements the GraphQL interface:
@@ -475,6 +570,9 @@ Live integration tests are marked `live` and excluded from the default selection
 Key test files:
 - `tests/test_leetcode_cli.py`: CLI connect/sync/status/disconnect, exit codes, secret scrubbing
 - `tests/test_leetcode_ui.py`: Settings page driven through Streamlit's `AppTest` runner
+- `tests/test_leetcode_autosync_phase_e.py`: the background scheduler — lifecycle, the shared
+  sync lock, failure recovery, Settings and CLI integration. No test sleeps or reaches the
+  network: intervals are injected through the scheduler's `wait_fn` seam.
 - `tests/test_leetcode_service_phase_c.py`: the account/sync service surface
 - `tests/test_leetcode_sync_phase_b.py`: the sync contract (window, watermark, gap, coverage)
 - `tests/test_leetcode_client_network.py`: transport hardening (timeouts, retries, rate limits)
