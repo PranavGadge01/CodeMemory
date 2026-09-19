@@ -626,9 +626,11 @@ def main(args: list[str] | None = None) -> None:
                 sys.exit(0)
 
             elif parsed.action == "autosync":
-                # Configuration only. A CLI process exits right after this, so it
-                # does not run the worker itself: the Streamlit app reads this
-                # persisted preference on startup and starts the scheduler then.
+                # Configuration only. A CLI process exits the moment this command
+                # finishes, so the preference is persisted and no worker is
+                # started here: a daemon thread launched in a process that is
+                # about to die can be killed mid-sync. The running web app reads
+                # this file on its next start and owns the worker lifecycle.
                 from codememory.connectors.leetcode.scheduler import (
                     DEFAULT_INTERVAL_SECONDS,
                     MAX_INTERVAL_SECONDS,
@@ -638,8 +640,8 @@ def main(args: list[str] | None = None) -> None:
                 scheduler = service.autosync
                 sub = (parsed.path or "").strip().lower()
                 if sub == "enable":
-                    applied = scheduler.set_interval(parsed.interval if parsed.interval is not None else DEFAULT_INTERVAL_SECONDS)
-                    scheduler.set_enabled(True)
+                    requested = parsed.interval if parsed.interval is not None else DEFAULT_INTERVAL_SECONDS
+                    applied = scheduler.persist_preference(True, interval_seconds=requested)
                     console.print(
                         f"[bold green]Automatic LeetCode sync enabled[/bold green], every "
                         f"{applied} seconds."
@@ -650,7 +652,7 @@ def main(args: list[str] | None = None) -> None:
                     )
                     sys.exit(0)
                 if sub == "disable":
-                    scheduler.set_enabled(False)
+                    scheduler.persist_preference(False)
                     console.print("[bold green]Automatic LeetCode sync disabled[/bold green].")
                     sys.exit(0)
                 if sub in ("status", ""):

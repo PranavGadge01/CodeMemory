@@ -289,6 +289,57 @@ def test_enabling_persists_preference_and_starts_worker(tmp_path: Path):
     assert scheduler.is_running is False
 
 
+def test_persist_preference_writes_the_config_without_a_worker(tmp_path: Path):
+    """The configuration-only path a short-lived process must take.
+
+    ``persist_preference`` is what the CLI uses: the process exits as soon as the
+    command finishes, so a worker started here would be killed mid-sync. It must
+    write the preference and touch no thread.
+    """
+    scheduler, _, _, _ = _build(tmp_path)
+
+    applied = scheduler.persist_preference(True, interval_seconds=900)
+
+    assert applied == 900
+    assert scheduler.enabled is True
+    assert scheduler.is_running is False, "no worker is started in this process"
+    assert scheduler._thread is None, "no thread object is left behind to join later"
+    stored = json.loads((tmp_path / "data" / "leetcode_autosync.json").read_text(encoding="utf-8"))
+    assert stored == {"enabled": True, "interval_seconds": 900}
+
+    # The next process reads the preference but still has to opt into the worker.
+    second, _, _, _ = _build(tmp_path)
+    assert second.enabled is True
+    assert second.is_running is False
+
+
+def test_persist_preference_does_not_touch_a_running_worker(tmp_path: Path):
+    """Configuring must not stop a worker the application already owns."""
+    release = threading.Event()
+    scheduler, _, _, _ = _build(tmp_path, enabled=True, wait_fn=_latched_wait(release))
+    scheduler.start()
+    try:
+        applied = scheduler.persist_preference(False, interval_seconds=10)
+
+        # The preference is what a later process will read...
+        assert applied == MIN_INTERVAL_SECONDS, "the interval is still clamped"
+        assert scheduler.enabled is False
+        # ...while this process's worker is left alone: only the app retires it.
+        assert scheduler.is_running is True
+    finally:
+        release.set()
+        scheduler.stop(timeout=5)
+
+
+def test_persist_preference_falls_back_to_the_current_interval(tmp_path: Path):
+    """Omitting the interval keeps the one already configured."""
+    scheduler, _, _, _ = _build(tmp_path)
+
+    assert scheduler.persist_preference(True) == DEFAULT_INTERVAL_SECONDS
+    scheduler.set_interval(1800)
+    assert scheduler.persist_preference(False) == 1800
+
+
 def test_set_interval_clamps_to_bounds_and_persists(tmp_path: Path):
     scheduler, _, _, _ = _build(tmp_path)
 
@@ -760,6 +811,7 @@ class FakeAutosync:
         self.ensure_running_calls = 0
         self.enabled = False
         self.set_enabled_calls: List[bool] = []
+        self.persist_calls: List[Any] = []
         self.set_interval_calls: List[Any] = []
         self.sync_now_calls = 0
         self.sync_result = _sync()
@@ -782,6 +834,13 @@ class FakeAutosync:
     def set_enabled(self, enabled: bool) -> None:
         self.enabled = bool(enabled)
         self.set_enabled_calls.append(bool(enabled))
+
+    def persist_preference(self, enabled: bool, interval_seconds: Optional[Any] = None) -> int:
+        self.enabled = bool(enabled)
+        self.persist_calls.append((bool(enabled), interval_seconds))
+        if interval_seconds is None:
+            return self.interval_seconds
+        return self.set_interval(interval_seconds)
 
     def set_interval(self, seconds: Any) -> int:
         self.set_interval_calls.append(seconds)
@@ -930,8 +989,10 @@ def test_cli_autosync_enable_persists_and_exits_zero(capsys, cli):
         cli_main.main(["leetcode", "autosync", "enable", "--interval", "600"])
     assert excinfo.value.code == 0
 
-    assert cli.set_interval_calls == [600]
-    assert cli.set_enabled_calls == [True]
+    # The CLI persists the configuration through the worker-free entry point: a
+    # CLI process exits at once, so it must not launch a worker that dies with it.
+    assert cli.persist_calls == [(True, 600)]
+    assert cli.set_enabled_calls == [], "the CLI must not touch the worker lifecycle"
     assert "Automatic LeetCode sync enabled" in _output(capsys)
 
 
@@ -939,14 +1000,17 @@ def test_cli_autosync_enable_without_interval_uses_default(capsys, cli):
     with pytest.raises(SystemExit):
         cli_main.main(["leetcode", "autosync", "enable"])
 
-    assert cli.set_interval_calls == [DEFAULT_INTERVAL_SECONDS]
+    # The CLI always writes an explicit interval, defaulted when none was given.
+    assert cli.persist_calls == [(True, DEFAULT_INTERVAL_SECONDS)]
+    assert cli.set_enabled_calls == []
 
 
 def test_cli_autosync_disable(capsys, cli):
     with pytest.raises(SystemExit):
         cli_main.main(["leetcode", "autosync", "disable"])
 
-    assert cli.set_enabled_calls == [False]
+    assert cli.persist_calls == [(False, None)]
+    assert cli.set_enabled_calls == [], "disabling from the CLI persists only"
     assert "disabled" in _output(capsys)
 
 

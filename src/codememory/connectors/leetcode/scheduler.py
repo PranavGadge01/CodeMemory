@@ -103,6 +103,8 @@ class LeetCodeSyncScheduler:
 
     Constructing one is side-effect free. Call :meth:`set_enabled` (or
     :meth:`ensure_running`) to start the worker, and :meth:`stop` to end it.
+    :meth:`persist_preference` writes the configuration *without* starting a
+    worker, which is what a short-lived process such as the CLI must do.
     Manual syncs should go through :meth:`sync_now` so they share the same lock
     as the scheduled ones.
     """
@@ -192,14 +194,34 @@ class LeetCodeSyncScheduler:
         """Enable or disable automatic sync, persist the choice, and apply it.
 
         Disabling stops the worker; enabling starts it. Persisting means a
-        preference set from the CLI is honoured by the next UI session.
+        preference set in one process is honoured by the next.
+
+        Processes that cannot host a worker — the CLI, which exits as soon as the
+        command finishes — must use :meth:`persist_preference` instead, so the
+        choice is written without starting a thread that dies with the process.
         """
-        self._enabled = bool(enabled)
-        self._save_config()
+        self.persist_preference(enabled)
         if self._enabled:
             self.ensure_running()
         else:
             self.stop()
+
+    def persist_preference(self, enabled: bool, interval_seconds: Optional[Any] = None) -> int:
+        """Write the preference (and optionally the interval) without a worker.
+
+        This is ``set_enabled`` for short-lived processes. Nothing is started and
+        nothing is stopped here, so no thread in this process outlives the call or
+        is killed with the process when it exits. The next long-lived process —
+        the web app — reads the file and owns the worker lifecycle itself.
+
+        Returns the interval actually applied, clamped to its bounds, so a caller
+        can report the real number back rather than the one that was typed.
+        """
+        if interval_seconds is not None:
+            self._interval_seconds = _clamp_interval(interval_seconds)
+        self._enabled = bool(enabled)
+        self._save_config()
+        return self._interval_seconds
 
     def set_interval(self, seconds: Any) -> int:
         """Set the sync interval (clamped to its bounds) and persist it.

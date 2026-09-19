@@ -108,9 +108,10 @@ python -m codememory.cli.main leetcode disconnect
 
 ### Automatic background sync
 
-The CLI configures the scheduler's persisted preference; the running web app
-picks it up on its next start (a CLI process exits, so it does not run the worker
-itself):
+The CLI writes the scheduler's persisted preference and exits; it never starts a
+worker, because a CLI process ends as soon as the command finishes and would take
+a mid-sync daemon thread with it. The running web app picks the preference up on
+its next start and owns the worker:
 
 ```bash
 # Turn automatic sync on, every 15 minutes (clamped to 5 min – 24 h)
@@ -198,9 +199,15 @@ until you turn it on; a process that never opts in never starts the worker.
 service.autosync.ensure_running()          # start it if it is enabled (idempotent)
 service.autosync.set_enabled(True)         # turn it on and start the worker
 service.autosync.set_interval(900)         # seconds; clamped to 5 min – 24 h
+service.autosync.persist_preference(True, 900)  # write the preference, no worker
 service.autosync.sync_now()                # one manual sync through the same lock
 service.autosync.status()                  # enabled / interval / running / next run
 ```
+
+`set_enabled` is the application path: it persists the choice *and* applies it in
+this process. `persist_preference` is for a process that cannot host a worker —
+the CLI, which exits at once — so it writes the file and starts nothing. The next
+long-lived process reads the file and decides.
 
 What it does — and just as importantly, what it does not:
 
@@ -227,7 +234,9 @@ What it does — and just as importantly, what it does not:
 - **One worker, ever.** `start()` is idempotent and the scheduler is a lazy
   per-service singleton, so repeated Streamlit reruns cannot stack or duplicate
   workers. The worker is a daemon thread and stops when the service is retired —
-  notably by **Clear All Data**, which also deletes the preference file.
+  notably by **Clear All Data**, which stops it *before* the storage tree is
+  deleted and also removes the preference file, so the cleared app starts with
+  automatic sync off rather than resurrecting the previous setting.
 
 The preference (`enabled`, `interval`) is stored as plain JSON at
 `data/leetcode_autosync.json`, written atomically; a missing or unreadable file

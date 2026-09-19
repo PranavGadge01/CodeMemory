@@ -7,6 +7,9 @@ engine or the GraphQL client, and it never asks for or displays credentials.
 
 from datetime import datetime, timezone
 import logging
+import shutil
+import time
+from pathlib import Path
 
 import streamlit as st
 
@@ -31,6 +34,40 @@ _COVERAGE_EXPLANATION = (
 )
 
 _ACTION_OUTCOME_KEY = "lc_action_outcome"
+
+# A delete can race a handle that is still being let go of: an antivirus scan, a
+# DuckDB connection closed a moment earlier, or a directory watcher. Retrying
+# briefly turns a transient lock into a completed clear rather than a
+# half-deleted storage tree.
+_CLEAR_MAX_ATTEMPTS = 4
+_CLEAR_RETRY_DELAY_SECONDS = 0.25
+
+
+def _clear_storage_tree() -> None:
+    """Delete and rebuild the storage tree, tolerating a transient file lock.
+
+    Raises the last failure if a tree cannot be cleared, so the page reports the
+    problem instead of claiming success over a torn storage state.
+    """
+    for directory in ("data", "knowledge"):
+        path = Path(directory)
+        last_error: Exception | None = None
+        for _attempt in range(_CLEAR_MAX_ATTEMPTS):
+            try:
+                if path.exists():
+                    shutil.rmtree(path)
+                last_error = None
+                break
+            except FileNotFoundError:
+                # Already gone — the outcome the clear was asking for.
+                last_error = None
+                break
+            except (PermissionError, OSError) as exc:
+                last_error = exc
+                time.sleep(_CLEAR_RETRY_DELAY_SECONDS)
+        if last_error is not None:
+            raise last_error
+        path.mkdir(parents=True, exist_ok=True)
 
 
 def _fmt_timestamp(value: datetime | None) -> str:
@@ -587,19 +624,33 @@ def render_settings_page() -> None:
     st.markdown("⚠️ **Clear all CodeMemory data.** This permanently deletes all problems, submissions, attempts, notes, and cached analyses.")
     if st.checkbox("☑️ I understand this will permanently delete ALL my CodeMemory data", key="confirm_clear"):
         if st.button("🗑️ Clear All Data", type="primary", key="btn_clear_all"):
-            import shutil
-            from pathlib import Path
-            for d in ["data", "knowledge"]:
-                p = Path(d)
-                if p.exists():
-                    shutil.rmtree(p)
-                p.mkdir(parents=True, exist_ok=True)
-            # The cached service still holds a DuckDB handle pointing at the
-            # database that was just deleted. Retire it before the rerun, so the
-            # next render builds a service over the freshly created empty
-            # storage tree instead of reading and writing through a dead handle.
+            # The cached service — and the LeetCode autosync worker it owns —
+            # hold open handles into the tree that is about to be deleted. They
+            # must be retired FIRST. Deleting the tree while a DuckDB handle or a
+            # syncing worker is still live races the filesystem (on Windows that
+            # is WinError 32 on an open file) and can leave the app reading and
+            # writing through handles to files that no longer exist.
             reset_service()
+            try:
+                _clear_storage_tree()
+            except Exception as exc:
+                logger.warning("Clear All Data could not delete the storage tree: %s", exc)
+                st.error(
+                    "❌ Some files could not be deleted — they may be held open by "
+                    "another program (an editor, an antivirus scan, another "
+                    "CodeMemory window). Your data was left in place; close what "
+                    "holds it and try again."
+                )
+                return
             st.session_state.pop("is_demo_data", None)
+            # The autosync preference file lived in the tree that was just
+            # deleted, so the scheduler now reads *disabled*. The toggle and
+            # interval widgets keep their old values across the rerun, though,
+            # which would look enabled and — worse — re-enable and restart the
+            # worker on the next render. Drop them so the controls are rebuilt
+            # from the cleared state instead of from a stale one.
+            for _widget_key in ("lc_autosync_enabled", "lc_autosync_interval"):
+                st.session_state.pop(_widget_key, None)
             st.success("🧹 All data cleared. CodeMemory has been reset to a fresh state.")
             st.rerun()
 

@@ -395,3 +395,94 @@ def test_cli_never_uses_the_low_level_client():
     source = inspect.getsource(cli_main)
     for forbidden in ("LeetCodeSyncEngine(", "LeetCodeClient(", "fetch_user_submissions", "account_service"):
         assert forbidden not in source, f"CLI must not use low-level LeetCode plumbing: {forbidden!r}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# autosync — the CLI must configure, never host a worker
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _real_scheduler(tmp_path):
+    """A real scheduler over a sandbox, so thread lifecycle is the real thing."""
+    from codememory.connectors.leetcode.scheduler import LeetCodeSyncScheduler
+
+    return LeetCodeSyncScheduler(
+        base_dir=tmp_path / "data",
+        knowledge_dir=tmp_path / "knowledge",
+        db_path=tmp_path / "data" / "codememory.duckdb",
+    )
+
+
+def _cli_with_scheduler(monkeypatch, tmp_path, scheduler):
+    service = SimpleNamespace(leetcode=MagicMock(), autosync=scheduler)
+    monkeypatch.setattr(cli_main, "CodeMemoryService", lambda *a, **k: service)
+    return scheduler
+
+
+def test_cli_autosync_enable_persists_without_starting_a_worker(monkeypatch, tmp_path):
+    """The CLI process exits at once, so ``enable`` must leave no worker behind.
+
+    Runs the real scheduler rather than a stub, so the absent thread is the real
+    behaviour and not an artifact of the stand-in.
+    """
+    import json
+    import threading
+
+    from codememory.connectors.leetcode.scheduler import DEFAULT_INTERVAL_SECONDS
+
+    scheduler = _cli_with_scheduler(monkeypatch, tmp_path, _real_scheduler(tmp_path))
+    # Threads from other tests in the same session are none of this test's
+    # business; what must not exist afterwards is one this command started.
+    threads_before = {thread.ident for thread in threading.enumerate()}
+
+    with pytest.raises(SystemExit) as excinfo:
+        main(["leetcode", "autosync", "enable", "--interval", "600"])
+
+    assert excinfo.value.code == 0
+    stored = json.loads((tmp_path / "data" / "leetcode_autosync.json").read_text(encoding="utf-8"))
+    assert stored == {"enabled": True, "interval_seconds": 600}
+
+    # The preference is what survives the process; a worker is not.
+    assert scheduler.enabled is True
+    assert scheduler.is_running is False
+    assert scheduler._thread is None
+    leftover = [
+        thread
+        for thread in threading.enumerate()
+        if thread.ident not in threads_before and thread.is_alive() and thread.name == "codememory-leetcode-autosync"
+    ]
+    assert leftover == [], "a CLI process must not leave an autosync worker running"
+
+    # The next process to read the preference still has to opt into the worker.
+    second = _real_scheduler(tmp_path)
+    assert second.enabled is True
+    assert second.is_running is False
+
+
+def test_cli_autosync_enable_defaults_the_interval(monkeypatch, tmp_path):
+    import json
+
+    from codememory.connectors.leetcode.scheduler import DEFAULT_INTERVAL_SECONDS
+
+    scheduler = _cli_with_scheduler(monkeypatch, tmp_path, _real_scheduler(tmp_path))
+
+    with pytest.raises(SystemExit):
+        main(["leetcode", "autosync", "enable"])
+
+    stored = json.loads((tmp_path / "data" / "leetcode_autosync.json").read_text(encoding="utf-8"))
+    assert stored == {"enabled": True, "interval_seconds": DEFAULT_INTERVAL_SECONDS}
+    assert scheduler.is_running is False
+
+
+def test_cli_autosync_disable_persists_without_a_worker(monkeypatch, tmp_path):
+    import json
+
+    scheduler = _cli_with_scheduler(monkeypatch, tmp_path, _real_scheduler(tmp_path))
+
+    with pytest.raises(SystemExit) as excinfo:
+        main(["leetcode", "autosync", "disable"])
+
+    assert excinfo.value.code == 0
+    stored = json.loads((tmp_path / "data" / "leetcode_autosync.json").read_text(encoding="utf-8"))
+    assert stored["enabled"] is False
+    assert scheduler.is_running is False

@@ -36,9 +36,12 @@ ENV/
 # Data & Knowledge base (Local User Data)
 data/*.duckdb
 data/*.parquet
+data/accounts/
+data/parquet/
 data/problems/
 data/attempts/
 data/submissions/
+data/*.json
 knowledge/*/
 
 # IDEs & OS
