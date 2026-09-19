@@ -11,23 +11,52 @@ import Link from "next/link";
 
 const COLLAPSE_KEY = "codememory.sidebar.collapsed";
 
+function subscribeCollapsed(notify: () => void) {
+  window.addEventListener("storage", notify);
+  return () => window.removeEventListener("storage", notify);
+}
+
+function readCollapsed(): boolean {
+  try {
+    return window.localStorage.getItem(COLLAPSE_KEY) === "1";
+  } catch {
+    /* storage unavailable — treat as not collapsed */
+    return false;
+  }
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = React.useState(false);
+
+  // The collapse preference lives in localStorage, an external store, so it is
+  // read through `useSyncExternalStore` rather than a setState-in-effect. The
+  // server snapshot is always `false` — localStorage is unavailable during SSR
+  // — which also means the first client render matches the server HTML, so the
+  // shell hydrates expanded and then settles to the stored preference.
+  const storedCollapsed = React.useSyncExternalStore(
+    subscribeCollapsed,
+    readCollapsed,
+    () => false,
+  );
+  // Session-only override, so the rail still toggles when writing to storage
+  // fails (blocked storage, private browsing) instead of freezing in place.
+  const [override, setOverride] = React.useState<boolean | null>(null);
+  const collapsed = override ?? storedCollapsed;
+
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
-  // Restore the collapse preference; localStorage is unavailable during SSR.
-  React.useEffect(() => {
-    try {
-      setCollapsed(window.localStorage.getItem(COLLAPSE_KEY) === "1");
-    } catch {
-      /* storage unavailable — keep the default */
-    }
-  }, []);
+  // Close the mobile drawer whenever the route changes. Compared against the
+  // previous pathname during render — rather than in an effect — so the drawer
+  // closes before the new route paints instead of afterwards.
+  const [previousPathname, setPreviousPathname] = React.useState(pathname);
+  if (pathname !== previousPathname) {
+    setPreviousPathname(pathname);
+    setMobileOpen(false);
+  }
 
   const toggleCollapsed = React.useCallback(() => {
-    setCollapsed((prev) => {
-      const next = !prev;
+    setOverride((prev) => {
+      const next = !(prev ?? storedCollapsed);
       try {
         window.localStorage.setItem(COLLAPSE_KEY, next ? "1" : "0");
       } catch {
@@ -35,12 +64,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       }
       return next;
     });
-  }, []);
-
-  // Close the mobile drawer whenever the route changes.
-  React.useEffect(() => {
-    setMobileOpen(false);
-  }, [pathname]);
+  }, [storedCollapsed]);
 
   // Lock background scroll while the drawer is open.
   React.useEffect(() => {

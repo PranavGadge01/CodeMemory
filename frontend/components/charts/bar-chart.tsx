@@ -1,5 +1,4 @@
 import * as React from "react";
-import { cn } from "@/lib/utils";
 import { CHART_COLORS, ChartSvg, GridLines, niceTicks, scaleLinear } from "@/components/charts/lib";
 
 export interface BarDatum {

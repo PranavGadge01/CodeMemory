@@ -100,8 +100,6 @@ function cellFill(value: number, max: number): string {
 }
 
 function monthLabels(days: ActivityDay[]) {
-  const cellSize = 11;
-  const gap = 3;
   const firstDate = new Date(days[0]?.date ?? 0);
   const leadingBlanks = (firstDate.getDay() + 6) % 7;
   const seen = new Set<string>();

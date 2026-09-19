@@ -28,8 +28,14 @@ export function Reveal({
     const element = ref.current;
     if (!element) return;
 
+    // Reveal is only ever called from a callback — never synchronously in the
+    // effect body — so neither path triggers a cascading render.
+    const reveal = () => setVisible(true);
+
     if (typeof IntersectionObserver === "undefined") {
-      setVisible(true);
+      // Nothing to observe: schedule the reveal on a microtask, which still
+      // lands before the next paint, so nothing visibly flickers.
+      Promise.resolve().then(reveal);
       return;
     }
 
@@ -37,7 +43,7 @@ export function Reveal({
       (entries) => {
         for (const entry of entries) {
           if (entry.isIntersecting) {
-            setVisible(true);
+            reveal();
             observer.unobserve(entry.target);
           }
         }
