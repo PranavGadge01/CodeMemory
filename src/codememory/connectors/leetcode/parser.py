@@ -19,11 +19,14 @@ class LeetCodeParser:
         """Map common LeetCode export column names and key variations to model field names."""
         normalized: dict[str, Any] = {}
         
-        # Key aliases mapping
+        # Key aliases mapping.
+        # NOTE: "question_id" is deliberately NOT an alias for "id" — it identifies
+        # the *problem*, not the submission, and mapping it here would mint a wrong
+        # external submission identity (e.g. leetcode_1 for every "Two Sum" record).
         field_mappings = {
             "title": ["title", "Problem Title", "problem_title", "title_slug", "Question Title"],
             "title_slug": ["title_slug", "slug", "problem_slug", "Question Slug"],
-            "id": ["id", "submission_id", "Submission ID", "question_id"],
+            "id": ["id", "submission_id", "Submission ID"],
             "difficulty": ["difficulty", "Difficulty", "Level"],
             "language": ["language", "lang", "Language"],
             "code": ["code", "source_code", "Code", "Source Code", "submission_code"],

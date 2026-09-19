@@ -19,6 +19,60 @@ def generate_slug(title: str) -> str:
     return s.strip("-") or "problem"
 
 
+def _parse_any_timestamp(value: Any) -> datetime | None:
+    """Best-effort parse of any timestamp representation into a UTC datetime.
+
+    Returns ``None`` when the value cannot be interpreted as a timestamp.
+    """
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        val = float(value)
+        if val > 1e11:  # epoch milliseconds
+            val /= 1000.0
+        return datetime.fromtimestamp(val, tz=timezone.utc)
+
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return None
+        # Numeric strings are epoch seconds or epoch milliseconds.
+        try:
+            val = float(text)
+        except ValueError:
+            val = None
+        if val is not None:
+            if val > 1e11:
+                val /= 1000.0
+            return datetime.fromtimestamp(val, tz=timezone.utc)
+
+        try:
+            dt = datetime.fromisoformat(text.replace("Z", "+00:00"))
+            return dt
+        except ValueError:
+            return None
+
+    return None
+
+
+def canonical_timestamp(value: Any) -> str:
+    """Render any timestamp representation as one stable UTC ISO string.
+
+    This is the single serialization used for submission hashing. Normalizing
+    here means a tz-aware datetime, a naive-but-UTC datetime, an epoch number,
+    and an epoch string all produce the *same* fingerprint, which is what makes
+    deduplication work across the import and sync entry points.
+    """
+    if value is None:
+        return ""
+    dt = _parse_any_timestamp(value)
+    if dt is None:
+        return str(value).strip()
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc).isoformat()
+
+
 def compute_submission_hash(
     problem_title: str,
     language: str,
@@ -26,11 +80,15 @@ def compute_submission_hash(
     submitted_at: datetime | str | None,
     status: str,
 ) -> str:
-    """Generate deterministic SHA256 hash for submission idempotency."""
+    """Generate the canonical deterministic SHA256 hash for a submission.
+
+    This is the ONE submission identity hash in CodeMemory. Every entry point
+    (file import, connector normalization, live sync) must funnel through here.
+    """
     code_clean = (code or "").strip()
     lang_clean = (language or "").strip().lower()
     title_clean = generate_slug(problem_title or "")
-    dt_str = str(submitted_at) if submitted_at else ""
+    dt_str = canonical_timestamp(submitted_at)
     status_str = str(status).strip()
 
     raw = f"{title_clean}:{lang_clean}:{status_str}:{dt_str}:{code_clean}"
@@ -94,8 +152,13 @@ class Submission(BaseModel):
         return _ensure_utc(v)
 
     def model_post_init(self, __context: Any) -> None:
-        """Compute submission hash if not provided."""
-        if not self.submission_hash and self.code:
+        """Compute the canonical submission hash when the caller did not supply one.
+
+        The hash is intentionally NOT gated on ``code``: a submission without
+        source code is still a real submission, and hashing it is what prevents
+        code-less records from collapsing into a single stored row.
+        """
+        if not self.submission_hash:
             self.submission_hash = compute_submission_hash(
                 problem_title=self.problem_id,
                 language=self.language,

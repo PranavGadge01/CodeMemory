@@ -12,6 +12,7 @@ from codememory.connectors.leetcode.capabilities import LEETCODE_CAPABILITIES
 from codememory.connectors.leetcode.mapper import LeetCodeMapper
 from codememory.connectors.leetcode.models import LeetCodeProblemRaw, LeetCodeSubmissionRaw
 from codememory.connectors.leetcode.sync import LeetCodeSyncEngine
+from codememory.domain.exceptions import ProblemNotFoundError
 
 
 # ──────────────────────────────────────────
@@ -210,7 +211,7 @@ def test_sync_engine_full_sync_flow():
 
     # Mock service that has no existing problem
     mock_service = MagicMock()
-    mock_service.get_problem.side_effect = Exception("Not found")
+    mock_service.get_problem.side_effect = ProblemNotFoundError("two-sum")
 
     mock_client.fetch_problem_details.return_value = LeetCodeProblemRaw(
         id="1",
@@ -226,6 +227,12 @@ def test_sync_engine_full_sync_flow():
     mock_problem.slug = "two-sum"
     mock_problem.attempts = []
     mock_service.add_problem.return_value = mock_problem
+
+    # add_submission() returns (problem, submission) in production; the stored
+    # submission carries the external LeetCode id.
+    mock_stored = MagicMock()
+    mock_stored.id = "leetcode_111"
+    mock_service.add_submission.return_value = (mock_problem, mock_stored)
 
     with tempfile.TemporaryDirectory() as tmpdir:
         acct_svc = AccountService(data_dir=tmpdir)

@@ -39,6 +39,7 @@ class BaseConnector(ABC):
     def normalize_submission(self, raw: RawExternalSubmission) -> NormalizedSubmissionRecord:
         """Convert raw external submission into CodeMemory's normalized import schema."""
         return NormalizedSubmissionRecord(
+            problem_id=raw.problem_slug or None,
             title=raw.problem_title,
             difficulty=raw.difficulty,
             topics=raw.topics,

@@ -1,5 +1,7 @@
 """Unit tests for LeetCode connector components (parser, mapper, client, connector)."""
 
+import socket
+
 from pathlib import Path
 import pytest
 
@@ -11,6 +13,26 @@ from codememory.connectors.leetcode.parser import LeetCodeParser
 from codememory.domain.enums import SubmissionStatus
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures" / "leetcode"
+
+# Bounded so an offline machine fails the probe quickly instead of hanging.
+_LIVE_PROBE_TIMEOUT = 3.0
+
+
+def _require_leetcode_reachable() -> None:
+    """Skip unless leetcode.com can be reached within a short bound.
+
+    Lives inside the test body rather than in a ``skipif`` condition on purpose:
+    pytest evaluates ``skipif`` expressions at collection time even for tests that
+    are deselected by a marker filter, so a probe placed there would make every
+    ordinary test run touch the network. Body-level code runs only when the test
+    is actually selected, i.e. only under ``pytest -m live``.
+    """
+    try:
+        with socket.create_connection(("leetcode.com", 443), timeout=_LIVE_PROBE_TIMEOUT):
+            pass
+    except OSError as exc:
+        pytest.skip(f"leetcode.com unreachable ({exc}); live integration test skipped")
+
 
 
 def test_leetcode_parser_json():
@@ -84,8 +106,21 @@ def test_leetcode_mapper_timestamp_and_hash():
     assert len(norm_rec.submission_hash) == 64
 
 
-def test_leetcode_client_fallback():
-    """Test LeetCodeClient network fallback behavior when offline/invalid query."""
+@pytest.mark.live
+def test_leetcode_client_live_fallback():
+    """Live integration test against the real public LeetCode GraphQL endpoint.
+
+    Deliberately NOT part of the default selection: it verifies the actual
+    transport contract (an unknown user yields no submissions; a well-known slug
+    resolves) against leetcode.com, which no CI runner should depend on. Marked
+    ``live`` so ``-m 'not live'`` (the default in pyproject) skips it.
+
+    Run it intentionally with::
+
+        pytest -m live tests/test_leetcode_connector.py::test_leetcode_client_live_fallback
+    """
+    _require_leetcode_reachable()
+
     client = LeetCodeClient()
     submissions = client.fetch_user_submissions("non_existent_user_12345")
     assert isinstance(submissions, list)

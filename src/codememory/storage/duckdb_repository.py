@@ -1,16 +1,35 @@
 """DuckDB storage implementation for relational querying and analytics."""
 
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Sequence
 
 import duckdb
 
 from codememory.domain.enums import DifficultyLevel, NoteType, Platform, SubmissionStatus
-from codememory.domain.models import Attempt, Problem, ProblemNote, SolutionAnalysis, Submission
+from codememory.domain.models import Attempt, Problem, ProblemNote, SolutionAnalysis, Submission, compute_submission_hash
 from codememory.storage.base import AttemptRepository, ProblemRepository, SubmissionRepository
 
 
 _shared_duckdb_connections: dict[str, duckdb.DuckDBPyConnection] = {}
+
+
+def _to_naive_utc(dt: datetime | None) -> datetime | None:
+    """Bind datetimes as naive UTC.
+
+    DuckDB's TIMESTAMP type is timezone-naive, and its Python binder converts a
+    tz-aware datetime by shifting it into the *host's local* timezone before
+    dropping the offset. Binding a tz-aware UTC value would therefore silently
+    shift every stored timestamp by the local UTC offset (invisible on a UTC CI
+    runner, wrong everywhere else). Domain models re-tag naive values as UTC on
+    read, so naive-UTC is the correct wire format — the same convention the
+    Parquet tier already uses.
+    """
+    if dt is None:
+        return None
+    if dt.tzinfo is not None:
+        dt = dt.astimezone(timezone.utc)
+    return dt.replace(tzinfo=None)
 
 
 class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
@@ -26,6 +45,10 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
             try:
                 _shared_duckdb_connections[self.db_path].execute("SELECT 1")
                 self.conn = _shared_duckdb_connections[self.db_path]
+                # Tables are already initialized on this connection, but an empty
+                # submission hash can be written at any point in a process's
+                # lifetime, so the repair must run here too.
+                self._repair_empty_submission_hashes()
                 return
             except Exception:
                 _shared_duckdb_connections.pop(self.db_path, None)
@@ -35,12 +58,71 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
             self.conn = duckdb.connect(self.db_path)
             _shared_duckdb_connections[self.db_path] = self.conn
             self._init_tables()
+            self._repair_empty_submission_hashes()
         except duckdb.IOException:
             try:
                 self.conn = duckdb.connect(self.db_path, read_only=True)
             except duckdb.IOException:
                 self.conn = duckdb.connect(":memory:")
                 self._init_tables()
+
+    def _repair_empty_submission_hashes(self) -> None:
+        """Backfill canonical hashes for legacy rows persisted with an empty hash.
+
+        Older code paths only hashed a submission when source code was present,
+        which left code-less records with an empty ``submission_hash``. Because
+        that column is UNIQUE, at most one such row could survive per database —
+        a silent data-loss path.
+
+        The repair is non-destructive: rows with an empty hash are given the
+        canonical hash derived from their stored fields. If that hash is already
+        claimed, the legacy row keeps a unique ``legacy_<id>`` placeholder so no
+        record is ever deleted or merged. Runs on both fresh and reused
+        connections because an empty hash can be written at any point in a
+        process's lifetime; the no-op cost is a single indexed scan.
+        """
+        try:
+            rows = self.conn.execute(
+                """
+                SELECT id, problem_id, code, language, status, submitted_at
+                FROM submissions
+                WHERE submission_hash IS NULL OR submission_hash = ''
+                """
+            ).fetchall()
+        except Exception:
+            return
+
+        if not rows:
+            return
+
+        taken = {
+            row[0]
+            for row in self.conn.execute(
+                "SELECT submission_hash FROM submissions WHERE submission_hash <> ''"
+            ).fetchall()
+        }
+
+        for sid, pid, code, lang, status, submitted_at in rows:
+            slug_row = self.conn.execute("SELECT slug FROM problems WHERE id = ?", [pid]).fetchone()
+            slug = slug_row[0] if slug_row else pid
+            new_hash = compute_submission_hash(
+                problem_title=slug,
+                language=lang or "",
+                code=code or "",
+                submitted_at=submitted_at,
+                status=status or "",
+            )
+            if not new_hash or new_hash in taken:
+                new_hash = f"legacy_{sid}"
+            try:
+                self.conn.execute(
+                    "UPDATE submissions SET submission_hash = ? WHERE id = ?", [new_hash, sid]
+                )
+            except Exception:
+                # A read-only or otherwise constrained connection cannot repair;
+                # leave the row untouched rather than failing construction.
+                continue
+            taken.add(new_hash)
 
     def close(self) -> None:
         """Close active DuckDB database connection."""
@@ -166,8 +248,8 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
                 problem.url,
                 topics_str,
                 problem.statement,
-                problem.created_at,
-                problem.updated_at,
+                _to_naive_utc(problem.created_at),
+                _to_naive_utc(problem.updated_at),
             ],
         )
 
@@ -199,23 +281,34 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
                     att_status,
                     tc,
                     sc,
-                    attempt.created_at,
-                    attempt.updated_at,
+                    _to_naive_utc(attempt.created_at),
+                    _to_naive_utc(attempt.updated_at),
                 ],
             )
 
-            # Upsert submissions
+            # Upsert submissions.
+            # The conflict target is the record's primary key — the external
+            # submission id (e.g. "leetcode_1003") — which is the canonical
+            # submission identity. Re-importing the same submission refreshes all
+            # of its fields in place, including code and submission_hash, rather
+            # than the previous partial update that silently kept stale code.
             for sub in attempt.submissions:
                 sub_status = sub.status.value if hasattr(sub.status, "value") else str(sub.status)
                 self.conn.execute(
                     """
                     INSERT INTO submissions (id, problem_id, attempt_id, code, language, status, runtime_ms, memory_mb, submitted_at, error_message, submission_hash)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT (submission_hash) DO UPDATE SET
+                    ON CONFLICT (id) DO UPDATE SET
+                        problem_id = excluded.problem_id,
+                        attempt_id = excluded.attempt_id,
+                        code = excluded.code,
+                        language = excluded.language,
                         status = excluded.status,
                         runtime_ms = excluded.runtime_ms,
                         memory_mb = excluded.memory_mb,
-                        error_message = excluded.error_message;
+                        submitted_at = excluded.submitted_at,
+                        error_message = excluded.error_message,
+                        submission_hash = excluded.submission_hash;
                 """,
                     [
                         str(sub.id),
@@ -226,9 +319,9 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
                         sub_status,
                         sub.runtime_ms,
                         sub.memory_mb,
-                        sub.submitted_at,
+                        _to_naive_utc(sub.submitted_at),
                         sub.error_message,
-                        sub.submission_hash,
+                        str(sub.submission_hash),
                     ],
                 )
 
@@ -249,7 +342,7 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
                     note.attempt_id,
                     note.content,
                     n_type,
-                    note.created_at,
+                    _to_naive_utc(note.created_at),
                 ],
             )
 

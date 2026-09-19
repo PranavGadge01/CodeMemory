@@ -6,9 +6,7 @@ from pathlib import Path
 from codememory.connectors.base import BaseConnector, RawExternalSubmission
 from codememory.connectors.leetcode.client import LeetCodeClient
 from codememory.connectors.leetcode.importer import LeetCodeImporter
-from codememory.connectors.leetcode.mapper import LeetCodeMapper
-from codememory.connectors.leetcode.parser import LeetCodeParser
-from codememory.domain.import_schema import NormalizedSubmissionRecord
+from codememory.domain.models import generate_slug
 from codememory.ingestion.importer import ImportSummary
 from codememory.storage.composite_repository import CompositeStorage
 
@@ -23,26 +21,32 @@ class LeetCodeConnector(BaseConnector):
         self.importer = LeetCodeImporter(storage=storage) if storage else None
 
     def fetch_user_submissions(self, username: str, limit: int = 50) -> List[RawExternalSubmission]:
-        """Fetch recent submissions from LeetCode GraphQL endpoint."""
+        """Fetch recent submissions from LeetCode GraphQL endpoint.
+
+        Returns raw transport records only. Conversion to the CodeMemory domain
+        happens in :meth:`BaseConnector.normalize_submission`, which every caller
+        funnels through.
+        """
         raw_items = self.client.fetch_user_submissions(username, limit=limit)
         results: List[RawExternalSubmission] = []
 
         for item in raw_items:
-            norm_rec = LeetCodeMapper.to_normalized_record(item)
+            external_sub_id = item.submission_id or item.id
+            slug = item.title_slug or generate_slug(item.title)
             results.append(
                 RawExternalSubmission(
-                    external_id=norm_rec.submission_id or f"leetcode_{item.id}",
-                    problem_title=norm_rec.title,
-                    problem_slug=item.title_slug or norm_rec.title.lower().replace(" ", "-"),
-                    difficulty=norm_rec.difficulty,
-                    topics=norm_rec.topics,
-                    language=norm_rec.language,
-                    code=norm_rec.code,
-                    status=norm_rec.status.value,
-                    runtime=norm_rec.runtime,
-                    memory=norm_rec.memory,
-                    timestamp=norm_rec.timestamp,
-                    url=norm_rec.url,
+                    external_id=f"leetcode_{external_sub_id}" if external_sub_id else f"leetcode_unassigned_{username}",
+                    problem_title=item.title,
+                    problem_slug=slug,
+                    difficulty=item.difficulty,
+                    topics=item.topics,
+                    language=item.language,
+                    code=item.code,
+                    status=item.status,
+                    runtime=item.runtime,
+                    memory=item.memory,
+                    timestamp=str(item.timestamp) if item.timestamp is not None else None,
+                    url=item.url or f"https://leetcode.com/problems/{slug}/",
                 )
             )
         return results

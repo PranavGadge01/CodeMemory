@@ -98,8 +98,11 @@ class CompositeStorage(ProblemRepository, SubmissionRepository, AttemptRepositor
                     )
                     prob.attempts.append(matched_attempt)
 
-            # verify idempotency hash
-            existing_hashes = {s.submission_hash for s in matched_attempt.submissions if s.submission_hash}
+            # Verify idempotency across the whole problem, not just the matched
+            # attempt, so the same submission can never land twice.
+            existing_hashes = {
+                s.submission_hash for a in prob.attempts for s in a.submissions if s.submission_hash
+            }
             if submission.submission_hash not in existing_hashes:
                 submission.attempt_id = matched_attempt.id
                 matched_attempt.submissions.append(submission)

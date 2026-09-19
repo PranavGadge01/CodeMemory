@@ -1,8 +1,25 @@
-"""LeetCode Sync Engine coordinating profile, progress, submission sync, and memory indexing."""
+"""LeetCode Sync Engine coordinating profile, progress, submission sync, and memory indexing.
+
+Sync contract
+-------------
+The supported public LeetCode API exposes only a server-bounded window of the
+most recent *accepted* submissions. It provides no source code, no runtime and no
+memory, and no cursor for paging further back. This engine therefore:
+
+* persists records exactly as the API describes them, with empty code and null
+  metrics rather than fabricated stand-ins;
+* never claims full history — ``SyncStatus.details["coverage"]`` is always
+  ``"recent-window"``;
+* keeps a local watermark of what has already been persisted. The watermark is a
+  purely local bookkeeping value and is NEVER sent to LeetCode as a ``since`` or
+  ``after`` parameter — the supported API has no such parameter;
+* detects (but does not attempt to recover) gaps where submissions fell outside
+  the server-bounded window between two syncs.
+"""
 
 from datetime import datetime, timezone
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from codememory.connectors.account.models import AccountConnection, AccountStatus, SyncState, SyncStatus
 from codememory.connectors.account.service import AccountService
@@ -10,22 +27,71 @@ from codememory.connectors.leetcode.capabilities import LEETCODE_CAPABILITIES
 from codememory.connectors.leetcode.client import LeetCodeClient
 from codememory.connectors.leetcode.mapper import LeetCodeMapper
 from codememory.connectors.leetcode.models import LeetCodeSubmissionRaw
+from codememory.domain.exceptions import ProblemNotFoundError
 from codememory.domain.models import generate_slug
 
 logger = logging.getLogger(__name__)
 
+# The supported public endpoint returns a server-bounded recent window. 20 is the
+# practical bound the public API serves; asking for more does not yield more.
+DEFAULT_SYNC_LIMIT = 20
+
+# Metadata keys used to persist the local watermark inside AccountConnection.
+WATERMARK_KEY_ID = "latest_external_id"
+WATERMARK_KEY_TS = "latest_persisted_timestamp"
+
+# Fields the supported public API cannot supply for a synced submission. Reported
+# on every sync so the UI can never imply metrics exist when they do not.
+UNAVAILABLE_FIELDS = ["code", "runtime_ms", "memory_mb"]
+
+
+def _external_id_sort_key(external_id: Optional[str]) -> tuple[int, str]:
+    """Ordering key for a CodeMemory external submission id.
+
+    LeetCode submission ids are monotonically increasing, so the numeric value is
+    the true order; the raw string is kept as a tie-break for non-numeric ids.
+    Parsing numerically matters: lexicographic order would place ``leetcode_9``
+    after ``leetcode_10``.
+    """
+    if not external_id:
+        return (-1, "")
+    raw = external_id
+    if raw.startswith("leetcode_"):
+        raw = raw[len("leetcode_") :]
+    try:
+        return (int(raw), "")
+    except ValueError:
+        return (-1, raw)
+
+
+def _record_key(timestamp: Optional[datetime], external_id: Optional[str]) -> tuple[float, tuple[int, str]]:
+    """Ordering tuple for a submission: timestamp first, external id as tie-break.
+
+    Timestamps are NOT unique — a user may submit two problems in the same
+    second — so the pair is the identity of order, never the timestamp alone.
+    """
+    if timestamp is None:
+        ts = 0.0
+    else:
+        ts = timestamp.astimezone(timezone.utc).timestamp() if timestamp.tzinfo else timestamp.replace(
+            tzinfo=timezone.utc
+        ).timestamp()
+    return (ts, _external_id_sort_key(external_id))
+
 
 class LeetCodeSyncEngine:
-    """Coordinates account connection, data retrieval, deduplication, storage, and memory index sync."""
+    """Coordinates account connection, data retrieval, deduplication, storage, and memory engine sync."""
 
     def __init__(
         self,
         account_service: Optional[AccountService] = None,
         client: Optional[LeetCodeClient] = None,
+        sync_limit: int = DEFAULT_SYNC_LIMIT,
     ):
         self.account_service = account_service or AccountService()
         self.client = client or LeetCodeClient()
         self.mapper = LeetCodeMapper()
+        self.sync_limit = max(1, int(sync_limit))
 
     def connect_account(self, username: str) -> AccountConnection:
         """Validate username via public GraphQL endpoint and store account connection metadata."""
@@ -56,18 +122,56 @@ class LeetCodeSyncEngine:
         )
         return self.account_service.save_connection(conn)
 
-    def sync(self, service: Any) -> SyncStatus:
-        """Synchronize public profile and recent submissions, updating domain storage & memory engine."""
+    def _read_watermark(self, conn: AccountConnection) -> Optional[tuple[float, tuple[int, str]]]:
+        """Reconstruct the persisted watermark ordering tuple, or ``None`` if absent.
+
+        Purely local state. This value is never transmitted to LeetCode.
+        """
+        metadata = conn.metadata or {}
+        stored_ts = metadata.get(WATERMARK_KEY_TS)
+        stored_id = metadata.get(WATERMARK_KEY_ID)
+        if not stored_ts and not stored_id:
+            return None
+        try:
+            ts = datetime.fromisoformat(str(stored_ts)) if stored_ts else None
+        except ValueError:
+            logger.warning("Ignoring unparseable persisted watermark timestamp: %r", stored_ts)
+            return None
+        return _record_key(ts, stored_id)
+
+    @staticmethod
+    def _write_watermark(conn: AccountConnection, key: tuple[float, tuple[int, str]]) -> None:
+        """Store a watermark ordering tuple back onto the connection metadata."""
+        conn.metadata[WATERMARK_KEY_TS] = datetime.fromtimestamp(key[0], tz=timezone.utc).isoformat()
+        conn.metadata[WATERMARK_KEY_ID] = None
+        # Recover the external id text from the numeric sort key where possible.
+        numeric = key[1][0]
+        if numeric >= 0:
+            conn.metadata[WATERMARK_KEY_ID] = f"leetcode_{numeric}"
+
+    def sync(self, service: Any, limit: Optional[int] = None) -> SyncStatus:
+        """Synchronize public profile and the recent submission window.
+
+        ``limit`` overrides the engine's configured ``sync_limit`` for this call
+        only. It is a local bound on how many records to request; it is not a
+        cursor and is never used to page backwards.
+        """
         conn = self.account_service.get_connection("LeetCode")
         if not conn or conn.status != AccountStatus.CONNECTED:
             raise ValueError("LeetCode account is not connected.")
+
+        window_limit = max(1, int(limit)) if limit is not None else self.sync_limit
 
         now = datetime.now(timezone.utc)
         sync_status = SyncStatus(started_at=now, status=SyncState.RUNNING)
 
         try:
-            # 1. Update Profile Metadata
+            # 1. Update Profile Metadata.
+            # A failed profile fetch is a real defect worth reporting, not a
+            # silent skip: submission data may still sync, so the run becomes
+            # PARTIAL rather than FAILED.
             profile_data = self.client.fetch_user_profile(conn.username)
+            profile_failed = profile_data is None
             if profile_data:
                 conn.display_name = profile_data.get("real_name") or conn.username
                 conn.user_avatar = profile_data.get("user_avatar") or conn.user_avatar
@@ -80,25 +184,34 @@ class LeetCodeSyncEngine:
                         "ranking": profile_data.get("ranking"),
                     }
                 )
+            else:
+                logger.warning("LeetCode profile fetch failed for '%s'; sync will be PARTIAL", conn.username)
 
-            # 2. Fetch Recent Submissions via GraphQL
-            raw_subs: list[LeetCodeSubmissionRaw] = self.client.fetch_user_submissions(conn.username, limit=25)
+            # 2. Fetch the recent accepted-submission window via GraphQL.
+            raw_subs: list[LeetCodeSubmissionRaw] = self.client.fetch_user_submissions(
+                conn.username, limit=window_limit
+            )
             sync_status.records_discovered = len(raw_subs)
+
+            # Normalize once; the ordering tuples are derived from the same
+            # records the persistence loop consumes below.
+            normalized = [self.mapper.to_normalized_record(r) for r in raw_subs]
+            visible_keys = [_record_key(n.timestamp, n.submission_id) for n in normalized]
+
+            previous_watermark = self._read_watermark(conn)
 
             added_count = 0
             skipped_count = 0
 
-            for sub_raw in raw_subs:
+            for norm in normalized:
                 try:
-                    # Map to normalized record
-                    norm = self.mapper.to_normalized_record(sub_raw)
                     problem_slug = norm.problem_id or generate_slug(norm.title)
 
                     # Ensure problem exists in storage or fetch problem metadata
                     prob = None
                     try:
                         prob = service.get_problem(problem_slug)
-                    except Exception:
+                    except ProblemNotFoundError:
                         # Problem not found locally -> fetch problem details from LeetCode
                         raw_prob = self.client.fetch_problem_details(problem_slug)
                         if raw_prob:
@@ -117,15 +230,17 @@ class LeetCodeSyncEngine:
                                 slug=problem_slug,
                                 difficulty=norm.difficulty,
                                 topics=norm.topics,
+                                url=norm.url,
                             )
 
-                    # Check deduplication in problem submissions
+                    # Idempotency guard, evaluated against storage plus whatever
+                    # this run has already persisted. service.add_submission()
+                    # additionally checks storage by hash, so a re-sync of an
+                    # already persisted submission can never create a duplicate.
                     existing_hashes = {
                         s.submission_hash for a in prob.attempts for s in a.submissions if s.submission_hash
                     }
-                    existing_ids = {
-                        s.id for a in prob.attempts for s in a.submissions
-                    }
+                    existing_ids = {s.id for a in prob.attempts for s in a.submissions}
 
                     sub_id_check = norm.submission_id or ""
 
@@ -133,15 +248,28 @@ class LeetCodeSyncEngine:
                         skipped_count += 1
                         continue
 
-                    # Add new submission
-                    service.add_submission(
+                    # Persist the submission with its external identity intact.
+                    # The supported public API returns no source code and no
+                    # runtime/memory, so those are persisted as absent rather than
+                    # fabricated: an invented snippet would corrupt the canonical
+                    # hash and misrepresent the user's history.
+                    _, stored = service.add_submission(
                         problem_identifier=prob.slug,
-                        code=norm.code or f"# Synced from LeetCode ({norm.status.value})\n# Title: {norm.title}",
+                        code=norm.code,
                         language=norm.language,
                         status=norm.status,
                         runtime_ms=norm.runtime_ms,
                         memory_mb=norm.memory_mb,
+                        submitted_at=norm.timestamp,
+                        submission_id=norm.submission_id,
+                        submission_hash=norm.submission_hash,
                     )
+
+                    # Account for what this run wrote, so a duplicate appearing
+                    # later in the same window counts as skipped, not added.
+                    existing_ids.add(stored.id)
+                    if norm.submission_hash:
+                        existing_hashes.add(norm.submission_hash)
                     added_count += 1
 
                 except Exception as ex:
@@ -150,19 +278,52 @@ class LeetCodeSyncEngine:
 
             sync_status.records_added = added_count
             sync_status.records_skipped = skipped_count
-            sync_status.status = SyncState.SUCCESS
+
+            # 3. Advance the watermark ONLY once every discovered record has been
+            # durably persisted. A single failed record preserves the previous
+            # watermark so the next run re-processes the window from a known-good
+            # baseline. The watermark never regresses: a record removed upstream
+            # must not make us forget what we have already seen.
+            watermark = previous_watermark
+            if visible_keys and sync_status.records_failed == 0:
+                candidate = max(visible_keys)
+                if watermark is None or candidate > watermark:
+                    watermark = candidate
+                    self._write_watermark(conn, watermark)
+
+            # 4. Report the honest coverage contract. The window is bounded by the
+            # server; a full count here would be a claim the API cannot support.
+            sync_status.details = {
+                "coverage": "recent-window",
+                "window_limit": window_limit,
+                "records_in_window": len(raw_subs),
+                "window_truncated": len(raw_subs) >= window_limit,
+                "gap_detected": self._gap_detected(visible_keys, previous_watermark),
+                "unavailable_fields": list(UNAVAILABLE_FIELDS),
+                "profile_fetch_failed": profile_failed,
+            }
+
             sync_status.finished_at = datetime.now(timezone.utc)
+            if sync_status.records_failed > 0 or profile_failed:
+                sync_status.status = SyncState.PARTIAL
+            else:
+                sync_status.status = SyncState.SUCCESS
 
-            # 3. Update Memory Engine Vector Index Incremental Build
-            try:
-                service.memory_engine.index_all(force_rebuild=False)
-            except Exception as e_mem:
-                logger.warning("Memory engine index update notice: %s", e_mem)
+            if profile_failed and not sync_status.error_message:
+                sync_status.error_message = "LeetCode profile fetch failed; submission data may be incomplete."
 
-            # 4. Update Connection Sync Metadata
+            # 5. Refresh downstream indexes only when the data actually changed.
+            # An unchanged window writes nothing, so rebuilding would be pure cost.
+            if added_count > 0:
+                try:
+                    service.memory_engine.index_all(force_rebuild=False)
+                except Exception as e_mem:
+                    logger.warning("Memory engine index update notice: %s", e_mem)
+
+            # 6. Update Connection Sync Metadata
             conn.last_sync_at = sync_status.finished_at
-            conn.last_sync_status = SyncState.SUCCESS
-            conn.last_sync_error = None
+            conn.last_sync_status = sync_status.status
+            conn.last_sync_error = sync_status.error_message
             self.account_service.save_connection(conn)
 
             return sync_status
@@ -178,6 +339,25 @@ class LeetCodeSyncEngine:
             self.account_service.save_connection(conn)
 
             return sync_status
+
+    @staticmethod
+    def _gap_detected(
+        visible_keys: list[tuple[float, tuple[int, str]]],
+        watermark: Optional[tuple[float, tuple[int, str]]],
+    ) -> bool:
+        """Report whether older submissions may have fallen outside the window.
+
+        The window shows the most recent N submissions. If the OLDEST visible
+        record is newer than the newest persisted one, then records strictly
+        between the two exist on LeetCode but are no longer reachable through the
+        bounded window — a permanent, unrecoverable gap.
+
+        Without a prior watermark (first sync) there is no baseline to compare
+        against, so no gap is claimed; ``window_truncated`` carries that signal.
+        """
+        if watermark is None or not visible_keys:
+            return False
+        return min(visible_keys) > watermark
 
     def disconnect_account(self) -> bool:
         """Disconnect LeetCode account metadata while preserving historical CodeMemory data."""

@@ -1,5 +1,6 @@
 """Core application service API for CodeMemory."""
 
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Sequence
 
@@ -9,7 +10,16 @@ from codememory.analytics.insights import InsightsGenerator
 from codememory.analytics.pattern_analyzer import PatternAnalysisResult, PatternAnalyzer
 from codememory.domain.enums import DifficultyLevel, NoteType, Platform, SubmissionStatus
 from codememory.domain.exceptions import ProblemNotFoundError
-from codememory.domain.models import Attempt, Problem, ProblemNote, SolutionAnalysis, Submission, generate_slug
+from codememory.domain.models import (
+    Attempt,
+    Problem,
+    ProblemNote,
+    SolutionAnalysis,
+    Submission,
+    _ensure_utc as ensure_utc,
+    compute_submission_hash,
+    generate_slug,
+)
 from codememory.exporters.knowledge_exporter import KnowledgeExporter
 from codememory.ingestion.importer import ImportService, ImportSummary
 from codememory.revision.revision_models import RevisionQueueItem, RevisionScoreBreakdown, RevisionWeights
@@ -106,20 +116,55 @@ class CodeMemoryService:
         memory_mb: float | None = None,
         error_message: str | None = None,
         reasoning: str | None = None,
+        submitted_at: datetime | str | None = None,
+        submission_id: str | None = None,
+        submission_hash: str | None = None,
     ) -> tuple[Problem, Submission]:
-        """Add code submission to a problem, automatically creating attempts."""
+        """Add a submission to a problem, automatically creating attempts.
+
+        Identity-aware and idempotent: callers may supply the external
+        ``submission_id`` (used as the stored record's primary key), the original
+        ``submitted_at`` timestamp, and/or a precomputed ``submission_hash``. When
+        a submission with the same hash already exists, the existing record is
+        returned instead of creating a duplicate.
+        """
         prob = self.get_problem(problem_identifier)
         sub_status = SubmissionStatus.parse(status) if isinstance(status, str) else status
 
-        sub = Submission(
-            problem_id=prob.id,
-            code=code,
+        submitted_dt = ensure_utc(submitted_at) if submitted_at is not None else datetime.now(timezone.utc)
+
+        # Canonical hash: prefer the caller's, otherwise derive it from the
+        # problem slug so that the sync and import paths agree.
+        sub_hash = submission_hash or compute_submission_hash(
+            problem_title=prob.slug,
             language=language,
-            status=sub_status,
-            runtime_ms=runtime_ms,
-            memory_mb=memory_mb,
-            error_message=error_message,
+            code=code,
+            submitted_at=submitted_dt,
+            status=sub_status.value,
         )
+
+        # Idempotency: the same submission already persisted — return it as-is.
+        if sub_hash:
+            existing = self.storage.get_by_hash(sub_hash)
+            if existing is not None:
+                return prob, existing
+
+        sub_kwargs: dict[str, Any] = {
+            "problem_id": prob.id,
+            "code": code,
+            "language": language,
+            "status": sub_status,
+            "runtime_ms": runtime_ms,
+            "memory_mb": memory_mb,
+            "submitted_at": submitted_dt,
+            "error_message": error_message,
+            "submission_hash": sub_hash,
+        }
+        if submission_id:
+            # Preserve the external identity (e.g. "leetcode_1003") as the
+            # stored primary key.
+            sub_kwargs["id"] = submission_id
+        sub = Submission(**sub_kwargs)
 
         # Attach to latest attempt or create new one
         target_attempt = None

@@ -25,7 +25,11 @@ def test_connector_normalization():
     assert norm.title == "Two Sum"
     assert norm.difficulty == "Easy"
     assert norm.topics == ["Array", "Hash Table"]
-    assert norm.language == "python"
+    # Language spelling is canonicalized so that the connector and file-import
+    # paths cannot disagree on a submission's language (which would otherwise
+    # produce different deduplication hashes for the same submission).
+    assert norm.language == "Python"
+    assert norm.problem_id == "two-sum"
     assert norm.status == "Accepted"
     assert norm.submission_id == "sub-lc-123"
 

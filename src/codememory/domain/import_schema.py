@@ -63,6 +63,19 @@ def parse_timestamp(value: Any) -> datetime:
         return datetime.fromtimestamp(val_sec, tz=timezone.utc)
     if isinstance(value, str) and value.strip():
         val_str = value.strip()
+
+        # Numeric strings are epoch seconds or milliseconds.
+        # Without this branch, "1700000000" falls through to the format table
+        # below, matches nothing, and silently becomes "now".
+        try:
+            val_sec = float(val_str)
+        except ValueError:
+            val_sec = None
+        if val_sec is not None:
+            if val_sec > 1e11:
+                val_sec /= 1000.0
+            return datetime.fromtimestamp(val_sec, tz=timezone.utc)
+
         # ISO format standard parsing
         try:
             dt = datetime.fromisoformat(val_str.replace("Z", "+00:00"))
@@ -100,6 +113,53 @@ def parse_topics(value: Any) -> list[str]:
         return [t.strip() for t in value.split(",") if t.strip()]
     return []
 
+
+# One canonical language vocabulary. Platform-specific spellings ("python3",
+# "golang", "cpp") are mapped to CodeMemory's internal names; anything unknown
+# passes through unchanged rather than being falsely "corrected".
+LANGUAGE_ALIASES: dict[str, str] = {
+    "python3": "Python",
+    "python": "Python",
+    "py3": "Python",
+    "py": "Python",
+    "cpp": "C++",
+    "c++": "C++",
+    "cplusplus": "C++",
+    "java": "Java",
+    "golang": "Go",
+    "go": "Go",
+    "javascript": "JavaScript",
+    "js": "JavaScript",
+    "typescript": "TypeScript",
+    "ts": "TypeScript",
+    "rust": "Rust",
+    "rs": "Rust",
+    "c": "C",
+    "csharp": "C#",
+    "c#": "C#",
+    "kotlin": "Kotlin",
+    "kt": "Kotlin",
+    "swift": "Swift",
+    "ruby": "Ruby",
+    "rb": "Ruby",
+}
+
+
+def normalize_language(value: Any) -> str:
+    """Canonicalize a programming language identifier.
+
+    This is the ONE place language spelling is normalized, so the file-import,
+    connector and sync entry points cannot disagree on a submission's language —
+    which would otherwise produce different deduplication hashes for the same
+    submission.
+    """
+    if value is None:
+        return "Unknown"
+    text = str(value).strip()
+    if not text:
+        return "Unknown"
+    return LANGUAGE_ALIASES.get(text.lower(), text)
+
 class NormalizedSubmissionRecord(BaseModel):
     """Normalized import schema accepting diverse JSON/CSV/JSONL input shapes."""
 
@@ -131,6 +191,15 @@ class NormalizedSubmissionRecord(BaseModel):
             for alt in ("problem_title", "problem_name", "name", "problem"):
                 if alt in d and d[alt]:
                     d["title"] = d[alt]
+                    break
+
+        # Problem identity: prefer the platform's authoritative slug when present
+        # (LeetCode's titleSlug), since a slug derived from the title can diverge
+        # from the real one.
+        if "problem_id" not in d or not d["problem_id"]:
+            for alt in ("title_slug", "problem_slug", "slug"):
+                if alt in d and d[alt]:
+                    d["problem_id"] = d[alt]
                     break
 
         # runtime aliases
@@ -192,6 +261,11 @@ class NormalizedSubmissionRecord(BaseModel):
     def validate_topics(cls, v: Any) -> list[str]:
         return parse_topics(v)
 
+    @field_validator("language", mode="before")
+    @classmethod
+    def validate_language(cls, v: Any) -> str:
+        return normalize_language(v)
+
     @field_validator("runtime_ms", mode="before")
     @classmethod
     def validate_runtime(cls, v: Any) -> float | None:
@@ -217,9 +291,11 @@ class NormalizedSubmissionRecord(BaseModel):
         if not self.problem_id and self.title:
             self.problem_id = generate_slug(self.title)
 
-        if not self.submission_hash and self.code:
+        # Always derive a hash, including for code-less records. Gate only on
+        # the caller having supplied one, never on the presence of code.
+        if not self.submission_hash:
             self.submission_hash = compute_submission_hash(
-                problem_title=self.title,
+                problem_title=self.problem_id or self.title,
                 language=self.language,
                 code=self.code,
                 submitted_at=self.timestamp,
