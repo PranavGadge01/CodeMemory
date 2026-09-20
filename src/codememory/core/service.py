@@ -32,6 +32,8 @@ from codememory.ai.evolution_service import EvolutionService, EvolutionSummary
 from codememory.ai.analyzer import AICodeAnalyzer
 from codememory.ai.memory_service import MemoryService as AIMemoryService
 from codememory.ai.models import SubmissionAnalysis, SolutionEvolution
+from codememory.ai.evidence_builder import EvidenceBuilder
+from codememory.ai.insight_service import GroundedInsight, InsightService
 from codememory.memory.service import MemoryService as MemoryEngineService
 from codememory.search.semantic_search import LocalSemanticSearchEngine, SemanticSearchResult
 from codememory.patterns.my_patterns_service import MyPatternsService, PersonalPatternSummary
@@ -83,6 +85,18 @@ class CodeMemoryService:
         self.semantic_search_engine = LocalSemanticSearchEngine()
         self.my_patterns_service = MyPatternsService()
         self.knowledge_graph_builder = KnowledgeGraphBuilder()
+
+        # Phase: Grounded Insight Pipeline
+        self.evidence_builder = EvidenceBuilder(
+            analytics_service=self.analytics_service,
+            pattern_analyzer=self.pattern_analyzer,
+            ai_analyzer=self.ai_analyzer,
+            storage=self.storage,
+        )
+        self.insight_service = InsightService(
+            ai_provider=self.ai_provider,
+            evidence_builder=self.evidence_builder,
+        )
 
         # Phase C account/sync surface. Lazily built: constructing it eagerly
         # would pull the LeetCode transport into every service instantiation,
@@ -501,6 +515,19 @@ class CodeMemoryService:
         for attempt in sorted(prob.attempts, key=lambda a: a.attempt_number):
             submissions.extend(attempt.submissions)
         return self.ai_analyzer.analyze_evolution(prob, submissions, force_refresh=force_refresh)
+
+    # 8. Grounded Insight Pipeline
+    def get_grounded_insight(self) -> GroundedInsight:
+        """Generate AI-interpreted insight grounded in deterministic analytics evidence."""
+        return self.insight_service.generate_full_profile_insight()
+
+    def get_topic_insight(self, topic: str) -> GroundedInsight:
+        """Generate AI-interpreted insight focused on a specific DSA topic."""
+        return self.insight_service.generate_topic_insight(topic)
+
+    def get_problem_insight(self, problem_identifier: str) -> GroundedInsight:
+        """Generate AI-interpreted insight focused on a specific problem."""
+        return self.insight_service.generate_problem_insight(problem_identifier)
 
     def ask_codememory(self, question: str) -> dict[str, Any]:
         """Ask natural language question grounded in personal CodeMemory records."""

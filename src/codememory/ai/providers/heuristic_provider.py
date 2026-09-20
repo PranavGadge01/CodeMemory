@@ -3,8 +3,10 @@
 import re
 from typing import List, Optional
 from codememory.ai.models import SubmissionAnalysis, SolutionEvolution, EvolutionStepDetail
-from codememory.ai.providers.base_provider import BaseAIProvider
+from codememory.ai.providers.base_provider import BaseAIProvider, InterpretationResult
 from codememory.domain.models import Problem, Submission
+
+from codememory.ai.evidence_models import InsightEvidence
 
 
 class HeuristicAIProvider(BaseAIProvider):
@@ -249,3 +251,162 @@ class HeuristicAIProvider(BaseAIProvider):
         lines.append("\n**Retrieved Relevant Context Sources:**")
         lines.append(context)
         return "\n".join(lines)
+
+    def interpret_evidence(self, evidence: InsightEvidence) -> InterpretationResult:
+        """Deterministic, offline evidence interpretation.
+
+        Constructs ``InterpretationResult`` directly from the supplied evidence.
+        Never invents statistics, never fabricates weaknesses from empty data,
+        and every ``evidence_ref`` traces to a real ``evidence_id``.
+        """
+        refs: list[str] = []
+        observations: list[str] = []
+        actions: list[str] = []
+
+        # Collect valid evidence IDs for reference-safety
+        valid_ids = evidence.all_evidence_ids()
+
+        def _ref(eid: str) -> None:
+            """Record an evidence reference if it exists in the bundle."""
+            if eid in valid_ids and eid not in refs:
+                refs.append(eid)
+
+        # --- Overview metrics ---
+        overview = evidence.metrics.overview
+        total_problems = overview.get("total_problems", 0)
+        acc_rate = overview.get("overall_acceptance_rate_pct", 0.0)
+        solved = overview.get("accepted_problems", 0)
+
+        if total_problems == 0:
+            return InterpretationResult(
+                headline="Insufficient practice data to generate insights.",
+                narrative="No coding problems have been recorded in CodeMemory yet. "
+                          "Import submissions or start solving problems to unlock personalized insights.",
+                key_observations=["No practice data available."],
+                recommended_actions=["Import submissions or begin solving problems."],
+                evidence_refs=[],
+            )
+
+        # Reference overview items
+        for item in evidence.items:
+            if item.source == "analytics.overview":
+                _ref(item.evidence_id)
+                break  # one reference is enough for the overview bucket
+
+        # --- Build headline ---
+        headline_parts = [f"{solved}/{total_problems} problems solved"]
+        if acc_rate > 0:
+            headline_parts.append(f"{acc_rate:.1f}% overall acceptance rate")
+        headline = ", ".join(headline_parts) + "."
+        if len(headline) > 200:
+            headline = headline[:197] + "..."
+
+        # --- Weak topics observations ---
+        for wt in evidence.patterns.weak_topics:
+            topic = wt.get("topic", "Unknown")
+            success_pct = wt.get("success_rate_pct", 0.0)
+            n_problems = wt.get("total_problems", 0)
+            obs = f"{topic} is a weak area ({success_pct:.0f}% success rate across {n_problems} problems)."
+            observations.append(obs)
+            actions.append(f"Practice more {topic} problems to strengthen this area.")
+            # Reference the corresponding evidence item
+            topic_key = topic.lower().replace(" ", "_").replace("-", "_")
+            eid = f"pattern_analyzer.weak_topics.{topic_key}"
+            _ref(eid)
+
+        # --- High failure topics ---
+        for hf in evidence.patterns.high_failure_topics:
+            topic = hf.get("topic", "Unknown")
+            acc_pct = hf.get("acceptance_rate_pct", 0.0)
+            total_subs = hf.get("total_submissions", 0)
+            obs = f"{topic} has a high failure rate ({acc_pct:.0f}% acceptance across {total_subs} submissions)."
+            if obs not in observations:
+                observations.append(obs)
+            topic_key = topic.lower().replace(" ", "_").replace("-", "_")
+            eid = f"pattern_analyzer.high_failure_topics.{topic_key}"
+            _ref(eid)
+
+        # --- Comparisons ---
+        for comp in evidence.comparisons:
+            if comp.delta < -10.0:
+                observations.append(
+                    f"{comp.label}: {comp.topic_rate:.1f}% vs {comp.overall_rate:.1f}% overall ({comp.delta:+.1f}%)."
+                )
+                _ref(comp.evidence_id)
+
+        # --- Improvement patterns ---
+        for imp in evidence.patterns.improvement_patterns:
+            summary = imp.get("summary", "")
+            if summary:
+                observations.append(summary)
+                metric = imp.get("metric", "unknown")
+                eid = f"pattern_analyzer.improvement_patterns.{metric}"
+                _ref(eid)
+
+        # --- Unpracticed topics ---
+        for ut in evidence.patterns.unpracticed_topics:
+            topic = ut.get("topic", "Unknown")
+            days = ut.get("days_unpracticed", 0)
+            actions.append(f"Resume practicing {topic} (inactive for {days} days).")
+            topic_key = topic.lower().replace(" ", "_").replace("-", "_")
+            eid = f"pattern_analyzer.unpracticed_topics.{topic_key}"
+            _ref(eid)
+
+        # --- Repeated failure problems ---
+        if evidence.patterns.repeated_tle_problems:
+            observations.append(
+                f"{len(evidence.patterns.repeated_tle_problems)} problems have repeated TLE failures."
+            )
+        if evidence.patterns.repeated_wa_problems:
+            observations.append(
+                f"{len(evidence.patterns.repeated_wa_problems)} problems have repeated WA failures."
+            )
+
+        # Trim to max allowed
+        observations = observations[:5]
+        actions = actions[:5]
+        refs = refs[:20]
+
+        # --- Build narrative ---
+        narrative_parts: list[str] = []
+        narrative_parts.append(
+            f"Across {total_problems} recorded problems, {solved} have been solved "
+            f"with an overall acceptance rate of {acc_rate:.1f}%."
+        )
+
+        if evidence.patterns.weak_topics:
+            weak_names = [wt.get("topic", "?") for wt in evidence.patterns.weak_topics[:3]]
+            narrative_parts.append(
+                f"The weakest areas are {', '.join(weak_names)}, "
+                "where success rates fall below the overall baseline."
+            )
+
+        if evidence.comparisons:
+            below = [c for c in evidence.comparisons if c.delta < -5.0]
+            if below:
+                narrative_parts.append(
+                    f"{len(below)} topic(s) have acceptance rates meaningfully below the overall average."
+                )
+
+        if evidence.patterns.improvement_patterns:
+            narrative_parts.append(
+                "There are positive improvement trends visible in recent practice activity."
+            )
+
+        if evidence.limitations:
+            narrative_parts.append(
+                "Note: " + " ".join(evidence.limitations[:2])
+            )
+
+        narrative = "\n\n".join(narrative_parts)
+        if len(narrative) > 3000:
+            narrative = narrative[:2997] + "..."
+
+        return InterpretationResult(
+            headline=headline,
+            narrative=narrative,
+            key_observations=observations,
+            recommended_actions=actions,
+            evidence_refs=refs,
+        )
+

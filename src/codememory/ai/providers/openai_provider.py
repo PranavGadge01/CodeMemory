@@ -9,14 +9,18 @@ from codememory.ai.models import SubmissionAnalysis, SolutionEvolution
 from codememory.ai.prompts import (
     SYSTEM_ASK_CODEMEMORY_PROMPT,
     SYSTEM_EVOLUTION_ANALYSIS_PROMPT,
+    SYSTEM_INTERPRET_EVIDENCE_PROMPT,
     SYSTEM_SUBMISSION_ANALYSIS_PROMPT,
     USER_ASK_CODEMEMORY_PROMPT,
     USER_EVOLUTION_ANALYSIS_PROMPT,
+    USER_INTERPRET_EVIDENCE_PROMPT,
     USER_SUBMISSION_ANALYSIS_PROMPT,
 )
-from codememory.ai.providers.base_provider import BaseAIProvider
+from codememory.ai.providers.base_provider import BaseAIProvider, InterpretationResult
 from codememory.ai.providers.heuristic_provider import HeuristicAIProvider
 from codememory.domain.models import Problem, Submission
+
+from codememory.ai.evidence_models import InsightEvidence
 
 
 class OpenAIProvider(BaseAIProvider):
@@ -151,3 +155,128 @@ class OpenAIProvider(BaseAIProvider):
             return response.choices[0].message.content or "No response generated."
         except Exception:
             return self.fallback.answer_question(question, context)
+
+    # ------------------------------------------------------------------
+    # Evidence interpretation
+    # ------------------------------------------------------------------
+
+    def interpret_evidence(self, evidence: InsightEvidence) -> InterpretationResult:
+        """Interpret structured evidence using the OpenAI API.
+
+        Serializes the evidence into a human-readable prompt with embedded
+        evidence IDs, requests structured JSON matching ``InterpretationResult``,
+        validates with Pydantic, and falls back to the heuristic provider on
+        any API, parsing, schema, or validation failure.
+        """
+        if not self.is_available():
+            return self.fallback.interpret_evidence(evidence)
+
+        try:
+            import openai
+            client = openai.OpenAI(api_key=self.api_key)
+
+            evidence_text = self._serialize_evidence(evidence)
+            prompt = USER_INTERPRET_EVIDENCE_PROMPT.format(evidence_text=evidence_text)
+
+            response = client.chat.completions.create(
+                model=self.model_name,
+                messages=[
+                    {"role": "system", "content": SYSTEM_INTERPRET_EVIDENCE_PROMPT},
+                    {"role": "user", "content": prompt},
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.2,
+            )
+
+            content = response.choices[0].message.content or "{}"
+            raw_data = json.loads(content)
+            result = InterpretationResult.model_validate(raw_data)
+
+            # Validate evidence references: strip any IDs the model hallucinated
+            valid_ids = evidence.all_evidence_ids()
+            result.evidence_refs = [ref for ref in result.evidence_refs if ref in valid_ids]
+
+            return result
+
+        except Exception:
+            return self.fallback.interpret_evidence(evidence)
+
+    @staticmethod
+    def _serialize_evidence(evidence: InsightEvidence) -> str:
+        """Serialize InsightEvidence into a compact, human-readable text with evidence IDs."""
+        lines: list[str] = []
+        lines.append(f"EVIDENCE BUNDLE (scope: {evidence.scope})")
+        lines.append("")
+
+        # Metrics overview
+        if evidence.metrics.overview:
+            lines.append("OVERVIEW METRICS:")
+            for item in evidence.items:
+                if item.source == "analytics.overview":
+                    unit_str = f" {item.unit}" if item.unit else ""
+                    lines.append(f"  [{item.evidence_id}] {item.label}: {item.value}{unit_str}")
+            lines.append("")
+
+        # Topic statistics
+        topic_items = [i for i in evidence.items if i.source.startswith("analytics.topic_stats")]
+        if topic_items:
+            lines.append("TOPIC STATISTICS:")
+            for item in topic_items:
+                unit_str = f" {item.unit}" if item.unit else ""
+                sample = f" (sample: {item.sample_size})" if item.sample_size is not None else ""
+                lines.append(f"  [{item.evidence_id}] {item.label}: {item.value}{unit_str}{sample}")
+            lines.append("")
+
+        # Difficulty statistics
+        diff_items = [i for i in evidence.items if i.source.startswith("analytics.difficulty_stats")]
+        if diff_items:
+            lines.append("DIFFICULTY STATISTICS:")
+            for item in diff_items:
+                unit_str = f" {item.unit}" if item.unit else ""
+                lines.append(f"  [{item.evidence_id}] {item.label}: {item.value}{unit_str}")
+            lines.append("")
+
+        # Comparisons
+        if evidence.comparisons:
+            lines.append("COMPARISONS:")
+            for comp in evidence.comparisons:
+                lines.append(
+                    f"  [{comp.evidence_id}] {comp.label}: "
+                    f"{comp.topic_rate:.1f}% vs {comp.overall_rate:.1f}% (delta: {comp.delta:+.1f}%)"
+                )
+            lines.append("")
+
+        # Patterns
+        pattern_items = [i for i in evidence.items if i.source.startswith("pattern_analyzer")]
+        if pattern_items:
+            lines.append("PATTERNS:")
+            for item in pattern_items:
+                lines.append(f"  [{item.evidence_id}] {item.label}: {item.value}")
+            lines.append("")
+
+        # AI analysis snapshots
+        ai_items = [i for i in evidence.items if i.source_type == "ai_analysis"]
+        if ai_items:
+            lines.append("AI ANALYSIS SNAPSHOTS:")
+            for item in ai_items:
+                lines.append(f"  [{item.evidence_id}] {item.label}: {item.value}")
+            lines.append("")
+
+        # Supporting problems
+        if evidence.supporting_problems:
+            lines.append("SUPPORTING PROBLEMS:")
+            for ps in evidence.supporting_problems:
+                lines.append(
+                    f"  {ps.title} ({ps.difficulty}) — {ps.status}, "
+                    f"{ps.total_attempts} attempts, topics: {', '.join(ps.topics)}"
+                )
+            lines.append("")
+
+        # Limitations
+        if evidence.limitations:
+            lines.append("LIMITATIONS:")
+            for lim in evidence.limitations:
+                lines.append(f"  - {lim}")
+
+        return "\n".join(lines)
+
