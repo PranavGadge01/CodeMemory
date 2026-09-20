@@ -9,15 +9,13 @@
  * No business logic here: these are fetch + map, nothing else.
  */
 
-import { apiGet, apiPost, apiDelete } from "@/lib/api/client";
+import { apiGet, apiPost } from "@/lib/api/client";
 import type {
   DashboardDTO,
   AnalyticsDTO,
   KnowledgeDTO,
   SettingsDTO,
   HealthDTO,
-  LeetCodeStatusDTO,
-  LeetCodeSyncResultDTO,
   PaginatedResponse,
   ProblemDTO,
   ProblemListItemDTO,
@@ -257,18 +255,12 @@ export function getSettings(): Promise<SettingsDTO> {
 
 /* --- LeetCode ---------------------------------------------------------- */
 
-export function getLeetCodeStatus(): Promise<LeetCodeStatusDTO> {
-  return apiGet<LeetCodeStatusDTO>("/leetcode/status");
-}
-
-export function connectLeetCode(username: string): Promise<LeetCodeStatusDTO> {
-  return apiPost<LeetCodeStatusDTO>("/leetcode/connect", { username });
-}
-
-export function syncLeetCode(): Promise<LeetCodeSyncResultDTO> {
-  return apiPost<LeetCodeSyncResultDTO>("/leetcode/sync");
-}
-
-export function disconnectLeetCode(): Promise<{ status: string }> {
-  return apiDelete<{ status: string }>("/leetcode/connect");
-}
+// LeetCode calls live in `lib/api/leetcode.ts` so the whole connector surface
+// is defined in one module. Re-exported here so the existing
+// `import { getLeetCodeStatus } from "@/lib/api"` callsite keeps working.
+export {
+  getLeetCodeStatus,
+  connectLeetCode,
+  syncLeetCode,
+  disconnectLeetCode,
+} from "@/lib/api/leetcode";
