@@ -274,10 +274,11 @@ class AnalyticsService:
                     multi_solved += 1
 
             # Detect brute force to optimized progression:
-            # e.g., attempt 1 has TLE or O(N^2) complexity or WA, followed by a later attempt with Accepted
+            # e.g., attempt 1 has TLE (timeout, the classic brute force), followed by a later attempt with Accepted
+            # We specifically check for TLE, not WA, because TLE indicates algorithmic inefficiency (brute force)
             if p_att_count > 1 and p.latest_accepted_submission:
                 first_att = p.attempts[0]
-                if not first_att.is_accepted or first_att.status in (SubmissionStatus.TIME_LIMIT_EXCEEDED, SubmissionStatus.WRONG_ANSWER):
+                if first_att.status == SubmissionStatus.TIME_LIMIT_EXCEEDED:
                     bf_to_opt += 1
 
         return AttemptStat(
