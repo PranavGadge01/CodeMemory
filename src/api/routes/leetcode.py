@@ -1,6 +1,8 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from codememory.core.service import CodeMemoryService
-from codememory.connectors.leetcode.service import LeetCodeAccountError
+from codememory.connectors.leetcode.service import LeetCodeAccountError, safe_error_message
 
 from api.dependencies import get_service
 from api.schemas.leetcode import (
@@ -8,6 +10,8 @@ from api.schemas.leetcode import (
     LeetCodeConnectRequest,
     LeetCodeSyncResultOut
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["leetcode"])
 
@@ -42,16 +46,24 @@ def sync(service: CodeMemoryService = Depends(get_service)):
         raise HTTPException(status_code=400, detail="LeetCode account not connected.")
     try:
         result = service.leetcode.sync()
+        # The engine reports the records it persisted as ``records_added``; the
+        # API field is named ``records_imported`` for the UI.
         return LeetCodeSyncResultOut(
             status=result.status.value,
             records_discovered=result.records_discovered,
-            records_imported=result.records_imported,
+            records_imported=result.records_added,
             records_skipped=result.records_skipped,
             records_failed=result.records_failed,
             error_message=result.error_message
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Sync failed.")
+        # The engine absorbs expected transport failures into a FAILED
+        # SyncStatus, so an exception reaching here is a real defect. Log the
+        # traceback server-side (it never reached the log before, which is why
+        # this failure showed up as a bare 500) and surface only the scrubbed
+        # message to the caller.
+        logger.exception("LeetCode sync failed")
+        raise HTTPException(status_code=500, detail=safe_error_message(e) or "Sync failed.")
 
 @router.delete("/leetcode/connect")
 def disconnect(service: CodeMemoryService = Depends(get_service)):
