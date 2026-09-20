@@ -70,7 +70,7 @@ export default function DashboardPage() {
                 </span>
               }
             />
-            <div className="px-5 py-5">
+            <div className="px-5 py-4">
               <ActivityHeatmap days={data.activity} />
               <Legend total={overview.totalSubmissions} shown={totalActivity(data.activity)} />
             </div>

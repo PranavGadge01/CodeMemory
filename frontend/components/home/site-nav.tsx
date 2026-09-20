@@ -5,7 +5,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Wordmark } from "@/components/system/logo";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/home/theme-toggle";
+import { ThemeToggle } from "@/components/system/theme-toggle";
 
 const NAV_LINKS = [
   { label: "Product", href: "/#product" },

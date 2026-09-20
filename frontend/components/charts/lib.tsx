@@ -31,6 +31,7 @@ export function ChartSvg({
   role = "img",
   label,
   height,
+  maxWidth,
 }: {
   children: React.ReactNode;
   className?: string;
@@ -40,15 +41,22 @@ export function ChartSvg({
   /** Pin the rendered height in px. Without it the viewBox's aspect ratio
       decides the height from the container width. */
   height?: number;
+  /**
+   * Cap the rendered width in px. `preserveAspectRatio="none"` makes the
+   * viewBox fill any container, so a full-width card stretches a wide, shallow
+   * chart into a very wide strip. Capping the plot area keeps the designed
+   * aspect ratio, and `mx-auto` keeps it centred within the card.
+   */
+  maxWidth?: number;
 }) {
   return (
     <svg
-      className={cn("block w-full", height ? undefined : "h-auto", className)}
+      className={cn("block w-full", height ? undefined : "h-auto", maxWidth ? "mx-auto" : undefined, className)}
       viewBox={viewBox}
       role={role}
       aria-label={label}
       preserveAspectRatio="none"
-      style={height ? { height } : undefined}
+      style={{ height, maxWidth }}
     >
       {children}
     </svg>

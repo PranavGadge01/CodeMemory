@@ -69,7 +69,7 @@ export default function AnalyticsPage() {
                   value: week.totalSubmissions,
                   hint: `${week.totalSubmissions} submissions · ${week.problemsSolved} solved · ${week.acceptedSubmissions} accepted`,
                 }))}
-                height={170}
+                height={190}
               />
             </div>
           </Surface>
@@ -99,7 +99,7 @@ export default function AnalyticsPage() {
                       color: CHART_COLORS.muted,
                     },
                   ]}
-                  height={190}
+                  height={150}
                 />
               </div>
             </Surface>

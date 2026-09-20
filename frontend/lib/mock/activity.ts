@@ -4,8 +4,12 @@ import { createRng, intIn } from "@/lib/mock/random";
 import { getMockProblems } from "@/lib/mock/problems";
 import { isSolved, latestSubmission, submissionsOf } from "@/lib/mock/derive";
 
-/** Number of trailing days the activity heatmap covers. */
-export const ACTIVITY_WINDOW_DAYS = 182;
+/**
+ * Number of trailing days the activity heatmap covers: a rolling 52-week year,
+ * so the right edge is always today and the left edge is roughly a year back —
+ * a calendar Jan–Dec window would instead go stale as the year advances.
+ */
+export const ACTIVITY_WINDOW_DAYS = 364;
 
 /**
  * Activity is generated from the *actual* mock submission timestamps, so the
@@ -17,7 +21,7 @@ export function getMockActivity(): ActivityDay[] {
 
   const byDay = new Map<string, ActivityDay>();
 
-  // Oldest first, so the leading-zero trim and the streak walk both work.
+  // Oldest first, so the streak walk works.
   for (let offset = ACTIVITY_WINDOW_DAYS - 1; offset >= 0; offset--) {
     const iso = daysAgo(offset);
     byDay.set(dayKey(iso), {
@@ -47,10 +51,11 @@ export function getMockActivity(): ActivityDay[] {
     }
   }
 
-  // Drop the leading zero days so the heatmap starts on the first active day.
-  const days = [...byDay.values()];
-  const firstActive = days.findIndex((day) => day.submissions > 0);
-  return days.slice(Math.max(0, firstActive));
+  // The full trailing window is returned as-is. Leading zero days are kept so
+  // the grid's left edge is always ~a year ago and empty months render as
+  // empty cells — which is what the heatmap is for — instead of silently
+  // shortening the range to the first active day.
+  return [...byDay.values()];
 }
 
 export function getMockTimeline(limit = 14): TimelineEvent[] {

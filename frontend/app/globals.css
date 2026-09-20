@@ -63,6 +63,12 @@
   --color-graph-node-topic: rgba(255, 255, 255, 0.55);
   --color-heatmap-empty: rgba(255, 255, 255, 0.045);
 
+  /* Code surfaces — the editor pane sits *below* the surface ladder, so it
+     reads as a sunken terminal in both themes. One step darker than the
+     canvas in dark mode, one step darker than the surface in light. */
+  --color-code-surface: #050608;
+  --color-code-line-number: #4a4e54;
+
   /* Primary button — the inverted CTA. White on the dark canvas, inverted to
      near-black on a light one so it always reads as the strongest action. */
   --color-btn-primary: #ffffff;
@@ -340,6 +346,9 @@ html.light {
   --color-graph-node-topic: rgba(9, 11, 14, 0.55);
   --color-heatmap-empty: rgba(9, 11, 14, 0.055);
 
+  --color-code-surface: #eceef1;
+  --color-code-line-number: #6c7279;
+
   --color-btn-primary: #15181d;
   --color-btn-primary-hover: #2a2e34;
   --color-btn-primary-pressed: #0d0f12;
@@ -356,6 +365,20 @@ html.light .bg-grid {
 
 html.light .bg-dots {
   background-image: radial-gradient(rgba(9, 11, 14, 0.07) 1px, transparent 1px);
+}
+
+/* Quiet scrollbars invert with the canvas — the dark ones are invisible on a
+   light background, which reads as a missing affordance rather than calm. */
+html.light * {
+  scrollbar-color: rgba(9, 11, 14, 0.22) transparent;
+}
+html.light *::-webkit-scrollbar-thumb {
+  background-color: rgba(9, 11, 14, 0.16);
+  background-clip: content-box;
+}
+html.light *::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(9, 11, 14, 0.26);
+  background-clip: content-box;
 }
 
 /* Theme toggle — the visible icon follows the <html> class, so the control

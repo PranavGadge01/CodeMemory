@@ -142,13 +142,13 @@ function CodeBlock({ code }: { code: string }) {
   const lines = code.split("\n");
 
   return (
-    <div className="overflow-x-auto bg-[#050608]">
+    <div className="overflow-x-auto bg-code-surface">
       <pre className="min-w-max py-4 font-mono text-[12.5px] leading-[1.65]">
         <code>
           {lines.map((line, index) => (
             <span key={index} className="flex">
               <span
-                className="w-12 shrink-0 select-none pr-4 text-right text-text-disabled"
+                className="w-12 shrink-0 select-none pr-4 text-right text-code-line-number"
                 aria-hidden="true"
               >
                 {index + 1}

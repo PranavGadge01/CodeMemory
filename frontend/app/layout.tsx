@@ -17,7 +17,12 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#07080A",
+  // The browser chrome follows the OS colour scheme rather than the manual
+  // preference — there is no per-theme hook available before first paint.
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#FFFFFF" },
+    { media: "(prefers-color-scheme: dark)", color: "#07080A" },
+  ],
   width: "device-width",
   initialScale: 1,
 };
@@ -26,11 +31,14 @@ export const viewport: Viewport = {
  * Applies the stored theme before first paint. Runs inline in `<head>` so it
  * completes before the body is parsed — no dark-to-light flash, and the class
  * React hydrates can differ from this one, hence `suppressHydrationWarning`.
- * Dark is the default for any unreadable or unset preference.
+ *
+ * The stored value is a preference: `dark`, `light`, or `system`, which is
+ * resolved against `prefers-color-scheme` here. Dark is the default for any
+ * unreadable or unset preference.
  */
 const THEME_INIT = `(function(){try{var t=localStorage.getItem(${JSON.stringify(
   THEME_STORAGE_KEY,
-)});var theme=t==="light"||t==="dark"?t:"dark";document.documentElement.classList.add(theme);}catch(e){document.documentElement.classList.add("dark");}})();`;
+)});var d=t==="light"||t==="dark"?t:(t==="system"?(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"):"dark");document.documentElement.classList.add(d);}catch(e){document.documentElement.classList.add("dark");}})();`;
 
 export default function RootLayout({
   children,

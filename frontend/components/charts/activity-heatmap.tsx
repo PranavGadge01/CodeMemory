@@ -3,18 +3,42 @@ import { cn } from "@/lib/utils";
 import type { ActivityDay } from "@/lib/types";
 import { formatNumber } from "@/lib/format";
 
+/** Width reserved inside the viewBox for the weekday labels. */
+const LABEL_WIDTH = 24;
+/**
+ * The grid scales up to fill a wide card, but not without limit — past this the
+ * cells stop reading as a compact contribution graph and start reading as
+ * oversized tiles, and the card grows taller than the section warrants.
+ */
+const MAX_CELL_SCALE = 1.5;
+const WEEKDAYS = [
+  { row: 0, label: "Mon" },
+  { row: 2, label: "Wed" },
+  { row: 4, label: "Fri" },
+];
+
 /**
  * Solving activity heatmap.
  *
  * The CodeMemory "memory trace": each cell is one day, and the cell's weight
  * is how much of that day was spent submitting. Weeks run down the columns so
  * the grid reads as a vertical timeline of the user's coding history.
+ *
+ * The window is a rolling trailing year: the last column is always today and
+ * the first is roughly 52 weeks back, so the graph never goes stale the way a
+ * Jan–Dec grid would as the year advances.
+ *
+ * Sizing: the viewBox is the grid's natural size at its design cell size, and
+ * the SVG scales to the card width while keeping that aspect ratio, so a
+ * trailing year spans the card without cells being stretched non-uniformly.
+ * A floor keeps weekday and month labels legible on narrow screens — below it
+ * the wrapper scrolls horizontally instead of shrinking the type any further.
  */
 export function ActivityHeatmap({
   days,
   className,
-  cellSize = 11,
-  gap = 3,
+  cellSize = 10,
+  gap = 2,
   max: maxProp,
 }: {
   days: ActivityDay[];
@@ -31,60 +55,67 @@ export function ActivityHeatmap({
   const columns = Math.ceil((days.length + leadingBlanks) / 7);
   const weekLabels = monthLabels(days);
 
-  const width = columns * (cellSize + gap);
-  const height = 7 * (cellSize + gap);
+  const step = cellSize + gap;
+  const gridWidth = columns * step;
+  const gridHeight = 7 * step;
+  const width = LABEL_WIDTH + gridWidth;
+  const height = gridHeight + 14;
 
   return (
-    <div className={cn("flex gap-3", className)}>
-      <div className="flex flex-col justify-between gap-1 pt-3.5 pb-1">
-        {["Mon", "Wed", "Fri"].map((label) => (
-          <span key={label} className="font-technical-sm text-text-faint">
+    <div className={cn("min-w-0 overflow-x-auto", className)}>
+      <svg
+        className="block mx-auto h-auto w-full"
+        viewBox={`0 0 ${width} ${height}`}
+        style={{ minWidth: width, maxWidth: width * MAX_CELL_SCALE }}
+        role="img"
+        aria-label={`Solving activity over ${days.length} days. Peak ${max} submissions in a day.`}
+      >
+        {WEEKDAYS.map(({ row, label }) => (
+          <text
+            key={row}
+            x={LABEL_WIDTH - 6}
+            y={row * step + Math.round(cellSize / 2) + 3}
+            textAnchor="end"
+            className="fill-text-faint font-mono"
+            fontSize={9}
+          >
             {label}
-          </span>
+          </text>
         ))}
-      </div>
-      <div className="min-w-0 flex-1 overflow-x-auto">
-        <svg
-          className="block h-auto w-full min-w-max"
-          viewBox={`0 0 ${width} ${height + 14}`}
-          role="img"
-          aria-label={`Solving activity over ${days.length} days. Peak ${max} submissions in a day.`}
-        >
-          {days.map((day, index) => {
-            const position = index + leadingBlanks;
-            const column = Math.floor(position / 7);
-            const row = position % 7;
-            const x = column * (cellSize + gap);
-            const y = row * (cellSize + gap);
-            return (
-              <rect
-                key={day.date}
-                x={x}
-                y={y}
-                width={cellSize}
-                height={cellSize}
-                rx={2}
-                fill={cellFill(day.submissions, max)}
-              >
-                <title>
-                  {`${day.date} — ${formatNumber(day.submissions)} submission${day.submissions === 1 ? "" : "s"}, ${day.accepted} accepted`}
-                </title>
-              </rect>
-            );
-          })}
-          {weekLabels.map((label) => (
-            <text
-              key={label.key}
-              x={label.column * (cellSize + gap)}
-              y={height + 10}
-              className="fill-text-faint font-mono"
-              fontSize={9}
+        {days.map((day, index) => {
+          const position = index + leadingBlanks;
+          const column = Math.floor(position / 7);
+          const row = position % 7;
+          const x = LABEL_WIDTH + column * step;
+          const y = row * step;
+          return (
+            <rect
+              key={day.date}
+              x={x}
+              y={y}
+              width={cellSize}
+              height={cellSize}
+              rx={2}
+              fill={cellFill(day.submissions, max)}
             >
-              {label.text}
-            </text>
-          ))}
-        </svg>
-      </div>
+              <title>
+                {`${day.date} — ${formatNumber(day.submissions)} submission${day.submissions === 1 ? "" : "s"}, ${day.accepted} accepted`}
+              </title>
+            </rect>
+          );
+        })}
+        {weekLabels.map((label) => (
+          <text
+            key={label.key}
+            x={LABEL_WIDTH + label.column * step}
+            y={gridHeight + 10}
+            className="fill-text-faint font-mono"
+            fontSize={9}
+          >
+            {label.text}
+          </text>
+        ))}
+      </svg>
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { Search, Plus, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Kbd } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/system/theme-toggle";
 
 interface TopbarProps {
   onOpenSidebar: () => void;
@@ -50,6 +51,11 @@ export function Topbar({ onOpenSidebar, title }: TopbarProps) {
           <Kbd>K</Kbd>
         </span>
       </button>
+
+      {/* The same icon-only switch the site navbar uses — one theme system,
+          rendered once here rather than per page. Always visible: on narrow
+          screens it is the only theme control in the app shell. */}
+      <ThemeToggle />
 
       <Button type="button" variant="outline" size="icon" aria-label="Import data" className="hidden sm:inline-flex">
         <Plus className="h-4 w-4" aria-hidden="true" />

@@ -126,7 +126,7 @@ export default function HomePage() {
                     description={`${formatNumber(data.activity.length)} days of submission history`}
                     action={<Database className="h-4 w-4 text-text-faint" aria-hidden="true" />}
                   />
-                  <div className="px-5 py-5">
+                  <div className="px-5 py-4">
                     <ActivityHeatmap days={data.activity} />
                   </div>
                 </Surface>

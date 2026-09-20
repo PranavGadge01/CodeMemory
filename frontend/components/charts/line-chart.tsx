@@ -11,6 +11,15 @@ export interface LineSeries {
 }
 
 /**
+ * Width of the chart's design space, in the same units as the viewBox. The
+ * viewBox keeps a wide, shallow aspect ratio and the rendered height is pinned
+ * by the `height` prop, so a `preserveAspectRatio="none"` reflow only stretches
+ * the chart horizontally — the axis typography stays at a constant px size and
+ * weekly labels never collide, whatever the container width.
+ */
+const VIEW_WIDTH = 560;
+
+/**
  * Trend chart for time series. Orange carries the primary series; comparison
  * series render as quiet outlines so the eye lands on the story, not on the
  * legend.
@@ -28,11 +37,11 @@ export function LineChart({
   height?: number;
   formatValue?: (value: number) => string;
 }) {
-  const padLeft = 32;
+  const padLeft = 34;
   const padBottom = 22;
   const padTop = 10;
   const innerHeight = height - padBottom - padTop;
-  const usable = 100 - padLeft;
+  const usable = VIEW_WIDTH - padLeft;
 
   const max = Math.max(1, ...series.flatMap((s) => s.values));
   const ticks = niceTicks(max, 3);
@@ -46,12 +55,13 @@ export function LineChart({
   return (
     <div className={cn("w-full", className)}>
       <ChartSvg
-        viewBox={`0 0 100 ${height}`}
+        viewBox={`0 0 ${VIEW_WIDTH} ${height}`}
+        height={height}
         label={`Line chart. ${series
           .map((s) => `${s.label}: ${s.values.join(", ")}`)
           .join(". ")}`}
       >
-        <GridLines values={ticks} y={y} x0={padLeft} x1={100} format={formatValue} />
+        <GridLines values={ticks} y={y} x0={padLeft} x1={VIEW_WIDTH} format={formatValue} />
         {series.map((line, seriesIndex) => {
           const points = line.values.map((value, index) => [x(index), y(value)] as const);
           const path = points
@@ -98,7 +108,7 @@ export function LineChart({
             y={height - 7}
             textAnchor="middle"
             className="fill-text-faint font-mono"
-            fontSize={7.5}
+            fontSize={9}
           >
             {label}
           </text>

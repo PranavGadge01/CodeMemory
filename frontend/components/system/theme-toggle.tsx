@@ -5,10 +5,12 @@ import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/system/theme";
 
 /**
- * Icon-only theme switch for the site navbar. Dark is the default
- * CodeMemory experience. Both icons are rendered and the visible one is
- * chosen by the `<html>` class in `globals.css`, so the control needs no
- * client state and never flashes the wrong icon.
+ * Icon-only theme switch, shared by the site navbar and the app topbar.
+ *
+ * Dark is the default CodeMemory experience. Both icons are rendered and the
+ * visible one is chosen by the `<html>` class in `globals.css`, so the control
+ * needs no client state and never flashes the wrong icon. Clicking pins an
+ * explicit preference, which also wins over `System` in Settings.
  */
 export function ThemeToggle({ className }: { className?: string }) {
   const { toggle } = useTheme();

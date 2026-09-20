@@ -10,13 +10,18 @@ export interface BarDatum {
 }
 
 /**
- * Width of the chart's design space, in the same units as the viewBox. The
- * viewBox keeps a wide, shallow aspect ratio and the rendered height is
- * pinned by the `height` prop, so a `preserveAspectRatio="none"` reflow only
- * stretches the chart horizontally — the axis typography stays at a constant
- * px size and weekly labels never collide, whatever the container width.
+ * Width of the chart's design space, in the same units as the viewBox.
+ *
+ * Sizing is split across two props:
+ * - `VIEW_WIDTH` sets the coordinate space the bars are laid out in. It is
+ *   deliberately only a little wider than the legacy 560, so 12 weekly bars
+ *   still keep readable spacing and the x-axis labels never collide.
+ * - `maxWidth` caps the rendered pixel width. `ChartSvg` fills its container,
+ *   so without a cap a full-width analytics card stretches this viewBox into a
+ *   6:1 strip. Capping it near the design width keeps the plot area at a
+ *   dashboard-like ~2.6:1 aspect ratio instead.
  */
-const VIEW_WIDTH = 560;
+const VIEW_WIDTH = 620;
 
 /**
  * Compact column chart. Submissions per week, solved per month — any series
@@ -26,12 +31,14 @@ export function BarChart({
   data,
   className,
   height = 160,
+  maxWidth = VIEW_WIDTH,
   formatValue = (value) => String(value),
   emphasizedOnly = false,
 }: {
   data: BarDatum[];
   className?: string;
   height?: number;
+  maxWidth?: number;
   formatValue?: (value: number) => string;
   /** Only draw the emphasized bars, keeping the rest as ghost outlines. */
   emphasizedOnly?: boolean;
@@ -53,6 +60,7 @@ export function BarChart({
       className={className}
       viewBox={`0 0 ${VIEW_WIDTH} ${height}`}
       height={height}
+      maxWidth={maxWidth}
       label={`Bar chart. ${data.map((d) => `${d.label}: ${d.value}`).join(", ")}`}
     >
       <GridLines

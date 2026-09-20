@@ -9,6 +9,14 @@ import { cn } from "@/lib/utils";
  * CSS-only in spirit — IntersectionObserver does nothing more than toggle a
  * class, so the animation itself remains a cheap transform/opacity pair and
  * honours `prefers-reduced-motion` through globals.css.
+ *
+ * The threshold is 0, not a ratio. A ratio threshold is unreachable for content
+ * taller than the viewport: the submissions panel is ~6500px tall, so even when
+ * it fills a 800px viewport the intersection ratio caps at ~0.12 and a 0.12
+ * threshold with a shrunk root never fires — leaving the panel stranded at
+ * opacity 0 until something resizes it. Threshold 0 with a small negative
+ * bottom rootMargin still defers the reveal until the element is about to
+ * enter the viewport, which is the animation's actual intent.
  */
 export function Reveal({
   children,
@@ -48,7 +56,7 @@ export function Reveal({
           }
         }
       },
-      { threshold: 0.12, rootMargin: "0px 0px -8% 0px" },
+      { threshold: 0, rootMargin: "0px 0px -8% 0px" },
     );
 
     observer.observe(element);

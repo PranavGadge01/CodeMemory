@@ -8,6 +8,8 @@ import { PageHeader } from "@/components/app/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SettingRow, SettingsGroup, SelectField, Toggle } from "@/components/app/settings/settings";
+import { useTheme } from "@/components/system/theme";
+import type { ThemePreference } from "@/lib/theme";
 
 const SECTIONS = [
   { id: "appearance", label: "Appearance" },
@@ -30,8 +32,9 @@ type RebuildStatus = "idle" | "working" | "done";
 export function SettingsView() {
   const [active, setActive] = React.useState("appearance");
 
-  // Appearance
-  const [theme, setTheme] = React.useState("dark");
+  // The one setting with a real effect: the theme preference the root layout
+  // reads before first paint. Everything else below is local UI state.
+  const { preference: themePreference, setPreference: setThemePreference } = useTheme();
   const [accentEmphasis, setAccentEmphasis] = React.useState(true);
   const [compact, setCompact] = React.useState(false);
   const [reducedMotion, setReducedMotion] = React.useState(false);
@@ -104,17 +107,21 @@ export function SettingsView() {
             id="appearance"
             eyebrow="Appearance"
             title="Theme and density"
-            description="CodeMemory is dark-first. Other themes are planned but not yet rendered."
+            description="Dark and Light are both finished themes. System follows your operating system's colour scheme, including after the app is open."
           >
-            <SettingRow label="Theme" description="The canvas the whole product renders on." htmlFor="theme-select">
+            <SettingRow
+              label="Theme"
+              description="The canvas the whole product renders on. Manual choices — here or in the topbar — are pinned, so they win over System until you switch back."
+              htmlFor="theme-select"
+            >
               <SelectField
                 id="theme-select"
-                value={theme}
-                onChange={setTheme}
+                value={themePreference}
+                onChange={(value) => setThemePreference(value as ThemePreference)}
                 options={[
                   { label: "Dark", value: "dark" },
                   { label: "System", value: "system" },
-                  { label: "Light (planned)", value: "light" },
+                  { label: "Light", value: "light" },
                 ]}
               />
             </SettingRow>
@@ -146,10 +153,8 @@ export function SettingsView() {
                 ]}
               />
             </SettingRow>
-            {theme === "light" ? (
-              <div className="px-5 py-3 text-caption text-text-faint">
-                Light theme is not yet implemented — the token system is dark-first.
-              </div>
+            {themePreference === "system" ? (
+              <SystemThemeNote />
             ) : null}
           </SettingsGroup>
 
@@ -439,6 +444,17 @@ export function SettingsView() {
         </div>
       </div>
     </PageContainer>
+  );
+}
+
+/** What System currently resolves to, read from the rendered `<html>` class so
+ *  it follows a live OS colour-scheme change rather than a stale snapshot. */
+function SystemThemeNote() {
+  const { theme } = useTheme();
+  return (
+    <div className="px-5 py-3 text-caption text-text-faint">
+      {`Following your system — currently ${theme}.`}
+    </div>
   );
 }
 
