@@ -101,7 +101,16 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
             except Exception:
                 _shared_duckdb_connections.pop(self.db_path, None)
 
-        # 2. Connect to disk file or fall back gracefully
+        # 2. Connect to the on-disk file.
+        #
+        # A read-only connection is a legitimate mode for an inspection tool
+        # that never writes. Substituting an in-memory database is not: a
+        # writable server that silently connected to ":memory:" would serve an
+        # empty database forever, still report ``duckdb=ok`` on the health
+        # endpoint, and discard every write on shutdown. That is exactly how a
+        # second server pointed at an already-locked database ended up showing a
+        # permanently zeroed dashboard. The fallback therefore stops at
+        # read-only and surfaces the failure instead of hiding it.
         try:
             self.conn = duckdb.connect(self.db_path)
             if shared:
@@ -112,8 +121,7 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
             try:
                 self.conn = duckdb.connect(self.db_path, read_only=True)
             except duckdb.IOException:
-                self.conn = duckdb.connect(":memory:")
-                self._init_tables()
+                raise
 
     def _repair_empty_submission_hashes(self) -> None:
         """Backfill canonical hashes for legacy rows persisted with an empty hash.

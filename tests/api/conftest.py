@@ -50,10 +50,14 @@ def mock_service():
 @pytest.fixture
 def client(mock_service):
     """Provides a TestClient with the mocked service dependency overridden."""
-    app = create_app()
-    
+    # Inject the isolated service into the lifespan too: the server otherwise
+    # builds its own against the real dev database, which a concurrent server
+    # process may already hold locked. The dependency override alone only covers
+    # request resolution, not app startup.
+    app = create_app(service=mock_service)
+
     # Override the dependency to use our isolated fixture service
     app.dependency_overrides[get_service] = lambda: mock_service
-    
+
     with TestClient(app) as client:
         yield client

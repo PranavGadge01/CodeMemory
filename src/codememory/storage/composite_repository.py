@@ -11,7 +11,21 @@ from codememory.storage.parquet_repository import ParquetStorage
 
 
 class CompositeStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
-    """Unified storage coordinator maintaining parity across Markdown, Parquet, and DuckDB."""
+    """Unified storage coordinator maintaining parity across Markdown, Parquet, and DuckDB.
+
+    DuckDB is the canonical store: ``save`` writes it first and derives the
+    Parquet and filesystem tiers from it, and ``list_all`` reads it directly.
+    The filesystem and Parquet tiers are write-through *exports* — a Markdown
+    tree is a git-friendly rendering of the canonical data, not a second source
+    of truth.
+
+    Reads therefore stop at DuckDB. Falling back to the filesystem tier broke
+    that invariant in both directions: a problem present only in an exported
+    ``metadata.json`` answered ``get_by_slug`` while being invisible to
+    ``list_all`` (so the dashboard stayed empty), and the LeetCode sync deduped
+    against those export-only records, reported the whole window as already
+    imported, and never persisted anything into the store the dashboard reads.
+    """
 
     def __init__(
         self,
@@ -48,18 +62,12 @@ class CompositeStorage(ProblemRepository, SubmissionRepository, AttemptRepositor
         return prob
 
     def get_by_id(self, problem_id: str) -> Problem | None:
-        """Get problem from fast DuckDB index (fallback to FS)."""
-        prob = self.duckdb_repo.get_by_id(problem_id)
-        if not prob:
-            prob = self.fs_repo.get_by_id(problem_id)
-        return prob
+        """Get problem from the canonical DuckDB index."""
+        return self.duckdb_repo.get_by_id(problem_id)
 
     def get_by_slug(self, slug: str) -> Problem | None:
-        """Get problem by slug."""
-        prob = self.duckdb_repo.get_by_slug(slug)
-        if not prob:
-            prob = self.fs_repo.get_by_slug(slug)
-        return prob
+        """Get problem by slug from the canonical DuckDB index."""
+        return self.duckdb_repo.get_by_slug(slug)
 
     def list_all(self) -> Sequence[Problem]:
         """List all problems from DuckDB storage."""
