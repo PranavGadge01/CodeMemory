@@ -20,7 +20,9 @@ dependencies = [
     "pyarrow>=14.0.0",
     "rich>=13.0.0",
     "streamlit>=1.30.0",
-    "plotly>=5.18.0"
+    "plotly>=5.18.0",
+    "fastapi>=0.141.1",
+    "uvicorn[standard]>=0.53.0",
 ]
 
 [project.optional-dependencies]
@@ -41,4 +43,9 @@ python_files = ["test_*.py"]
 addopts = "-v --tb=short -m 'not live'"
 markers = [
     "live: integration tests that require live network access to leetcode.com. Excluded from the default selection so normal runs and CI need no network; run explicitly with `pytest -m live`.",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
 ]
