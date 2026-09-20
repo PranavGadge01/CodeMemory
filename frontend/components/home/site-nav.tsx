@@ -50,11 +50,8 @@ export function SiteNav() {
 
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/auth/sign-in">Sign in</Link>
-          </Button>
           <Button variant="primary" size="sm" asChild>
-            <Link href="/dashboard">Open CodeMemory</Link>
+            <Link href="/connect">Connect LeetCode</Link>
           </Button>
         </div>
       </div>
