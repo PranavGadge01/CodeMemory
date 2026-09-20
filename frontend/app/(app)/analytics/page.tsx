@@ -1,4 +1,4 @@
-import { getAnalytics } from "@/lib/data";
+import { getAnalytics, toAsyncState } from "@/lib/api";
 import type { ProgressOverTime } from "@/lib/types";
 import { PageContainer, PageSection } from "@/components/app/page-container";
 import { PageHeader } from "@/components/app/page-header";
@@ -13,14 +13,23 @@ import { DifficultyDistribution } from "@/components/app/analytics/difficulty-di
 import { TopicTable } from "@/components/app/analytics/topic-table";
 import { StruggleList } from "@/components/app/analytics/struggle-list";
 import { formatNumber, formatPercent } from "@/lib/format";
+import { ErrorState, PageSkeleton, EmptyDataState } from "@/components/app/data-states";
 
 export const metadata = { title: "Coding analytics" };
 
 /** Weekly buckets shown across the time-series sections. ~18 weeks exist in a full history; 12 keeps the labels readable. */
 const WEEKS_SHOWN = 12;
 
-export default function AnalyticsPage() {
-  const { overview, difficulties, topics, languages, progress, struggles } = getAnalytics();
+export default async function AnalyticsPage() {
+  // Weeks keep the progress charts readable at the granularity the UI was
+  // designed for; the endpoint accepts `day` and `month` as well.
+  const state = await toAsyncState(getAnalytics("week"));
+
+  if (state.status !== "success") {
+    return <AnalyticsPending state={state} />;
+  }
+
+  const { overview, difficulties, topics, languages, progress, struggles } = state.data;
   const weeks = progress.slice(-WEEKS_SHOWN);
 
   return (
@@ -65,14 +74,21 @@ export default function AnalyticsPage() {
             />
             <div className="flex flex-col gap-6 px-5 py-5 sm:flex-row sm:items-center sm:gap-10">
               <div className="min-w-0 flex-1 sm:max-w-[640px]">
-                <BarChart
-                  data={weeks.map((week) => ({
-                    label: week.label,
-                    value: week.totalSubmissions,
-                    hint: `${week.totalSubmissions} submissions · ${week.problemsSolved} solved · ${week.acceptedSubmissions} accepted`,
-                  }))}
-                  height={190}
-                />
+                {weeks.length > 0 ? (
+                  <BarChart
+                    data={weeks.map((week) => ({
+                      label: week.label,
+                      value: week.totalSubmissions,
+                      hint: `${week.totalSubmissions} submissions · ${week.problemsSolved} solved · ${week.acceptedSubmissions} accepted`,
+                    }))}
+                    height={190}
+                  />
+                ) : (
+                  <EmptyDataState
+                    title="No weekly volume yet"
+                    description="Submission volume per week appears here once submissions have been indexed."
+                  />
+                )}
               </div>
               <WeeklySummary weeks={weeks} />
             </div>
@@ -88,23 +104,30 @@ export default function AnalyticsPage() {
                 description="Problems solved against total submissions, per week."
               />
               <div className="px-5 py-5">
-                <LineChart
-                  labels={weeks.map((week) => week.label)}
-                  series={[
-                    {
-                      label: "Problems solved",
-                      values: weeks.map((week) => week.problemsSolved),
-                      color: CHART_COLORS.accent,
-                      area: true,
-                    },
-                    {
-                      label: "Total submissions",
-                      values: weeks.map((week) => week.totalSubmissions),
-                      color: CHART_COLORS.muted,
-                    },
-                  ]}
-                  height={150}
-                />
+                {weeks.length > 0 ? (
+                  <LineChart
+                    labels={weeks.map((week) => week.label)}
+                    series={[
+                      {
+                        label: "Problems solved",
+                        values: weeks.map((week) => week.problemsSolved),
+                        color: CHART_COLORS.accent,
+                        area: true,
+                      },
+                      {
+                        label: "Total submissions",
+                        values: weeks.map((week) => week.totalSubmissions),
+                        color: CHART_COLORS.muted,
+                      },
+                    ]}
+                    height={150}
+                  />
+                ) : (
+                  <EmptyDataState
+                    title="No progress recorded"
+                    description="Solved versus attempted appears here once a week of history exists."
+                  />
+                )}
               </div>
             </Surface>
           </Reveal>
@@ -117,7 +140,14 @@ export default function AnalyticsPage() {
                 description="Solved against attempted, per difficulty."
               />
               <div className="px-5 py-5">
-                <DifficultyDistribution stats={difficulties} />
+                {difficulties.length > 0 ? (
+                  <DifficultyDistribution stats={difficulties} />
+                ) : (
+                  <EmptyDataState
+                    title="No difficulty data"
+                    description="Solved against attempted per difficulty appears once problems are indexed."
+                  />
+                )}
               </div>
             </Surface>
           </Reveal>
@@ -130,7 +160,14 @@ export default function AnalyticsPage() {
               title="Topic performance"
               description="Where your submission volume concentrates, and what it converts into."
             />
-            <TopicTable topics={topics} />
+            {topics.length > 0 ? (
+              <TopicTable topics={topics} />
+            ) : (
+              <EmptyDataState
+                title="No topic performance yet"
+                description="Per-topic submission volume and conversion appear once problems carry topics."
+              />
+            )}
           </Surface>
         </Reveal>
 
@@ -143,21 +180,30 @@ export default function AnalyticsPage() {
                 description="Share of all submissions, per language."
               />
               <div className="px-5 py-5">
-                <DistributionBars
-                  rows={languages.map((stat, index) => ({
-                    label: stat.language,
-                    value: stat.usageSharePct,
-                    // Languages are categorical — no colour carries meaning, so
-                    // only the most-used language takes the accent.
-                    color: index === 0 ? CHART_COLORS.accent : "rgba(255,255,255,0.18)",
-                    hint: `${stat.totalSubmissions} submissions · ${formatPercent(stat.acceptanceRatePct)} accepted`,
-                  }))}
-                  max={100}
-                  formatValue={(value) => `${value.toFixed(0)}%`}
-                />
-                <div className="mt-4 border-t border-border-soft pt-3 text-caption text-text-faint">
-                  Acceptance rate per language is in each bar tooltip.
-                </div>
+                {languages.length > 0 ? (
+                  <>
+                    <DistributionBars
+                      rows={languages.map((stat, index) => ({
+                        label: stat.language,
+                        value: stat.usageSharePct,
+                        // Languages are categorical — no colour carries meaning, so
+                        // only the most-used language takes the accent.
+                        color: index === 0 ? CHART_COLORS.accent : "rgba(255,255,255,0.18)",
+                        hint: `${stat.totalSubmissions} submissions · ${formatPercent(stat.acceptanceRatePct)} accepted`,
+                      }))}
+                      max={100}
+                      formatValue={(value) => `${value.toFixed(0)}%`}
+                    />
+                    <div className="mt-4 border-t border-border-soft pt-3 text-caption text-text-faint">
+                      Acceptance rate per language is in each bar tooltip.
+                    </div>
+                  </>
+                ) : (
+                  <EmptyDataState
+                    title="No language usage yet"
+                    description="Share of submissions per language appears once a submission exists."
+                  />
+                )}
               </div>
             </Surface>
           </Reveal>
@@ -173,6 +219,32 @@ export default function AnalyticsPage() {
             </Surface>
           </Reveal>
         </div>
+      </PageSection>
+    </PageContainer>
+  );
+}
+
+/** Loading and error keep the page's frame so the layout never reflows. */
+function AnalyticsPending({
+  state,
+}: {
+  state: { status: "loading" } | { status: "error"; error: import("@/lib/api").ApiError };
+}) {
+  return (
+    <PageContainer>
+      <PageSection className="gap-6">
+        <PageHeader
+          eyebrow="Analytics"
+          title="Coding analytics"
+          description="Derived from your own submissions — every number below is computed from problems you have actually attempted, nothing inferred or assumed."
+        />
+        {state.status === "error" ? (
+          <Surface>
+            <ErrorState error={state.error} />
+          </Surface>
+        ) : (
+          <PageSkeleton />
+        )}
       </PageSection>
     </PageContainer>
   );
