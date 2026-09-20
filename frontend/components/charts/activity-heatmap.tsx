@@ -8,7 +8,8 @@ const LABEL_WIDTH = 24;
 /**
  * The grid scales up to fill a wide card, but not without limit — past this the
  * cells stop reading as a compact contribution graph and start reading as
- * oversized tiles, and the card grows taller than the section warrants.
+ * oversized tiles. The dashboard's full-width card raises the ceiling via
+ * `maxScale`; the homepage's narrower preview keeps the default.
  */
 const MAX_CELL_SCALE = 1.5;
 const WEEKDAYS = [
@@ -31,8 +32,9 @@ const WEEKDAYS = [
  * Sizing: the viewBox is the grid's natural size at its design cell size, and
  * the SVG scales to the card width while keeping that aspect ratio, so a
  * trailing year spans the card without cells being stretched non-uniformly.
- * A floor keeps weekday and month labels legible on narrow screens — below it
- * the wrapper scrolls horizontally instead of shrinking the type any further.
+ * There is no floor: on a narrow viewport the whole grid shrinks together —
+ * cells, gaps and labels — so all 364 days stay visible without a horizontal
+ * scrollbar. `maxScale` is the only ceiling.
  */
 export function ActivityHeatmap({
   days,
@@ -40,12 +42,15 @@ export function ActivityHeatmap({
   cellSize = 10,
   gap = 2,
   max: maxProp,
+  maxScale = MAX_CELL_SCALE,
 }: {
   days: ActivityDay[];
   className?: string;
   cellSize?: number;
   gap?: number;
   max?: number;
+  /** How large the grid may grow relative to its design size. */
+  maxScale?: number;
 }) {
   const max = maxProp ?? Math.max(1, ...days.map((day) => day.submissions));
 
@@ -66,7 +71,7 @@ export function ActivityHeatmap({
       <svg
         className="block mx-auto h-auto w-full"
         viewBox={`0 0 ${width} ${height}`}
-        style={{ minWidth: width, maxWidth: width * MAX_CELL_SCALE }}
+        style={{ maxWidth: width * maxScale }}
         role="img"
         aria-label={`Solving activity over ${days.length} days. Peak ${max} submissions in a day.`}
       >

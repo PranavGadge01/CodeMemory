@@ -71,7 +71,7 @@ export default function DashboardPage() {
               }
             />
             <div className="px-5 py-4">
-              <ActivityHeatmap days={data.activity} />
+              <ActivityHeatmap days={data.activity} maxScale={2} />
               <Legend total={overview.totalSubmissions} shown={totalActivity(data.activity)} />
             </div>
           </Surface>

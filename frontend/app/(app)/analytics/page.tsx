@@ -1,4 +1,5 @@
 import { getAnalytics } from "@/lib/data";
+import type { ProgressOverTime } from "@/lib/types";
 import { PageContainer, PageSection } from "@/components/app/page-container";
 import { PageHeader } from "@/components/app/page-header";
 import { StatStrip } from "@/components/app/stat-strip";
@@ -11,7 +12,7 @@ import { Reveal } from "@/components/system/reveal";
 import { DifficultyDistribution } from "@/components/app/analytics/difficulty-distribution";
 import { TopicTable } from "@/components/app/analytics/topic-table";
 import { StruggleList } from "@/components/app/analytics/struggle-list";
-import { formatPercent } from "@/lib/format";
+import { formatNumber, formatPercent } from "@/lib/format";
 
 export const metadata = { title: "Coding analytics" };
 
@@ -62,15 +63,18 @@ export default function AnalyticsPage() {
               title="Submissions per week"
               description={`Weekly submission volume across the last ${weeks.length} weeks.`}
             />
-            <div className="px-5 py-5">
-              <BarChart
-                data={weeks.map((week) => ({
-                  label: week.label,
-                  value: week.totalSubmissions,
-                  hint: `${week.totalSubmissions} submissions · ${week.problemsSolved} solved · ${week.acceptedSubmissions} accepted`,
-                }))}
-                height={190}
-              />
+            <div className="flex flex-col gap-6 px-5 py-5 sm:flex-row sm:items-center sm:gap-10">
+              <div className="min-w-0 flex-1 sm:max-w-[640px]">
+                <BarChart
+                  data={weeks.map((week) => ({
+                    label: week.label,
+                    value: week.totalSubmissions,
+                    hint: `${week.totalSubmissions} submissions · ${week.problemsSolved} solved · ${week.acceptedSubmissions} accepted`,
+                  }))}
+                  height={190}
+                />
+              </div>
+              <WeeklySummary weeks={weeks} />
             </div>
           </Surface>
         </Reveal>
@@ -171,5 +175,41 @@ export default function AnalyticsPage() {
         </div>
       </PageSection>
     </PageContainer>
+  );
+}
+
+/**
+ * Compact companion to the weekly bar chart. It fills the card's right side
+ * with a few facts derived from the same weeks, and nothing else — this is not
+ * an insights panel; the page already carries the detail further down.
+ */
+function WeeklySummary({ weeks }: { weeks: ProgressOverTime[] }) {
+  if (weeks.length === 0) return null;
+
+  const total = weeks.reduce((sum, week) => sum + week.totalSubmissions, 0);
+  const average = total / Math.max(1, weeks.length);
+  const peak = weeks.reduce(
+    (best, week) => (week.totalSubmissions > best.totalSubmissions ? week : best),
+    weeks[0],
+  );
+
+  return (
+    <aside className="w-full shrink-0 sm:w-48 sm:border-l sm:border-border-soft sm:pl-8">
+      <span className="eyebrow">{weeks.length} weeks</span>
+      <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-1 sm:gap-0 sm:divide-y sm:divide-border-soft">
+        <SummaryFact label="Submissions" value={formatNumber(total)} />
+        <SummaryFact label="Avg / week" value={average.toFixed(1)} />
+        <SummaryFact label="Peak week" value={`${peak.label} · ${peak.totalSubmissions}`} />
+      </div>
+    </aside>
+  );
+}
+
+function SummaryFact({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 sm:py-2.5 sm:first:pt-0 sm:last:pb-0">
+      <div className="font-technical-sm text-text-faint">{label}</div>
+      <div className="mt-0.5 truncate font-technical text-text-secondary tabular-nums">{value}</div>
+    </div>
   );
 }
