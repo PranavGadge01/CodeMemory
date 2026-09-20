@@ -1,5 +1,6 @@
 """DuckDB storage implementation for relational querying and analytics."""
 
+import threading
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Sequence
@@ -12,6 +13,30 @@ from codememory.storage.base import AttemptRepository, ProblemRepository, Submis
 
 
 _shared_duckdb_connections: dict[str, duckdb.DuckDBPyConnection] = {}
+
+# Guards mutation of the connection/lock registries themselves, so two threads
+# constructing a DuckDBStorage against the same path at once agree on which
+# connection — and therefore which lock — they share.
+_shared_duckdb_registry_lock = threading.Lock()
+
+# One re-entrant lock per database path, held by every instance whose connection
+# came from the pooled handle for that path. See DuckDBStorage: a single
+# DuckDBPyConnection is not safe for concurrent use, so all access to it is
+# serialised through this lock. Re-entrance is required because the public
+# methods nest (``save`` inside ``save_submission``, ``_build_problem_from_row``
+# inside ``get_by_slug``).
+_shared_duckdb_locks: dict[str, threading.RLock] = {}
+
+
+def _lock_for(db_path: str) -> threading.RLock:
+    """Return the lock guarding the pooled connection for ``db_path``."""
+    with _shared_duckdb_registry_lock:
+        lock = _shared_duckdb_locks.get(db_path)
+        if lock is None:
+            lock = threading.RLock()
+            _shared_duckdb_locks[db_path] = lock
+        return lock
+
 
 
 def _to_naive_utc(dt: datetime | None) -> datetime | None:
@@ -41,6 +66,15 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
     concurrent use from two threads — interleaved statements corrupt each
     other's result sets — while two separate connections to the same file are
     serialised by DuckDB itself and are safe.
+
+    The pooled connection is shared by every instance in the process built
+    against the same path, including all of a threaded server's request
+    threads. Because one connection cannot serve two statements at once, every
+    access is serialised through a per-path re-entrant lock: a read holds it for
+    the whole multi-statement graph build, so a concurrent request can never
+    reset another's pending result set. Callers still run concurrently; only
+    the connection access is ordered, and each critical section is a few
+    indexed lookups.
     """
 
     def __init__(
@@ -50,6 +84,7 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
         shared: bool = True,
     ):
         self.db_path = str(db_path)
+        self._lock = _lock_for(self.db_path)
         if self.db_path != ":memory:":
             Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
 
@@ -95,48 +130,49 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
         connections because an empty hash can be written at any point in a
         process's lifetime; the no-op cost is a single indexed scan.
         """
-        try:
-            rows = self.conn.execute(
-                """
-                SELECT id, problem_id, code, language, status, submitted_at
-                FROM submissions
-                WHERE submission_hash IS NULL OR submission_hash = ''
-                """
-            ).fetchall()
-        except Exception:
-            return
-
-        if not rows:
-            return
-
-        taken = {
-            row[0]
-            for row in self.conn.execute(
-                "SELECT submission_hash FROM submissions WHERE submission_hash <> ''"
-            ).fetchall()
-        }
-
-        for sid, pid, code, lang, status, submitted_at in rows:
-            slug_row = self.conn.execute("SELECT slug FROM problems WHERE id = ?", [pid]).fetchone()
-            slug = slug_row[0] if slug_row else pid
-            new_hash = compute_submission_hash(
-                problem_title=slug,
-                language=lang or "",
-                code=code or "",
-                submitted_at=submitted_at,
-                status=status or "",
-            )
-            if not new_hash or new_hash in taken:
-                new_hash = f"legacy_{sid}"
+        with self._lock:
             try:
-                self.conn.execute(
-                    "UPDATE submissions SET submission_hash = ? WHERE id = ?", [new_hash, sid]
-                )
+                rows = self.conn.execute(
+                    """
+                    SELECT id, problem_id, code, language, status, submitted_at
+                    FROM submissions
+                    WHERE submission_hash IS NULL OR submission_hash = ''
+                    """
+                ).fetchall()
             except Exception:
-                # A read-only or otherwise constrained connection cannot repair;
-                # leave the row untouched rather than failing construction.
-                continue
-            taken.add(new_hash)
+                return
+
+            if not rows:
+                return
+
+            taken = {
+                row[0]
+                for row in self.conn.execute(
+                    "SELECT submission_hash FROM submissions WHERE submission_hash <> ''"
+                ).fetchall()
+            }
+
+            for sid, pid, code, lang, status, submitted_at in rows:
+                slug_row = self.conn.execute("SELECT slug FROM problems WHERE id = ?", [pid]).fetchone()
+                slug = slug_row[0] if slug_row else pid
+                new_hash = compute_submission_hash(
+                    problem_title=slug,
+                    language=lang or "",
+                    code=code or "",
+                    submitted_at=submitted_at,
+                    status=status or "",
+                )
+                if not new_hash or new_hash in taken:
+                    new_hash = f"legacy_{sid}"
+                try:
+                    self.conn.execute(
+                        "UPDATE submissions SET submission_hash = ? WHERE id = ?", [new_hash, sid]
+                    )
+                except Exception:
+                    # A read-only or otherwise constrained connection cannot repair;
+                    # leave the row untouched rather than failing construction.
+                    continue
+                taken.add(new_hash)
 
     def close(self) -> None:
         """Close this instance's connection and drop it from the shared registry.
@@ -151,6 +187,9 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
         """
         if not (hasattr(self, "conn") and self.conn):
             return
+        # No lock here: a caller closing a connection must not block behind a
+        # thread that holds the lock through a query on that same connection,
+        # and teardown is already idempotent and exception-safe.
         registered = _shared_duckdb_connections.get(self.db_path)
         # Only unregister a handle this instance actually owns; a different
         # instance may already have reopened the path underneath this one.
@@ -166,11 +205,12 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
 
     def health(self) -> bool:
         """Verify the DuckDB connection can execute a trivial query."""
-        try:
-            row = self.conn.execute("SELECT 1").fetchone()
-        except Exception:
-            return False
-        return bool(row) and row[0] == 1
+        with self._lock:
+            try:
+                row = self.conn.execute("SELECT 1").fetchone()
+            except Exception:
+                return False
+            return bool(row) and row[0] == 1
 
     def _init_tables(self) -> None:
         """Create tables if they do not exist."""
@@ -241,6 +281,10 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
 
     def save(self, problem: Problem) -> Problem:
         """Upsert problem, attempts, submissions, and notes into DuckDB."""
+        with self._lock:
+            return self._save_locked(problem)
+
+    def _save_locked(self, problem: Problem) -> Problem:
         topics_str = ", ".join(problem.topics) if problem.topics else ""
         platform_str = problem.platform.value if hasattr(problem.platform, "value") else str(problem.platform)
         diff_str = problem.difficulty.value if hasattr(problem.difficulty, "value") else str(problem.difficulty)
@@ -370,16 +414,23 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
         return problem
 
     def get_by_id(self, problem_id: str) -> Problem | None:
-        res = self.conn.execute("SELECT * FROM problems WHERE id = ?", [problem_id]).fetchone()
-        if not res:
-            return None
-        return self._build_problem_from_row(res)
+        with self._lock:
+            res = self.conn.execute("SELECT * FROM problems WHERE id = ?", [problem_id]).fetchone()
+            if not res:
+                return None
+            return self._build_problem_from_row(res)
 
     def get_by_slug(self, slug: str) -> Problem | None:
-        res = self.conn.execute("SELECT * FROM problems WHERE slug = ?", [slug]).fetchone()
-        if not res:
-            return None
-        return self._build_problem_from_row(res)
+        # The lock spans the problem lookup *and* the child-row builds: a
+        # concurrent statement on the same connection would reset this query's
+        # pending result and hand one thread the other's rows, which is how a
+        # problem row reaches the attempt-row unpack and ``attempt_number``
+        # ends up validating a slug string.
+        with self._lock:
+            res = self.conn.execute("SELECT * FROM problems WHERE slug = ?", [slug]).fetchone()
+            if not res:
+                return None
+            return self._build_problem_from_row(res)
 
     def _build_problem_from_row(self, row: tuple) -> Problem:
         pid, title, slug, diff, platform, url, topics_str, stmt, created_at, updated_at = row
@@ -459,80 +510,89 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
         )
 
     def list_all(self) -> Sequence[Problem]:
-        rows = self.conn.execute("SELECT * FROM problems ORDER BY title ASC").fetchall()
-        return [self._build_problem_from_row(r) for r in rows]
+        with self._lock:
+            rows = self.conn.execute("SELECT * FROM problems ORDER BY title ASC").fetchall()
+            return [self._build_problem_from_row(r) for r in rows]
 
     def delete(self, problem_id: str) -> bool:
-        res = self.conn.execute("DELETE FROM problems WHERE id = ?", [problem_id])
-        return res.rowcount > 0
+        with self._lock:
+            res = self.conn.execute("DELETE FROM problems WHERE id = ?", [problem_id])
+            return res.rowcount > 0
 
     def save_submission(self, submission: Submission) -> Submission:
-        prob = self.get_by_id(submission.problem_id) or self.get_by_slug(submission.problem_id)
-        if prob:
-            if not prob.attempts:
-                prob.attempts.append(Attempt(problem_id=prob.id, attempt_number=1, status=submission.status))
-            prob.attempts[-1].submissions.append(submission)
-            self.save(prob)
-        return submission
+        with self._lock:
+            prob = self.get_by_id(submission.problem_id) or self.get_by_slug(submission.problem_id)
+            if prob:
+                if not prob.attempts:
+                    prob.attempts.append(Attempt(problem_id=prob.id, attempt_number=1, status=submission.status))
+                prob.attempts[-1].submissions.append(submission)
+                self._save_locked(prob)
+            return submission
 
     def get_by_hash(self, submission_hash: str) -> Submission | None:
-        res = self.conn.execute("SELECT * FROM submissions WHERE submission_hash = ?", [submission_hash]).fetchone()
-        if not res:
-            return None
-        sid, pid, aid, code, lang, status, rt, mem, s_time, err, s_hash = res
-        return Submission(
-            id=sid,
-            problem_id=pid,
-            attempt_id=aid,
-            code=code,
-            language=lang,
-            status=SubmissionStatus.parse(status),
-            runtime_ms=rt,
-            memory_mb=mem,
-            submitted_at=s_time,
-            error_message=err,
-            submission_hash=s_hash,
-        )
+        with self._lock:
+            res = self.conn.execute("SELECT * FROM submissions WHERE submission_hash = ?", [submission_hash]).fetchone()
+            if not res:
+                return None
+            sid, pid, aid, code, lang, status, rt, mem, s_time, err, s_hash = res
+            return Submission(
+                id=sid,
+                problem_id=pid,
+                attempt_id=aid,
+                code=code,
+                language=lang,
+                status=SubmissionStatus.parse(status),
+                runtime_ms=rt,
+                memory_mb=mem,
+                submitted_at=s_time,
+                error_message=err,
+                submission_hash=s_hash,
+            )
 
     def list_by_problem(self, problem_id: str) -> Sequence[Submission]:
-        prob = self.get_by_id(problem_id) or self.get_by_slug(problem_id)
-        if not prob:
-            return []
-        subs: list[Submission] = []
-        for a in prob.attempts:
-            subs.extend(a.submissions)
-        return sorted(subs, key=lambda s: s.submitted_at)
+        with self._lock:
+            prob = self.get_by_id(problem_id) or self.get_by_slug(problem_id)
+            if not prob:
+                return []
+            subs: list[Submission] = []
+            for a in prob.attempts:
+                subs.extend(a.submissions)
+            return sorted(subs, key=lambda s: s.submitted_at)
 
     def list_by_attempt(self, attempt_id: str) -> Sequence[Submission]:
-        rows = self.conn.execute("SELECT * FROM submissions WHERE attempt_id = ? ORDER BY submitted_at ASC", [attempt_id]).fetchall()
-        subs: list[Submission] = []
-        for r in rows:
-            sid, pid, aid, code, lang, status, rt, mem, s_time, err, s_hash = r
-            subs.append(
-                Submission(
-                    id=sid,
-                    problem_id=pid,
-                    attempt_id=aid,
-                    code=code,
-                    language=lang,
-                    status=SubmissionStatus.parse(status),
-                    runtime_ms=rt,
-                    memory_mb=mem,
-                    submitted_at=s_time,
-                    error_message=err,
-                    submission_hash=s_hash,
+        with self._lock:
+            rows = self.conn.execute(
+                "SELECT * FROM submissions WHERE attempt_id = ? ORDER BY submitted_at ASC", [attempt_id]
+            ).fetchall()
+            subs: list[Submission] = []
+            for r in rows:
+                sid, pid, aid, code, lang, status, rt, mem, s_time, err, s_hash = r
+                subs.append(
+                    Submission(
+                        id=sid,
+                        problem_id=pid,
+                        attempt_id=aid,
+                        code=code,
+                        language=lang,
+                        status=SubmissionStatus.parse(status),
+                        runtime_ms=rt,
+                        memory_mb=mem,
+                        submitted_at=s_time,
+                        error_message=err,
+                        submission_hash=s_hash,
+                    )
                 )
-            )
-        return subs
+            return subs
 
     def save_attempt(self, attempt: Attempt) -> Attempt:
-        prob = self.get_by_id(attempt.problem_id)
-        if prob:
-            for i, a in enumerate(prob.attempts):
-                if a.id == attempt.id:
-                    prob.attempts[i] = attempt
-                    break
-            else:
-                prob.attempts.append(attempt)
-            self.save(prob)
-        return attempt
+        with self._lock:
+            prob = self.get_by_id(attempt.problem_id)
+            if prob:
+                for i, a in enumerate(prob.attempts):
+                    if a.id == attempt.id:
+                        prob.attempts[i] = attempt
+                        break
+                else:
+                    prob.attempts.append(attempt)
+                self._save_locked(prob)
+            return attempt

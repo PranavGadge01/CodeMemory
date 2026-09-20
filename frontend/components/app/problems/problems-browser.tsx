@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { ChevronDown, RotateCcw, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,6 @@ import { ProblemDrawer } from "@/components/app/problems/problem-drawer";
 import {
   attemptCount,
   bestRuntime,
-  isSolved,
   languagesOf,
   lastActivityAt,
   solveStatus,
@@ -40,37 +40,86 @@ const DIFFICULTY_ORDER: Record<Difficulty, number> = {
   Unknown: 3,
 };
 
+/**
+ * Query-string keys the browser writes. Kept in one place so the page and the
+ * browser can never disagree about a filter's URL name.
+ */
+export const QUERY_KEYS = {
+  q: "q",
+  difficulty: "difficulty",
+  status: "status",
+  sort: "sort",
+} as const;
+
 export function ProblemsBrowser({
   problems,
+  /** Slugs the server-side filters kept. Sorting and the drawer stay client-side. */
+  visibleSlugs,
+  filteredTotal,
+  params,
   initialSlug = null,
+  initialProblem = null,
 }: {
   problems: Problem[];
+  visibleSlugs: Set<string>;
+  filteredTotal: number;
+  params: { q: string; difficulty: string; status: string; sort: string };
   initialSlug?: string | null;
+  initialProblem?: Problem | null;
 }) {
-  const [query, setQuery] = React.useState("");
-  const [difficulty, setDifficulty] = React.useState<DifficultyFilter>("All");
-  const [status, setStatus] = React.useState<StatusFilter>("All");
-  const [sort, setSort] = React.useState<SortKey>("activity");
+  const router = useRouter();
+
+  const query = params.q;
+  const difficulty = (DIFFICULTIES.includes(params.difficulty as DifficultyFilter)
+    ? params.difficulty
+    : "All") as DifficultyFilter;
+  const status = (STATUSES.includes(params.status as StatusFilter) ? params.status : "All") as StatusFilter;
+  const sort = SORTS.some((option) => option.value === params.sort)
+    ? (params.sort as SortKey)
+    : "activity";
 
   // The drawer's content outlives its visibility by one transition so the
   // slide-out has something to render against.
-  const [selectedSlug, setSelectedSlug] = React.useState<string | null>(initialSlug);
   const [drawerOpen, setDrawerOpen] = React.useState(Boolean(initialSlug));
+  // A deep-linked problem may not be in the filtered set, so the drawer holds
+  // the problem the page fetched for it rather than looking it up locally.
+  const [drawerProblem, setDrawerProblem] = React.useState<Problem | null>(initialProblem);
   const closeTimer = React.useRef<number>(0);
 
-  const openProblem = React.useCallback((slug: string) => {
-    window.clearTimeout(closeTimer.current);
-    setSelectedSlug(slug);
-    setDrawerOpen(true);
-  }, []);
+  const openProblem = React.useCallback(
+    (slug: string, problem: Problem | null) => {
+      window.clearTimeout(closeTimer.current);
+      setDrawerProblem(problem);
+      setDrawerOpen(true);
+    },
+    [],
+  );
 
   const closeDrawer = React.useCallback(() => {
     window.clearTimeout(closeTimer.current);
     setDrawerOpen(false);
-    closeTimer.current = window.setTimeout(() => setSelectedSlug(null), 260);
+    closeTimer.current = window.setTimeout(() => {
+      setDrawerProblem(null);
+    }, 260);
   }, []);
 
   React.useEffect(() => () => window.clearTimeout(closeTimer.current), []);
+
+  /**
+   * Push one filter into the query string. The backend applies the filter, so
+   * the browser never filters the list itself; sorting has no backend
+   * equivalent and is applied to the server-filtered set below.
+   */
+  const setParam = React.useCallback(
+    (key: string, value: string) => {
+      const next = new URLSearchParams(window.location.search);
+      if (value === "") next.delete(key);
+      else next.set(key, value);
+      const qs = next.toString();
+      router.replace(qs ? `/problems?${qs}` : "/problems", { scroll: false });
+    },
+    [router],
+  );
 
   const difficultyCounts = React.useMemo(() => {
     const counts: Record<DifficultyFilter, number> = {
@@ -98,19 +147,9 @@ export function ProblemsBrowser({
     >;
   }, [problems]);
 
+  // The backend already filtered; this is only the client-side re-sort.
   const filtered = React.useMemo(() => {
-    const needle = query.trim().toLowerCase();
-
-    const matches = problems.filter((problem) => {
-      if (difficulty !== "All" && problem.difficulty !== difficulty) return false;
-      if (status === "Solved" && !isSolved(problem)) return false;
-      if (status === "Attempted" && solveStatus(problem) !== "Attempted") return false;
-      if (needle) {
-        const haystack = `${problem.title} ${problem.slug} ${problem.topics.join(" ")}`.toLowerCase();
-        if (!haystack.includes(needle)) return false;
-      }
-      return true;
-    });
+    const matches = problems.filter((problem) => visibleSlugs.has(problem.slug));
 
     const byTitle = (a: Problem, b: Problem) => a.title.localeCompare(b.title);
 
@@ -122,36 +161,32 @@ export function ProblemsBrowser({
       case "title":
         return [...matches].sort(byTitle);
       case "attempts":
-        return [...matches].sort(
-          (a, b) => attemptCount(b) - attemptCount(a) || byTitle(a, b),
-        );
+        return [...matches].sort((a, b) => attemptCount(b) - attemptCount(a) || byTitle(a, b));
       case "activity":
       default:
         return [...matches].sort(
           (a, b) => lastActivityAt(b).localeCompare(lastActivityAt(a)) || byTitle(a, b),
         );
     }
-  }, [problems, query, difficulty, status, sort]);
+  }, [problems, visibleSlugs, sort]);
 
   const hasFilters = query.trim() !== "" || difficulty !== "All" || status !== "All";
 
   const resetFilters = React.useCallback(() => {
-    setQuery("");
-    setDifficulty("All");
-    setStatus("All");
-  }, []);
-
-  const selected =
-    selectedSlug === null
-      ? null
-      : problems.find((problem) => problem.slug === selectedSlug) ?? null;
+    const next = new URLSearchParams(window.location.search);
+    next.delete(QUERY_KEYS.q);
+    next.delete(QUERY_KEYS.difficulty);
+    next.delete(QUERY_KEYS.status);
+    const qs = next.toString();
+    router.replace(qs ? `/problems?${qs}` : "/problems", { scroll: false });
+  }, [router]);
 
   return (
     <Surface className="overflow-hidden">
       <div className="flex flex-col gap-3 border-b border-border-soft p-4 lg:flex-row lg:items-center">
         <SearchInput
           value={query}
-          onChange={setQuery}
+          onChange={(value) => setParam(QUERY_KEYS.q, value)}
           placeholder="Search title or topic…"
           className="lg:max-w-xs"
           aria-label="Search problems by title or topic"
@@ -162,7 +197,7 @@ export function ProblemsBrowser({
             <FilterChip
               key={value}
               active={difficulty === value}
-              onClick={() => setDifficulty(value)}
+              onClick={() => setParam(QUERY_KEYS.difficulty, value === "All" ? "" : value)}
               count={difficultyCounts[value]}
             >
               {value}
@@ -177,7 +212,7 @@ export function ProblemsBrowser({
             <FilterChip
               key={value}
               active={status === value}
-              onClick={() => setStatus(value)}
+              onClick={() => setParam(QUERY_KEYS.status, value === "All" ? "" : value)}
               count={statusCounts[value]}
             >
               {value}
@@ -186,13 +221,13 @@ export function ProblemsBrowser({
         </div>
 
         <div className="lg:ml-auto">
-          <SortSelect value={sort} onChange={setSort} />
+          <SortSelect value={sort} onChange={(value) => setParam(QUERY_KEYS.sort, value)} />
         </div>
       </div>
 
       <div className="flex items-center justify-between gap-3 border-b border-border-soft px-4 py-2.5">
         <span className="font-technical-sm text-text-muted">
-          {`Showing ${formatNumber(filtered.length)} of ${formatNumber(problems.length)} problems`}
+          {`Showing ${formatNumber(filtered.length)} of ${formatNumber(filteredTotal)} problems`}
         </span>
         {hasFilters ? (
           <button
@@ -209,12 +244,18 @@ export function ProblemsBrowser({
       {filtered.length === 0 ? (
         <EmptyState
           icon={<Search className="h-4 w-4" aria-hidden="true" />}
-          title="No problems match these filters"
-          description="Try a different search term, or clear the difficulty and status filters."
+          title={hasFilters ? "No problems match these filters" : "No problems yet"}
+          description={
+            hasFilters
+              ? "Try a different search term, or clear the difficulty and status filters."
+              : "Problems appear here once a submission history has been imported."
+          }
           action={
-            <Button variant="subtle" size="sm" onClick={resetFilters}>
-              Clear all filters
-            </Button>
+            hasFilters ? (
+              <Button variant="subtle" size="sm" onClick={resetFilters}>
+                Clear all filters
+              </Button>
+            ) : null
           }
         />
       ) : (
@@ -230,14 +271,14 @@ export function ProblemsBrowser({
           </TableHead>
           <Tbody>
             {filtered.map((problem) => (
-              <Tr key={problem.id} onClick={() => openProblem(problem.slug)}>
+              <Tr key={problem.id} onClick={() => openProblem(problem.slug, problem)}>
                 <Td>
                   <div className="flex max-w-[300px] items-baseline">
                     <button
                       type="button"
                       onClick={(event) => {
                         event.stopPropagation();
-                        openProblem(problem.slug);
+                        openProblem(problem.slug, problem);
                       }}
                       title={`Open details for ${problem.title}`}
                       className="press truncate text-left text-body-sm font-medium text-text-primary hover:text-accent"
@@ -253,10 +294,7 @@ export function ProblemsBrowser({
                   <DifficultyBadge difficulty={problem.difficulty} />
                 </Td>
                 <Td className="max-w-[220px]">
-                  <TruncatedList
-                    items={problem.topics}
-                    title={problem.topics.join(", ")}
-                  />
+                  <TruncatedList items={problem.topics} title={problem.topics.join(", ")} />
                 </Td>
                 <Td align="right" mono>
                   {attemptCount(problem)}
@@ -280,8 +318,8 @@ export function ProblemsBrowser({
       )}
 
       <ProblemDrawer
-        problem={selected}
-        open={drawerOpen && selected !== null}
+        problem={drawerProblem}
+        open={drawerOpen && drawerProblem !== null}
         onClose={closeDrawer}
       />
     </Surface>
@@ -309,7 +347,7 @@ function SortSelect({
   onChange,
 }: {
   value: SortKey;
-  onChange: (value: SortKey) => void;
+  onChange: (value: string) => void;
 }) {
   return (
     <div className="relative">
@@ -319,7 +357,7 @@ function SortSelect({
       <select
         id="problem-sort"
         value={value}
-        onChange={(event) => onChange(event.target.value as SortKey)}
+        onChange={(event) => onChange(event.target.value)}
         className={cn(
           "h-9 w-full appearance-none rounded-md border border-border bg-surface pl-3 pr-9 text-body-sm text-text-primary",
           "transition-colors duration-micro ease-standard",

@@ -80,6 +80,89 @@ def test_duckdb_repository(tmp_path: Path):
     db_repo.close()
 
 
+def test_duckdb_repository_concurrent_reads(tmp_path: Path):
+    # The pooled DuckDB connection is shared by every storage instance in the
+    # process built against the same path — including all of a threaded
+    # server's request threads. One connection cannot run two statements at
+    # once: interleaving them let one thread's ``SELECT * FROM problems`` rows
+    # be consumed by another thread's attempt-row fetch inside
+    # ``_build_problem_from_row``, so ``attempt_number`` received the slug.
+    # Reads must therefore be safe to run concurrently.
+    from concurrent.futures import ThreadPoolExecutor
+
+    db_file = tmp_path / "test.duckdb"
+    db_repo = DuckDBStorage(db_path=db_file)
+
+    prob = Problem(
+        title="Coin Change",
+        difficulty=DifficultyLevel.MEDIUM,
+        topics=["Dynamic Programming", "BFS"],
+    )
+    sub = Submission(
+        problem_id=prob.id,
+        code="def coinChange(coins, amount): pass",
+        language="python",
+        status=SubmissionStatus.ACCEPTED,
+        runtime_ms=80.0,
+        memory_mb=16.0,
+    )
+    att = Attempt(problem_id=prob.id, attempt_number=1, status=SubmissionStatus.ACCEPTED, submissions=[sub])
+    prob.attempts = [att]
+    db_repo.save(prob)
+
+    def read_once(_):
+        fetched = db_repo.get_by_slug("coin-change")
+        if fetched is None:
+            return None
+        return (fetched.title, [a.attempt_number for a in fetched.attempts])
+
+    try:
+        with ThreadPoolExecutor(max_workers=20) as pool:
+            results = list(pool.map(read_once, range(20)))
+    finally:
+        db_repo.close()
+
+    assert len(results) == 20
+    assert all(r == ("Coin Change", [1]) for r in results), results
+
+
+def test_duckdb_repository_concurrent_read_write(tmp_path: Path):
+    # A reader must not observe a half-written graph, and a writer must not
+    # corrupt a concurrent reader's result set.
+    from concurrent.futures import ThreadPoolExecutor
+
+    db_file = tmp_path / "test.duckdb"
+    db_repo = DuckDBStorage(db_path=db_file)
+
+    for i in range(5):
+        prob = Problem(
+            title=f"Problem {i}",
+            difficulty=DifficultyLevel.EASY,
+            topics=["Array"],
+        )
+        sub = Submission(
+            problem_id=prob.id,
+            code=f"def p{i}(): pass",
+            language="python",
+            status=SubmissionStatus.ACCEPTED,
+        )
+        prob.attempts = [Attempt(problem_id=prob.id, attempt_number=1, status=SubmissionStatus.ACCEPTED, submissions=[sub])]
+        db_repo.save(prob)
+
+    def read_once(_):
+        return {p.slug: [a.attempt_number for a in p.attempts] for p in db_repo.list_all()}
+
+    try:
+        with ThreadPoolExecutor(max_workers=12) as pool:
+            readers = list(pool.map(read_once, range(12)))
+            pool.submit(db_repo.get_by_slug, "problem-0").result()
+    finally:
+        db_repo.close()
+
+    expected = {f"problem-{i}": [1] for i in range(5)}
+    assert all(r == expected for r in readers), readers
+
+
 def test_parquet_repository(tmp_path: Path):
     p_dir = tmp_path / "parquet"
     parquet_repo = ParquetStorage(data_dir=p_dir)
