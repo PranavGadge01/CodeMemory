@@ -21,8 +21,9 @@ async def lifespan(app: FastAPI):
     owns_service = service is None
     if owns_service:
         service = CodeMemoryService(
+            base_dir=settings.data_dir,
+            knowledge_dir=settings.knowledge_dir,
             db_path=settings.db_path,
-            # In a real environment, we would also configure knowledge/data dirs if the service took them.
         )
     app.state.service = service
     yield
@@ -78,3 +79,19 @@ def create_app(service: Optional[CodeMemoryService] = None) -> FastAPI:
     app.include_router(settings_router.router, prefix="/api/v1")
 
     return app
+
+
+def main() -> None:
+    """Entry point for ``codememory-api`` console script."""
+    import uvicorn
+
+    uvicorn.run(
+        "api.app:create_app",
+        host=settings.host,
+        port=settings.port,
+        log_level=settings.log_level,
+    )
+
+
+if __name__ == "__main__":
+    main()
