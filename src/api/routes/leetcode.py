@@ -68,5 +68,5 @@ def sync(service: CodeMemoryService = Depends(get_service)):
 @router.delete("/leetcode/connect")
 def disconnect(service: CodeMemoryService = Depends(get_service)):
     """Disconnect the LeetCode account."""
-    service._account_service.disconnect("leetcode")
-    return {"status": "ok"}
+    result = service.leetcode.disconnect()
+    return {"status": "ok", "disconnected": result}

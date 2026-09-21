@@ -23,6 +23,7 @@ dependencies = [
     "plotly>=5.18.0",
     "fastapi>=0.141.1",
     "uvicorn[standard]>=0.53.0",
+    "python-dotenv>=1.0.0",
 ]
 
 [project.optional-dependencies]
@@ -35,6 +36,7 @@ dev = [
 
 [project.scripts]
 codememory = "codememory.cli.main:main"
+codememory-api = "api.app:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
