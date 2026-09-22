@@ -99,12 +99,28 @@ export interface AnalyticsDTO {
 
 /* --- Dashboard --------------------------------------------------------- */
 
+export interface ActivityDayDTO {
+  date: string;
+  submissions: number;
+  accepted: number;
+  solved: number;
+  minutesActive: number;
+}
+
+export interface TimelineEventDTO {
+  id: string;
+  kind: string;
+  title: string;
+  detail: string;
+  problemSlug: string | null;
+  language: string | null;
+  occurredAt: string;
+}
+
 export interface DashboardDTO {
   overview: AnalyticsOverviewDTO;
-  /** Deferred by the backend route — arrives as an empty array. */
-  activity: unknown[];
-  /** Deferred by the backend route — arrives as an empty array. */
-  timeline: unknown[];
+  activity: ActivityDayDTO[];
+  timeline: TimelineEventDTO[];
   struggles: StruggleProblemDTO[];
   topics: TopicStatDTO[];
   languages: LanguageStatDTO[];
@@ -256,7 +272,6 @@ export interface KnowledgeClusterDTO {
 
 export interface KnowledgeDTO {
   graph: KnowledgeGraphDTO;
-  /** Deferred by the backend route — arrives as an empty array. */
   clusters: KnowledgeClusterDTO[];
 }
 

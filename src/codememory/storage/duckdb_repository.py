@@ -269,10 +269,18 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
                 memory_mb DOUBLE,
                 submitted_at TIMESTAMP NOT NULL,
                 error_message TEXT,
-                submission_hash VARCHAR UNIQUE NOT NULL
+                submission_hash VARCHAR NOT NULL,
+                source_provider VARCHAR,
+                source_account VARCHAR
             );
         """
         )
+
+        # Migration: add provenance columns to pre-existing databases.
+        # ALTER TABLE ... ADD COLUMN IF NOT EXISTS is a DuckDB no-op when the
+        # column already exists, so this is safe to run on every connection.
+        self.conn.execute("ALTER TABLE submissions ADD COLUMN IF NOT EXISTS source_provider VARCHAR;")
+        self.conn.execute("ALTER TABLE submissions ADD COLUMN IF NOT EXISTS source_account VARCHAR;")
 
         self.conn.execute(
             """
@@ -369,8 +377,8 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
                 sub_status = sub.status.value if hasattr(sub.status, "value") else str(sub.status)
                 self.conn.execute(
                     """
-                    INSERT INTO submissions (id, problem_id, attempt_id, code, language, status, runtime_ms, memory_mb, submitted_at, error_message, submission_hash)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO submissions (id, problem_id, attempt_id, code, language, status, runtime_ms, memory_mb, submitted_at, error_message, submission_hash, source_provider, source_account)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT (id) DO UPDATE SET
                         problem_id = excluded.problem_id,
                         attempt_id = excluded.attempt_id,
@@ -381,7 +389,9 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
                         memory_mb = excluded.memory_mb,
                         submitted_at = excluded.submitted_at,
                         error_message = excluded.error_message,
-                        submission_hash = excluded.submission_hash;
+                        submission_hash = excluded.submission_hash,
+                        source_provider = excluded.source_provider,
+                        source_account = excluded.source_account;
                 """,
                     [
                         str(sub.id),
@@ -395,6 +405,8 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
                         _to_naive_utc(sub.submitted_at),
                         sub.error_message,
                         str(sub.submission_hash),
+                        sub.source_provider,
+                        sub.source_account,
                     ],
                 )
 
@@ -455,7 +467,7 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
             sub_rows = self.conn.execute("SELECT * FROM submissions WHERE attempt_id = ? ORDER BY submitted_at ASC", [aid]).fetchall()
             submissions: list[Submission] = []
             for s_row in sub_rows:
-                sid, _, _, code, lang, s_status, rt, mem, s_time, err, s_hash = s_row
+                sid, _, _, code, lang, s_status, rt, mem, s_time, err, s_hash, s_provider, s_account = s_row
                 sub = Submission(
                     id=sid,
                     problem_id=pid,
@@ -468,6 +480,8 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
                     submitted_at=s_time,
                     error_message=err,
                     submission_hash=s_hash,
+                    source_provider=s_provider,
+                    source_account=s_account,
                 )
                 submissions.append(sub)
 
@@ -542,7 +556,7 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
             res = self.conn.execute("SELECT * FROM submissions WHERE submission_hash = ?", [submission_hash]).fetchone()
             if not res:
                 return None
-            sid, pid, aid, code, lang, status, rt, mem, s_time, err, s_hash = res
+            sid, pid, aid, code, lang, status, rt, mem, s_time, err, s_hash, s_provider, s_account = res
             return Submission(
                 id=sid,
                 problem_id=pid,
@@ -555,6 +569,8 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
                 submitted_at=s_time,
                 error_message=err,
                 submission_hash=s_hash,
+                source_provider=s_provider,
+                source_account=s_account,
             )
 
     def list_by_problem(self, problem_id: str) -> Sequence[Submission]:
@@ -574,7 +590,7 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
             ).fetchall()
             subs: list[Submission] = []
             for r in rows:
-                sid, pid, aid, code, lang, status, rt, mem, s_time, err, s_hash = r
+                sid, pid, aid, code, lang, status, rt, mem, s_time, err, s_hash, s_provider, s_account = r
                 subs.append(
                     Submission(
                         id=sid,
@@ -588,6 +604,8 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
                         submitted_at=s_time,
                         error_message=err,
                         submission_hash=s_hash,
+                        source_provider=s_provider,
+                        source_account=s_account,
                     )
                 )
             return subs
