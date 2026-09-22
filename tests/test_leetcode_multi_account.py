@@ -64,25 +64,33 @@ def _mock_client(submissions=None, *, username="syncuser"):
     return client
 
 
-def _make_service(tmp_path: Path) -> CodeMemoryService:
+def _make_service(tmp_path: Path, account_service=None) -> CodeMemoryService:
     return CodeMemoryService(
         base_dir=tmp_path / "data",
         knowledge_dir=tmp_path / "knowledge",
         db_path=tmp_path / "test_ma.duckdb",
+        account_service=account_service,
     )
 
 
 def _surface(tmp_path: Path, client=None) -> tuple[LeetCodeAccountService, CodeMemoryService]:
-    service = _make_service(tmp_path)
+    account_service = AccountService(data_dir=tmp_path / "accounts")
+    service = _make_service(tmp_path, account_service=account_service)
     surface = LeetCodeAccountService(
         app_service=service,
-        account_service=AccountService(data_dir=tmp_path / "accounts"),
+        account_service=account_service,
         client=client or _mock_client(),
     )
     return surface, service
 
 
-def _stored_submissions(service: CodeMemoryService):
+def _raw_submissions(service: CodeMemoryService):
+    """Return all stored submissions across all accounts (raw storage)."""
+    return [s for p in service.storage.list_all() for a in p.attempts for s in a.submissions]
+
+
+def _visible_submissions(service: CodeMemoryService):
+    """Return only submissions visible under the active account scope."""
     return [s for p in service.list_problems() for a in p.attempts for s in a.submissions]
 
 
@@ -108,7 +116,7 @@ def test_legacy_submission_without_provenance_loads(tmp_path):
     )
     service.storage.save_submission(sub)
 
-    subs = _stored_submissions(service)
+    subs = _raw_submissions(service)
     assert len(subs) == 1
     assert subs[0].source_provider is None
     assert subs[0].source_account is None
@@ -122,7 +130,7 @@ def test_sync_tags_submission_with_provided_account(tmp_path):
     surface.connect("alice")
     surface.sync()
 
-    subs = _stored_submissions(service)
+    subs = _raw_submissions(service)
     assert len(subs) == 1
     assert subs[0].source_provider == "leetcode"
     assert subs[0].source_account == "alice"
@@ -141,7 +149,7 @@ def test_same_account_sync_is_idempotent(tmp_path):
     assert first.records_added == 1
     assert second.records_added == 0
     assert second.records_skipped == 1
-    assert len(_stored_submissions(service)) == 1
+    assert len(_raw_submissions(service)) == 1
 
 
 # 4. Account A and B can store equivalent submissions without cross-account deduplication
@@ -169,7 +177,7 @@ def test_different_accounts_do_not_cross_dedup(tmp_path):
     surface_b.connect("bob")
     surface_b.sync()
 
-    subs = _stored_submissions(service_b)
+    subs = _raw_submissions(service_b)
     assert len(subs) == 2
 
     alice_subs = [s for s in subs if s.source_account == "alice"]
@@ -189,7 +197,7 @@ def test_connect_b_preserves_a_submissions(tmp_path):
     surface_a.connect("alice")
     surface_a.sync()
 
-    alice_before = _stored_submissions(service_a)
+    alice_before = _raw_submissions(service_a)
     assert len(alice_before) == 1
     assert alice_before[0].source_account == "alice"
 
@@ -202,7 +210,7 @@ def test_connect_b_preserves_a_submissions(tmp_path):
     surface_b.connect("bob")
     surface_b.sync()
 
-    all_subs = _stored_submissions(service_b)
+    all_subs = _raw_submissions(service_b)
     assert len(all_subs) == 2
     accounts = {s.source_account for s in all_subs}
     assert accounts == {"alice", "bob"}
@@ -217,7 +225,7 @@ def test_a_submissions_unchanged_after_b_connect(tmp_path):
     surface_a.connect("alice")
     surface_a.sync()
 
-    alice_sub = _stored_submissions(service_a)[0]
+    alice_sub = _raw_submissions(service_a)[0]
     alice_sub_id = alice_sub.id
     alice_sub_hash = alice_sub.submission_hash
 
@@ -229,7 +237,7 @@ def test_a_submissions_unchanged_after_b_connect(tmp_path):
     surface_b.connect("bob")
     surface_b.sync()
 
-    all_subs = _stored_submissions(service_b)
+    all_subs = _raw_submissions(service_b)
     a_subs = [s for s in all_subs if s.source_account == "alice"]
     assert len(a_subs) == 1
     assert a_subs[0].id == alice_sub_id
@@ -271,8 +279,7 @@ def test_analytics_heatmap_filtered_by_account(tmp_path):
     analytics = AnalyticsService(storage=service.storage)
 
     all_activity = analytics.get_activity_heatmap(days=90)
-    assert len(all_activity) == 1
-    assert all_activity[0].submissions == 2
+    assert len(all_activity) == 0  # no active account → no leetcode data visible
 
     alice_activity = analytics.get_activity_heatmap(days=90, account="alice")
     assert len(alice_activity) == 1
@@ -352,16 +359,13 @@ def test_analytics_timeline_filtered_by_account(tmp_path):
     analytics = AnalyticsService(storage=service.storage)
 
     all_timeline = analytics.get_timeline_events(limit=14)
+    assert all_timeline == []  # no active account → no leetcode data visible
+
     alice_timeline = analytics.get_timeline_events(limit=14, account="alice")
-    bob_timeline = analytics.get_timeline_events(limit=14, account="bob")
-
-    all_solved = {e.title for e in all_timeline if e.kind == "solved"}
-    assert "Solved Two Sum" in all_solved
-    assert "Solved Add Two" in all_solved
-
     alice_solved = {e.title for e in alice_timeline if e.kind == "solved"}
     assert alice_solved == {"Solved Two Sum"}
 
+    bob_timeline = analytics.get_timeline_events(limit=14, account="bob")
     bob_solved = {e.title for e in bob_timeline if e.kind == "solved"}
     assert bob_solved == {"Solved Add Two"}
 
@@ -394,8 +398,12 @@ def test_analytics_account_none_aggregates_all(tmp_path):
 
     analytics = AnalyticsService(storage=service.storage)
     overview = analytics.get_overview()
-    assert overview.total_submissions == 2
-    assert overview.accepted_problems == 2
+    assert overview.total_submissions == 0  # no active account → no leetcode data visible
+    assert overview.accepted_problems == 0
+
+    alice_overview = analytics.get_overview(account="alice")
+    assert alice_overview.total_submissions == 1
+    assert alice_overview.accepted_problems == 1
 
 
 # 10. Disconnecting an account does not delete its historical submissions
@@ -406,17 +414,17 @@ def test_disconnect_preserves_submissions(tmp_path):
     surface.connect("alice")
     surface.sync()
 
-    assert len(_stored_submissions(service)) == 1
+    assert len(_raw_submissions(service)) == 1
 
     surface.disconnect()
 
     # Connection record is gone
     assert surface.is_connected() is False
     # But submissions remain
-    assert len(_stored_submissions(service)) == 1
+    assert len(_raw_submissions(service)) == 1
 
 
-# 11. Same-account sync is idempotent (hash + account both match)
+    # 11. Same-account sync is idempotent (hash + account both match)
 def test_same_account_sync_idempotency(tmp_path):
     """A second sync of the same account for the same submission is skipped."""
     client = _mock_client([_raw()])
@@ -429,4 +437,175 @@ def test_same_account_sync_idempotency(tmp_path):
     assert first.records_added == 1
     assert second.records_added == 0
     assert second.records_skipped == 1
-    assert len(_stored_submissions(service)) == 1
+    assert len(_raw_submissions(service)) == 1
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 2: Active-account scoping — queries only show the active account.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _make_account_service(tmp_path: Path) -> AccountService:
+    return AccountService(data_dir=tmp_path / "accounts")
+
+
+def _connect_and_sync(tmp_path: Path, username: str, submissions: list | None = None) -> None:
+    """Helper: create a fresh service + account service, connect, and sync."""
+    account_service = _make_account_service(tmp_path)
+    service = _make_service(tmp_path, account_service=account_service)
+    surface = LeetCodeAccountService(
+        app_service=service,
+        account_service=account_service,
+        client=_mock_client(submissions, username=username),
+    )
+    surface.connect(username)
+    surface.sync()
+
+
+def test_active_account_scoping_hides_other_account(tmp_path):
+    """When account B is active, account A's submissions are not visible."""
+    _connect_and_sync(tmp_path, "alice", [_raw(submission_id="1001", timestamp=1700000000)])
+    _connect_and_sync(tmp_path, "bob", [_raw(submission_id="1002", timestamp=1700003600)])
+
+    account_service = _make_account_service(tmp_path)
+    service = _make_service(tmp_path, account_service=account_service)
+    subs = _visible_submissions(service)
+    assert len(subs) == 1
+    assert subs[0].source_account == "bob"
+
+
+def test_reconnect_restores_previous_account_data(tmp_path):
+    """Switching back to account A restores A's historical submissions."""
+    _connect_and_sync(tmp_path, "alice", [_raw(submission_id="3001", timestamp=1700000000)])
+    _connect_and_sync(tmp_path, "bob", [_raw(submission_id="3002", timestamp=1700003600)])
+
+    # Reconnect Alice with a fresh service
+    account_service = _make_account_service(tmp_path)
+    service = _make_service(tmp_path, account_service=account_service)
+    surface = LeetCodeAccountService(
+        app_service=service,
+        account_service=account_service,
+        client=_mock_client(username="alice"),
+    )
+    surface.connect("alice")
+
+    alice_subs = _visible_submissions(service)
+    assert len(alice_subs) == 1
+    assert alice_subs[0].source_account == "alice"
+    assert alice_subs[0].id == "leetcode_3001"
+
+
+def test_a_b_a_preserves_both_identities(tmp_path):
+    """A -> B -> A must preserve both accounts' data without deletion."""
+    _connect_and_sync(tmp_path, "alice", [_raw(submission_id="5001", timestamp=1700000000)])
+    _connect_and_sync(tmp_path, "bob", [_raw(submission_id="5002", timestamp=1700003600)])
+    _connect_and_sync(tmp_path, "alice", [_raw(submission_id="5003", timestamp=1700010000)])
+
+    account_service = _make_account_service(tmp_path)
+    service = _make_service(tmp_path, account_service=account_service)
+    surface = LeetCodeAccountService(
+        app_service=service,
+        account_service=account_service,
+        client=_mock_client(username="alice"),
+    )
+    surface.connect("alice")
+
+    alice_subs = _visible_submissions(service)
+    assert len(alice_subs) == 2  # 5001 and 5003
+    assert all(s.source_account == "alice" for s in alice_subs)
+
+
+def test_empty_account_shows_empty_views(tmp_path):
+    """If the active account has zero submissions, views show empty/zero."""
+    _connect_and_sync(tmp_path, "alice", [_raw(submission_id="6001", timestamp=1700000000)])
+
+    account_service = _make_account_service(tmp_path)
+    service = _make_service(tmp_path, account_service=account_service)
+    surface = LeetCodeAccountService(
+        app_service=service,
+        account_service=account_service,
+        client=_mock_client(submissions=[], username="bob"),
+    )
+    surface.connect("bob")
+    surface.sync()  # bob has no submissions
+
+    from codememory.analytics.analytics_service import AnalyticsService
+    analytics = AnalyticsService(storage=service.storage)
+
+    overview = analytics.get_overview(account="bob")
+    assert overview.total_submissions == 0
+    assert overview.total_problems == 0
+
+
+def test_legacy_null_source_account_not_assigned(tmp_path):
+    """Records with NULL source_account must NOT be assigned to active account."""
+    account_service = _make_account_service(tmp_path)
+    service = _make_service(tmp_path, account_service=account_service)
+    problem = service.add_problem(
+        title="Legacy Problem", slug="legacy", difficulty="Easy", topics=[],
+        url=None, statement=None
+    )
+    from datetime import datetime as dt
+    sub = Submission(
+        id="legacy_sub_1",
+        problem_id=problem.id,
+        attempt_id="",
+        code="",
+        language="python3",
+        status=SubmissionStatus.ACCEPTED,
+        submitted_at=dt(2024, 1, 1, tzinfo=timezone.utc),
+        submission_hash="legacy_hash_1",
+    )
+    service.storage.save_submission(sub)
+
+    account_service = _make_account_service(tmp_path)
+    surface = LeetCodeAccountService(
+        app_service=service,
+        account_service=account_service,
+        client=_mock_client(username="alice"),
+    )
+    surface.connect("alice")
+
+    # legacy record should NOT appear as alice's
+    alice_subs = [s for p in service.list_problems() for a in p.attempts for s in a.submissions]
+    assert len(alice_subs) == 0  # legacy record is filtered out
+
+
+def test_account_switch_does_not_mutate_source_account(tmp_path):
+    """Switching active account must not change stored source_account values."""
+    _connect_and_sync(tmp_path, "alice", [_raw(submission_id="7001", timestamp=1700000000)])
+
+    account_service = _make_account_service(tmp_path)
+    service = _make_service(tmp_path, account_service=account_service)
+    surface = LeetCodeAccountService(
+        app_service=service,
+        account_service=account_service,
+        client=_mock_client(username="bob"),
+    )
+    surface.connect("bob")
+
+    # Verify alice's stored record still has source_account="alice"
+    raw_subs = [s for p in service.storage.list_all() for a in p.attempts for s in a.submissions]
+    alice_recs = [s for s in raw_subs if s.id == "leetcode_7001"]
+    assert len(alice_recs) == 1
+    assert alice_recs[0].source_account == "alice"
+
+
+def test_reconnect_does_not_reimport_existing(tmp_path):
+    """Reconnecting an account and syncing must not reimport existing data."""
+    _connect_and_sync(tmp_path, "alice", [_raw(submission_id="8001", timestamp=1700000000)])
+
+    account_service = _make_account_service(tmp_path)
+    service = _make_service(tmp_path, account_service=account_service)
+    surface = LeetCodeAccountService(
+        app_service=service,
+        account_service=account_service,
+        client=_mock_client([_raw(submission_id="8001", timestamp=1700000000)], username="alice"),
+    )
+    surface.connect("alice")
+    result = surface.sync()
+
+    assert result.records_added == 0
+    assert result.records_skipped == 1
+    alice_subs = _visible_submissions(service)
+    assert len(alice_subs) == 1

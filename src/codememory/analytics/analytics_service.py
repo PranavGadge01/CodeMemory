@@ -58,6 +58,33 @@ class AnalyticsService:
             filtered.append(p_copy)
         return filtered
 
+    @staticmethod
+    def _has_leetcode_submissions(problems: Sequence[Problem]) -> bool:
+        """Check if any problem has LeetCode-sourced submissions."""
+        for p in problems:
+            for a in p.attempts:
+                for s in a.submissions:
+                    if s.source_provider is not None:
+                        return True
+        return False
+
+    def _scope_problems(self, problems: Sequence[Problem], account: str | None) -> list[Problem]:
+        """Apply account scoping to problems for analytics.
+
+        - When ``account`` is a string, filter to that account's submissions.
+        - When ``account`` is None and LeetCode data exists, return empty
+          (prevent cross-account aggregation).
+        - When ``account`` is None and no LeetCode data exists, return all
+          (legacy behavior for non-LeetCode data).
+        """
+        if account is not None:
+            return self._filter_problems_by_account(problems, account)
+        # No active account: if any LeetCode-sourced submissions exist,
+        # return empty to prevent cross-account data exposure.
+        if self._has_leetcode_submissions(problems):
+            return []
+        return list(problems)
+
     # 1. System Overview Statistics
     def get_overview(self, account: str | None = None) -> AnalyticsOverview:
         """Calculate complete system overview statistics.
@@ -66,9 +93,7 @@ class AnalyticsService:
         are counted (e.g. a specific LeetCode username).
         """
         problems = self._get_all_problems()
-
-        if account is not None:
-            problems = self._filter_problems_by_account(problems, account)
+        problems = self._scope_problems(problems, account)
         if not problems:
             return AnalyticsOverview()
 
@@ -143,10 +168,9 @@ class AnalyticsService:
         problems = self._get_all_problems()
         if not problems:
             return []
-        if account is not None:
-            problems = self._filter_problems_by_account(problems, account)
-            if not problems:
-                return []
+        problems = self._scope_problems(problems, account)
+        if not problems:
+            return []
 
         topic_data: dict[str, dict] = defaultdict(
             lambda: {
@@ -206,8 +230,7 @@ class AnalyticsService:
     def get_difficulty_statistics(self, account: str | None = None) -> list[DifficultyStat]:
         """Calculate problem solving metrics grouped by difficulty."""
         problems = self._get_all_problems()
-        if account is not None:
-            problems = self._filter_problems_by_account(problems, account)
+        problems = self._scope_problems(problems, account)
         diff_data: dict[str, dict] = defaultdict(
             lambda: {
                 "total_problems": 0,
@@ -257,7 +280,7 @@ class AnalyticsService:
     def get_language_statistics(self, account: str | None = None) -> list[LanguageStat]:
         """Calculate submission statistics grouped by programming language using DuckDB."""
         try:
-            account_filter = f" AND source_account = '{account}'" if account is not None else ""
+            account_filter = f" AND source_account = '{account}'" if account is not None else " AND source_provider IS NULL"
             query = f"""
                 SELECT
                     language,
@@ -294,8 +317,7 @@ class AnalyticsService:
     def get_attempt_statistics(self, account: str | None = None) -> AttemptStat:
         """Calculate statistics on attempt counts and brute-force->optimized progressions."""
         problems = self._get_all_problems()
-        if account is not None:
-            problems = self._filter_problems_by_account(problems, account)
+        problems = self._scope_problems(problems, account)
         if not problems:
             return AttemptStat()
 
@@ -339,8 +361,7 @@ class AnalyticsService:
     def get_progress_over_time(self, granularity: str = "day", account: str | None = None) -> list[ProgressOverTime]:
         """Aggragate solved problems and submission counts over time using Polars."""
         problems = self._get_all_problems()
-        if account is not None:
-            problems = self._filter_problems_by_account(problems, account)
+        problems = self._scope_problems(problems, account)
         rows: list[dict] = []
 
         for p in problems:
@@ -396,8 +417,7 @@ class AnalyticsService:
     def get_struggle_problems(self, limit: int = 10, account: str | None = None) -> list[StruggleProblem]:
         """Identify problems with high failure rates or multiple failed attempts."""
         problems = self._get_all_problems()
-        if account is not None:
-            problems = self._filter_problems_by_account(problems, account)
+        problems = self._scope_problems(problems, account)
         struggles: list[StruggleProblem] = []
 
         for p in problems:
@@ -439,7 +459,7 @@ class AnalyticsService:
         When ``account`` is provided, only submissions from that source account are
         counted (e.g. a specific LeetCode username).
         """
-        account_filter = f" AND source_account = '{account}'" if account is not None else ""
+        account_filter = f" AND source_account = '{account}'" if account is not None else " AND source_provider IS NULL"
         query = f"""
             SELECT
                 strftime(DATE(submitted_at), '%Y-%m-%d') as day,
@@ -479,7 +499,7 @@ class AnalyticsService:
         When ``account`` is provided, only submissions from that source account
         are considered.
         """
-        account_filter = f"WHERE source_account = '{account}'" if account is not None else ""
+        account_filter = f"WHERE source_account = '{account}'" if account is not None else "WHERE source_provider IS NULL"
         query = f"""
             SELECT DISTINCT CAST(strftime(submitted_at, '%Y-%m-%d') AS VARCHAR) as day
             FROM submissions
@@ -557,7 +577,7 @@ class AnalyticsService:
         """
         events: list[TimelineEvent] = []
 
-        account_filter = f"WHERE source_account = '{account}'" if account is not None else ""
+        account_filter = f"WHERE source_account = '{account}'" if account is not None else "WHERE source_provider IS NULL"
         query = f"""
             SELECT id, submitted_at, status, problem_id, language
             FROM submissions
@@ -571,7 +591,8 @@ class AnalyticsService:
 
         # Load problems to get slug/title mappings
         problems = self._get_all_problems()
-        problem_map: dict[str, Problem] = {p.id: p for p in problems}
+        scoped = self._scope_problems(problems, account)
+        problem_map: dict[str, Problem] = {p.id: p for p in scoped}
 
         # Track first events for each problem
         first_submission: dict[str, str] = {}  # problem_id -> submission_id
@@ -618,8 +639,8 @@ class AnalyticsService:
                     )
                 )
 
-        # Add problem import events
-        for p in problems:
+        # Add problem import events (scoped to active account)
+        for p in scoped:
             events.append(
                 TimelineEvent(
                     id=f"imported_{p.id}",
@@ -652,10 +673,9 @@ class AnalyticsService:
         problems = self._get_all_problems()
         if not problems:
             return []
-        if account is not None:
-            problems = self._filter_problems_by_account(problems, account)
-            if not problems:
-                return []
+        problems = self._scope_problems(problems, account)
+        if not problems:
+            return []
 
         # Group problems by their topics
         topic_problems: dict[str, list[Problem]] = defaultdict(list)

@@ -302,4 +302,5 @@ class NormalizedSubmissionRecord(BaseModel):
                 code=self.code,
                 submitted_at=self.timestamp,
                 status=self.status.value,
+                source_account=self.source_account,
             )

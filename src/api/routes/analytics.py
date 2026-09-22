@@ -10,17 +10,15 @@ router = APIRouter(tags=["analytics"])
 @router.get("/analytics", response_model=AnalyticsOut)
 def get_analytics(
     granularity: str = Query("day", description="day, week, or month"),
-    account: Optional[str] = Query(default=None, description="Filter submissions by source account (e.g. LeetCode username)."),
     service: CodeMemoryService = Depends(get_service),
 ):
     """Get full system analytics.
 
-    When ``account`` is provided, only submissions tagged with that
-    ``source_account`` are included in the analytics.
+    When a LeetCode account is connected, analytics are scoped to that account.
     """
-    # Ensure safe granularity fallback if passed an invalid value
     safe_granularity = granularity if granularity in ["day", "week", "month"] else "day"
-    
+    account = service.active_account
+
     return AnalyticsOut(
         overview=service.analytics_service.get_overview(account=account).model_dump(),
         topics=[t.model_dump() for t in service.analytics_service.get_topic_statistics(account=account)],

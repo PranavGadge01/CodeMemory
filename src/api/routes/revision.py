@@ -17,8 +17,9 @@ def get_revision_queue(
     # The public service surface is ``revision_service``; ``service.revision``
     # never existed and raised AttributeError (HTTP 500) on every call.
     # Topic filtering is applied python-side.
-    queue = service.revision_service.get_revision_queue(limit=limit)
-
+    queue = service.revision_service.get_revision_queue(
+        limit=limit, account=service.active_account
+    )
     if topic:
         topic_lower = topic.lower()
         queue = [q for q in queue if any(topic_lower in t.lower() for t in q.topics)]

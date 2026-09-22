@@ -74,12 +74,13 @@ def _fixture_raw(submission_id: str = "1003") -> LeetCodeSubmissionRaw:
     )
 
 
-def _make_service(tmp_path: Path) -> CodeMemoryService:
+def _make_service(tmp_path: Path, account_service=None) -> CodeMemoryService:
     """Build a fully isolated CodeMemoryService rooted at tmp_path."""
     return CodeMemoryService(
         base_dir=tmp_path / "data",
         knowledge_dir=tmp_path / "knowledge",
         db_path=tmp_path / "phase_a.duckdb",
+        account_service=account_service,
     )
 
 
@@ -545,9 +546,9 @@ def test_legacy_empty_hash_is_repaired_without_data_loss(tmp_path):
 
 
 def _connected_engine(tmp_path: Path, client) -> tuple[LeetCodeSyncEngine, CodeMemoryService]:
-    service = _make_service(tmp_path)
     acct = AccountService(data_dir=tmp_path / "accounts")
     acct.save_connection(AccountConnection(provider="LeetCode", username="syncuser", status=AccountStatus.CONNECTED))
+    service = _make_service(tmp_path, account_service=acct)
     engine = LeetCodeSyncEngine(account_service=acct, client=client)
     return engine, service
 

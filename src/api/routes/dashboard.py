@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 from typing import List, Optional
 
 from codememory.core.service import CodeMemoryService
@@ -9,15 +9,14 @@ router = APIRouter(tags=["dashboard"])
 
 @router.get("/dashboard", response_model=DashboardOut)
 def get_dashboard(
-    account: Optional[str] = Query(default=None, description="Filter submissions by source account (e.g. LeetCode username)."),
     service: CodeMemoryService = Depends(get_service),
 ):
     """Assemble dashboard data from existing service methods.
 
-    When ``account`` is omitted, all submissions are included. When provided,
-    only submissions tagged with that ``source_account`` are counted, allowing
-    analytics to be scoped to a single connected LeetCode account.
+    When a LeetCode account is connected, all data is scoped to that account's
+    submissions. When no account is connected, all submissions are included.
     """
+    account = service.active_account
     overview = service.analytics_service.get_overview(account=account)
     streaks = service.analytics_service.get_streaks(account=account)
 
@@ -35,7 +34,7 @@ def get_dashboard(
     struggles = service.analytics_service.get_struggle_problems(limit=5, account=account)
 
     # Revision queue limit to 5
-    revision_queue = service.revision_service.get_revision_queue(limit=5)
+    revision_queue = service.revision_service.get_revision_queue(limit=5, account=account)
 
     # Real activity heatmaps and timeline events
     activity = service.analytics_service.get_activity_heatmap(account=account)

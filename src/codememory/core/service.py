@@ -53,6 +53,7 @@ class CodeMemoryService:
         db_path: str | Path = "data/codememory.duckdb",
         *,
         shared_duckdb_connection: bool = True,
+        account_service: Optional["AccountService"] = None,
     ):
         # Ensure base directories exist before storage layer initializes
         Path(base_dir).mkdir(parents=True, exist_ok=True)
@@ -60,6 +61,19 @@ class CodeMemoryService:
         self.base_dir = Path(base_dir)
         self.knowledge_dir = Path(knowledge_dir)
         self._db_path = str(db_path)
+        # When using an in-memory database, avoid inheriting the real data
+        # directory's account connections — tests injecting db_path=":memory:"
+        # must not see the dev environment's connected account.
+        if db_path == ":memory:":
+            import tempfile
+            self._tmp_base = tempfile.mkdtemp(prefix="codememory_mem_")
+            self._account_data_dir = Path(self._tmp_base) / "accounts"
+        else:
+            self._account_data_dir = self.base_dir / "accounts"
+        # If an explicit account service is provided (e.g. by tests or the
+        # LeetCodeAccountService constructor), use it instead of creating one
+        # from the default data dir.
+        self._explicit_account_service = account_service
         self.storage = CompositeStorage(
             base_dir=base_dir,
             knowledge_dir=knowledge_dir,
@@ -93,6 +107,94 @@ class CodeMemoryService:
         self._autosync: Optional["LeetCodeSyncScheduler"] = None
 
     # 1. Problem operations
+
+    @property
+    def active_account(self) -> str | None:
+        """Resolve the currently connected LeetCode account username.
+
+        Returns the active ``source_account`` used to scope all user-facing
+        queries. When no LeetCode account is connected, returns ``None`` and
+        user-facing queries exclude LeetCode-sourced submissions to prevent
+        cross-account aggregation.
+        """
+        try:
+            conn = self.leetcode._account_service.get_connection("LeetCode")
+            if conn and conn.username:
+                return conn.username
+        except Exception:
+            pass
+        return None
+
+    def list_problems(self) -> Sequence[Problem]:
+        """List stored problems, scoped to the active account.
+
+        When a LeetCode account is connected, only problems with submissions
+        belonging to that account are returned, with non-matching submissions
+        stripped.
+
+        When no LeetCode account is connected, problems with only LeetCode-sourced
+        submissions are excluded — only problems with non-LeetCode or legacy
+        (NULL source_provider) submissions are returned, preventing cross-account
+        aggregation.
+        """
+        all_problems = self.storage.list_all()
+        active = self.active_account
+        if active is not None:
+            # Filter to problems that have submissions from the active account,
+            # stripping submissions from other accounts.
+            filtered: list[Problem] = []
+            for p in all_problems:
+                kept_attempts = []
+                for a in p.attempts:
+                    matching = [s for s in a.submissions if s.source_account == active]
+                    if not matching:
+                        continue
+                    import copy
+                    a_copy = copy.copy(a)
+                    a_copy.submissions = matching
+                    kept_attempts.append(a_copy)
+                if not kept_attempts:
+                    continue
+                import copy
+                p_copy = copy.copy(p)
+                p_copy.attempts = kept_attempts
+                filtered.append(p_copy)
+            return filtered
+        # No active account: exclude problems that have ONLY LeetCode-sourced
+        # submissions (source_provider is not None). Keep problems with no
+        # source_provider (manually added) or mixed/no provenance.
+        from codememory.domain.enums import Platform
+        unscoped: list[Problem] = []
+        for p in all_problems:
+            is_leetcode_only = False
+            for a in p.attempts:
+                for s in a.submissions:
+                    if s.source_provider is not None:
+                        is_leetcode_only = True
+                        break
+                if is_leetcode_only:
+                    break
+            if not is_leetcode_only:
+                unscoped.append(p)
+        return unscoped
+        for p in all_problems:
+            kept_attempts = []
+            for a in p.attempts:
+                matching = [s for s in a.submissions if s.source_account == active]
+                if not matching:
+                    continue
+                import copy
+                a_copy = copy.copy(a)
+                a_copy.submissions = matching
+                kept_attempts.append(a_copy)
+            if not kept_attempts:
+                continue
+            import copy
+            p_copy = copy.copy(p)
+            p_copy.attempts = kept_attempts
+            filtered.append(p_copy)
+        return filtered
+
     def add_problem(
         self,
         title: str,
@@ -118,16 +220,52 @@ class CodeMemoryService:
         )
         return self.storage.save(problem)
 
-    def get_problem(self, identifier: str) -> Problem:
-        """Retrieve problem by ID or slug."""
+    def get_problem(self, identifier: str, account: str | None = None) -> Problem:
+        """Retrieve problem by ID or slug.
+
+        When ``account`` is provided, only submissions from that account are
+        included in the returned problem. The caller is responsible for passing
+        the active account; most service methods default to ``self.active_account``.
+
+        When ``account`` is None (no active LeetCode account), LeetCode-sourced
+        submissions are excluded to prevent cross-account aggregation.
+        """
         prob = self.storage.get_by_slug(identifier) or self.storage.get_by_id(identifier)
         if not prob:
             raise ProblemNotFoundError(identifier)
-        return prob
-
-    def list_problems(self) -> Sequence[Problem]:
-        """List all stored problems."""
-        return self.storage.list_all()
+        if account is None:
+            # No active account: strip LeetCode-sourced submissions to prevent
+            # cross-account data exposure. Keep submissions with NULL
+            # source_provider (non-LeetCode / legacy).
+            import copy
+            filtered_attempts = []
+            for a in prob.attempts:
+                non_leetcode = [s for s in a.submissions if s.source_provider is None]
+                if not non_leetcode:
+                    continue
+                a_copy = copy.copy(a)
+                a_copy.submissions = non_leetcode
+                filtered_attempts.append(a_copy)
+            if not filtered_attempts:
+                return copy.copy(prob)
+            prob_copy = copy.copy(prob)
+            prob_copy.attempts = filtered_attempts
+            return prob_copy
+        # Filter submissions to only those belonging to the specified account.
+        import copy
+        filtered_attempts = []
+        for a in prob.attempts:
+            matching = [s for s in a.submissions if s.source_account == account]
+            if not matching:
+                continue
+            a_copy = copy.copy(a)
+            a_copy.submissions = matching
+            filtered_attempts.append(a_copy)
+        if not filtered_attempts:
+            return copy.copy(prob)
+        prob_copy = copy.copy(prob)
+        prob_copy.attempts = filtered_attempts
+        return prob_copy
 
     # 2. Submission & Attempt operations
     def add_submission(
@@ -160,13 +298,17 @@ class CodeMemoryService:
         submitted_dt = ensure_utc(submitted_at) if submitted_at is not None else datetime.now(timezone.utc)
 
         # Canonical hash: prefer the caller's, otherwise derive it from the
-        # problem slug so that the sync and import paths agree.
+        # problem slug so that the sync and import paths agree. When
+        # source_account provenance is available it is folded into the hash
+        # so equivalent submissions from different accounts are not
+        # cross-deduplicated.
         sub_hash = submission_hash or compute_submission_hash(
             problem_title=prob.slug,
             language=language,
             code=code,
             submitted_at=submitted_dt,
             status=sub_status.value,
+            source_account=source_account,
         )
 
          # Idempotency: the same submission already persisted — return it as-is.
@@ -240,7 +382,7 @@ class CodeMemoryService:
 
     def list_attempts(self, problem_identifier: str) -> Sequence[Attempt]:
         """List all attempts for a problem."""
-        prob = self.get_problem(problem_identifier)
+        prob = self.get_problem(problem_identifier, account=self.active_account)
         return sorted(prob.attempts, key=lambda a: a.attempt_number)
 
     def add_attempt(
@@ -298,8 +440,12 @@ class CodeMemoryService:
 
     # 3. History Reconstruction Concept
     def get_problem_history(self, problem_identifier: str) -> dict[str, Any]:
-        """Reconstruct chronological evolution history of a problem."""
-        prob = self.get_problem(problem_identifier)
+        """Reconstruct chronological evolution history of a problem.
+
+        When a LeetCode account is connected, only that account's submissions
+        are included in the history.
+        """
+        prob = self.get_problem(problem_identifier, account=self.active_account)
         history_events: list[dict[str, Any]] = []
 
         all_submissions: list[tuple[Attempt, Submission]] = []
@@ -419,8 +565,8 @@ class CodeMemoryService:
     # 6. Analytics summary
     def get_analytics_summary(self) -> dict[str, Any]:
         """Compute system-wide DSA problem solving statistics."""
-        overview = self.analytics_service.get_overview()
-        diff_stats = self.analytics_service.get_difficulty_statistics()
+        overview = self.analytics_service.get_overview(account=self.active_account)
+        diff_stats = self.analytics_service.get_difficulty_statistics(account=self.active_account)
         difficulty_counts = {ds.difficulty: ds.total_problems for ds in diff_stats}
 
         return {
@@ -437,7 +583,7 @@ class CodeMemoryService:
     # 7. Phase 5 Intelligent & Semantic API
     def get_solution_evolution(self, problem_identifier: str) -> EvolutionSummary:
         """Get chronological evolution summary and narrative across attempts for a problem."""
-        prob = self.get_problem(problem_identifier)
+        prob = self.get_problem(problem_identifier, account=self.active_account)
         submissions: list[Submission] = []
         for attempt in prob.attempts:
             submissions.extend(attempt.submissions)
@@ -463,13 +609,19 @@ class CodeMemoryService:
                 submissions.extend(attempt.submissions)
         return self.my_patterns_service.analyze_patterns(problems, submissions)
 
-    def get_knowledge_graph(self) -> KnowledgeGraph:
-        """Construct lightweight DSA relationship graph mapping topics, problems, approaches, and mistakes."""
-        problems = list(self.list_problems())
+    def get_knowledge_graph(self, account: str | None = None) -> KnowledgeGraph:
+        """Construct lightweight DSA relationship graph mapping topics, problems, approaches, and mistakes.
+
+        When ``account`` is provided, only submissions from that account are
+        included in the graph.
+        """
+        problems = self.list_problems()
         submissions: list[Submission] = []
         for prob in problems:
             for attempt in prob.attempts:
-                submissions.extend(attempt.submissions)
+                for s in attempt.submissions:
+                    if account is None or s.source_account == account:
+                        submissions.append(s)
         return self.knowledge_graph_builder.build_graph(problems, submissions)
 
     def analyze_submission(self, submission_id: str, force_refresh: bool = False) -> SubmissionAnalysis:
@@ -615,9 +767,10 @@ class CodeMemoryService:
             from codememory.connectors.account.service import AccountService
             from codememory.connectors.leetcode.service import LeetCodeAccountService
 
+            acct_svc = self._explicit_account_service or AccountService(data_dir=self._account_data_dir)
             self._leetcode_service = LeetCodeAccountService(
                 app_service=self,
-                account_service=AccountService(data_dir=self.base_dir / "accounts"),
+                account_service=acct_svc,
             )
         return self._leetcode_service
 

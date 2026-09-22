@@ -19,7 +19,11 @@ def list_problems(
     status: Optional[str] = None,
     service: CodeMemoryService = Depends(get_service)
 ):
-    """List problems with python-side filtering and pagination."""
+    """List problems with python-side filtering and pagination.
+
+    When a LeetCode account is connected, only problems with submissions from
+    that account are returned.
+    """
     all_problems = service.list_problems()
     
     # Apply filters
@@ -65,7 +69,7 @@ def list_problems(
 def get_problem(slug: str, service: CodeMemoryService = Depends(get_service)):
     """Get a problem by its slug."""
     try:
-        problem = service.get_problem(slug)
+        problem = service.get_problem(slug, account=service.active_account)
         return ProblemOut(**problem.model_dump())
     except ProblemNotFoundError:
         raise HTTPException(status_code=404, detail="Problem not found")

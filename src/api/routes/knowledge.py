@@ -8,9 +8,13 @@ router = APIRouter(tags=["knowledge"])
 
 @router.get("/knowledge", response_model=KnowledgeOut)
 def get_knowledge(service: CodeMemoryService = Depends(get_service)):
-    """Get the knowledge graph and topic-based clusters."""
-    graph = service.get_knowledge_graph()
-    clusters = service.analytics_service.get_knowledge_clusters()
+    """Get the knowledge graph and topic-based clusters.
+
+    When a LeetCode account is connected, only that account's data is used.
+    """
+    account = service.active_account
+    graph = service.get_knowledge_graph(account=account)
+    clusters = service.analytics_service.get_knowledge_clusters(account=account)
 
     return KnowledgeOut(
         graph={

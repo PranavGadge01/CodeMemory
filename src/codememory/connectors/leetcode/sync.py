@@ -194,13 +194,14 @@ class LeetCodeSyncEngine:
             sync_status.records_discovered = len(raw_subs)
 
             # Normalize once; the ordering tuples are derived from the same
-            # records the persistence loop consumes below.
-            normalized = [self.mapper.to_normalized_record(r) for r in raw_subs]
-            # Tag each record with the connected account so provenance is
-            # stored on the submission itself, not just the connection.
-            for norm in normalized:
-                norm.source_provider = "leetcode"
-                norm.source_account = conn.username
+            # records the persistence loop consumes below. Provenance is passed
+            # into the mapper so source_account is available during the record's
+            # hash computation (provenance must precede hashing to produce
+            # account-distinct hashes).
+            normalized = [
+                self.mapper.to_normalized_record(r, source_account=conn.username)
+                for r in raw_subs
+            ]
             visible_keys = [_record_key(n.timestamp, n.submission_id) for n in normalized]
 
             previous_watermark = self._read_watermark(conn)
