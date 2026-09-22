@@ -30,6 +30,8 @@ import type {
 } from "@/lib/types";
 import type {
   AnalyticsOverviewDTO,
+  ActivityDayDTO,
+  TimelineEventDTO,
   AttemptDTO,
   DifficultyStatDTO,
   LanguageStatDTO,
@@ -483,8 +485,26 @@ export function mapKnowledgeCluster(dto: KnowledgeClusterDTO): KnowledgeCluster 
   };
 }
 
-/* --- Activity (deferred on the backend) --------------------------------- */
+/* --- Activity ---------------------------------------------------------- */
 
-export const EMPTY_ACTIVITY: ActivityDay[] = [];
-export const EMPTY_TIMELINE: TimelineEvent[] = [];
-export const EMPTY_CLUSTERS: KnowledgeCluster[] = [];
+export function mapActivityDay(dto: ActivityDayDTO): ActivityDay {
+  return {
+    date: dto.date,
+    submissions: dto.submissions,
+    accepted: dto.accepted,
+    solved: dto.solved,
+    minutesActive: dto.minutesActive,
+  };
+}
+
+export function mapTimelineEvent(dto: TimelineEventDTO): TimelineEvent {
+  return {
+    id: dto.id,
+    kind: dto.kind as TimelineEvent["kind"],
+    title: dto.title,
+    detail: dto.detail,
+    problemSlug: dto.problemSlug,
+    language: dto.language ? mapLanguage(dto.language) : null,
+    occurredAt: dto.occurredAt,
+  };
+}

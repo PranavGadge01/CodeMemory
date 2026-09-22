@@ -21,8 +21,26 @@ import type {
   ProblemListItemDTO,
   SubmissionDTO,
   RevisionQueueItemDTO,
+  ActivityDayDTO,
+  TimelineEventDTO,
 } from "@/lib/api/types";
+import type {
+  ActivityDay,
+  AnalyticsOverview,
+  DifficultyStat,
+  KnowledgeCluster,
+  KnowledgeGraph,
+  LanguageStat,
+  Problem,
+  ProgressOverTime,
+  RevisionQueueItem,
+  StruggleProblem,
+  Submission,
+  TimelineEvent,
+  TopicStat,
+} from "@/lib/types";
 import {
+  mapActivityDay,
   mapAnalyticsOverview,
   mapDifficultyStat,
   mapKnowledgeCluster,
@@ -34,21 +52,9 @@ import {
   mapRevisionQueueItem,
   mapStruggleProblem,
   mapSubmission,
+  mapTimelineEvent,
   mapTopicStat,
 } from "@/lib/api/mappers";
-import type {
-  AnalyticsOverview,
-  DifficultyStat,
-  KnowledgeCluster,
-  KnowledgeGraph,
-  LanguageStat,
-  Problem,
-  ProgressOverTime,
-  RevisionQueueItem,
-  StruggleProblem,
-  Submission,
-  TopicStat,
-} from "@/lib/types";
 
 /* --- Health ------------------------------------------------------------- */
 
@@ -60,8 +66,8 @@ export function getHealth(): Promise<HealthDTO> {
 
 export interface DashboardData {
   overview: AnalyticsOverview;
-  activity: never[];
-  timeline: never[];
+  activity: ActivityDay[];
+  timeline: TimelineEvent[];
   struggles: StruggleProblem[];
   topics: TopicStat[];
   languages: LanguageStat[];
@@ -71,18 +77,17 @@ export interface DashboardData {
 }
 
 /**
- * The dashboard endpoint. `activity` and `timeline` are deferred by the backend
- * route and arrive empty — the caller renders its empty states for those
- * sections rather than substituting mock data.
+ * The dashboard endpoint. The backend now serves real activity and timeline
+ * arrays, so they are mapped through the DTO → domain layer instead of being
+ * discarded.
  */
 export async function getDashboard(): Promise<DashboardData> {
   const dto = await apiGet<DashboardDTO>("/dashboard");
 
   return {
     overview: mapAnalyticsOverview(dto.overview),
-    // Both are intentionally left empty: the backend returns `[]` for them.
-    activity: [],
-    timeline: [],
+    activity: dto.activity.map(mapActivityDay),
+    timeline: dto.timeline.map(mapTimelineEvent),
     struggles: dto.struggles.map(mapStruggleProblem),
     topics: dto.topics.map(mapTopicStat),
     languages: dto.languages.map(mapLanguageStat),

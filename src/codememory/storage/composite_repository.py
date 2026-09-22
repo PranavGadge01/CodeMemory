@@ -119,11 +119,24 @@ class CompositeStorage(ProblemRepository, SubmissionRepository, AttemptRepositor
                     prob.attempts.append(matched_attempt)
 
             # Verify idempotency across the whole problem, not just the matched
-            # attempt, so the same submission can never land twice.
-            existing_hashes = {
-                s.submission_hash for a in prob.attempts for s in a.submissions if s.submission_hash
-            }
-            if submission.submission_hash not in existing_hashes:
+            # attempt, so the same submission can never land twice for the same
+            # account. A hash matching another account's submission is not a
+            # duplicate — both are kept.
+            is_duplicate = False
+            if submission.submission_hash:
+                for a in prob.attempts:
+                    for s in a.submissions:
+                        if s.submission_hash == submission.submission_hash:
+                            if (
+                                submission.source_account is None
+                                or submission.source_account == ""
+                                or s.source_account == submission.source_account
+                            ):
+                                is_duplicate = True
+                                break
+                    if is_duplicate:
+                        break
+            if not is_duplicate:
                 submission.attempt_id = matched_attempt.id
                 matched_attempt.submissions.append(submission)
                 self.save(prob)

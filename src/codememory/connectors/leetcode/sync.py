@@ -196,6 +196,11 @@ class LeetCodeSyncEngine:
             # Normalize once; the ordering tuples are derived from the same
             # records the persistence loop consumes below.
             normalized = [self.mapper.to_normalized_record(r) for r in raw_subs]
+            # Tag each record with the connected account so provenance is
+            # stored on the submission itself, not just the connection.
+            for norm in normalized:
+                norm.source_provider = "leetcode"
+                norm.source_account = conn.username
             visible_keys = [_record_key(n.timestamp, n.submission_id) for n in normalized]
 
             previous_watermark = self._read_watermark(conn)
@@ -241,10 +246,27 @@ class LeetCodeSyncEngine:
                         s.submission_hash for a in prob.attempts for s in a.submissions if s.submission_hash
                     }
                     existing_ids = {s.id for a in prob.attempts for s in a.submissions}
+                    # Map from hash → set of source_accounts that claim it, so a
+                    # cross-account hash collision does not cause B's submission to
+                    # be skipped against A's record (or vice-versa).
+                    hash_accounts: dict[str, set[str | None]] = {}
+                    for a in prob.attempts:
+                        for s in a.submissions:
+                            if s.submission_hash:
+                                hash_accounts.setdefault(s.submission_hash, set()).add(s.source_account)
 
                     sub_id_check = norm.submission_id or ""
 
-                    if norm.submission_hash in existing_hashes or sub_id_check in existing_ids:
+                    # A submission is a duplicate only if BOTH its external id
+                    # and its hash+account match what is already stored. A hash
+                    # that matches A's record but belongs to a different account
+                    # is a cross-account collision, not a duplicate.
+                    is_duplicate_id = sub_id_check in existing_ids
+                    is_duplicate_hash = norm.submission_hash in existing_hashes and (
+                        conn.username in hash_accounts.get(norm.submission_hash, set())
+                    )
+
+                    if is_duplicate_id or is_duplicate_hash:
                         skipped_count += 1
                         continue
 
@@ -263,6 +285,8 @@ class LeetCodeSyncEngine:
                         submitted_at=norm.timestamp,
                         submission_id=norm.submission_id,
                         submission_hash=norm.submission_hash,
+                        source_provider="leetcode",
+                        source_account=conn.username,
                     )
 
                     # Account for what this run wrote, so a duplicate appearing

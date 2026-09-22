@@ -145,6 +145,8 @@ class Submission(BaseModel):
     submitted_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     error_message: str | None = None
     submission_hash: str = ""
+    source_provider: str | None = None
+    source_account: str | None = None
 
     @field_validator("submitted_at", mode="before")
     @classmethod

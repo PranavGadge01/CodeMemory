@@ -143,6 +143,8 @@ class CodeMemoryService:
         submitted_at: datetime | str | None = None,
         submission_id: str | None = None,
         submission_hash: str | None = None,
+        source_provider: str | None = None,
+        source_account: str | None = None,
     ) -> tuple[Problem, Submission]:
         """Add a submission to a problem, automatically creating attempts.
 
@@ -167,10 +169,16 @@ class CodeMemoryService:
             status=sub_status.value,
         )
 
-        # Idempotency: the same submission already persisted — return it as-is.
+         # Idempotency: the same submission already persisted — return it as-is.
         if sub_hash:
             existing = self.storage.get_by_hash(sub_hash)
-            if existing is not None:
+            # Only treat as a duplicate if the existing record belongs to the
+            # same account. A hash collision across accounts is not a duplicate.
+            if existing is not None and (
+                source_account is None
+                or source_account == ""
+                or existing.source_account == source_account
+            ):
                 return prob, existing
 
         sub_kwargs: dict[str, Any] = {
@@ -183,6 +191,8 @@ class CodeMemoryService:
             "submitted_at": submitted_dt,
             "error_message": error_message,
             "submission_hash": sub_hash,
+            "source_provider": source_provider,
+            "source_account": source_account,
         }
         if submission_id:
             # Preserve the external identity (e.g. "leetcode_1003") as the

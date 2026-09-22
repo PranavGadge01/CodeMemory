@@ -178,6 +178,8 @@ class NormalizedSubmissionRecord(BaseModel):
     statement: str | None = None
     reasoning: str | None = None
     submission_hash: str = ""
+    source_provider: str | None = None
+    source_account: str | None = None
 
     @model_validator(mode="before")
     @classmethod
