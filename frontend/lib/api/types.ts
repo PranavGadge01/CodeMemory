@@ -282,6 +282,16 @@ export interface SettingsDTO {
   autosyncEnabled: boolean;
   dataDir: string;
   version: string;
+  theme: string;
+  accentEmphasis: boolean;
+  compactDensity: boolean;
+  reducedMotion: boolean;
+  codeFontSize: string;
+  defaultCodeLanguage: string;
+  defaultDifficulty: string;
+  showFailedAttempts: boolean;
+  autoExpandEvolution: boolean;
+  timestampDisplay: string;
 }
 
 /* --- LeetCode ---------------------------------------------------------- */

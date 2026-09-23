@@ -27,6 +27,7 @@ from codememory.revision.revision_models import RevisionQueueItem, RevisionScore
 from codememory.revision.revision_service import RevisionService
 from codememory.search.search_service import SearchService
 from codememory.storage.composite_repository import CompositeStorage
+from codememory.core.settings import SettingsStore, UserSettings
 from codememory.ai.fallback_provider import HeuristicAIProvider
 from codememory.ai.evolution_service import EvolutionService, EvolutionSummary
 from codememory.ai.analyzer import AICodeAnalyzer
@@ -82,6 +83,7 @@ class CodeMemoryService:
         )
         self.import_service = ImportService(storage=self.storage)
         self.exporter = KnowledgeExporter(output_dir=knowledge_dir)
+        self.settings_store = SettingsStore(data_dir=self.base_dir)
         self.analytics_service = AnalyticsService(storage=self.storage)
         self.search_service = SearchService(storage=self.storage)
         self.pattern_analyzer = PatternAnalyzer(analytics_service=self.analytics_service)
@@ -124,6 +126,18 @@ class CodeMemoryService:
         except Exception:
             pass
         return None
+
+    def get_settings(self) -> UserSettings:
+        """Load persisted user settings (backend is the single source of truth)."""
+        return self.settings_store.load()
+
+    def update_setting(self, key: str, value: Any) -> UserSettings:
+        """Persist a single setting and return the updated model."""
+        return self.settings_store.update(**{key: value})
+
+    def update_settings(self, **fields: Any) -> UserSettings:
+        """Persist one or more settings and return the updated model."""
+        return self.settings_store.update(**fields)
 
     def list_problems(self) -> Sequence[Problem]:
         """List stored problems, scoped to the active account.

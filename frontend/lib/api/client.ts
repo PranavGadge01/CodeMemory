@@ -136,6 +136,14 @@ export function apiPost<T>(path: string, body?: unknown): Promise<T> {
   });
 }
 
+/** PUT a JSON body and return the parsed response. */
+export function apiPut<T>(path: string, body: unknown): Promise<T> {
+  return request<T>(buildUrl(path), {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+}
+
 /** DELETE a resource. */
 export function apiDelete<T>(path: string): Promise<T> {
   return request<T>(buildUrl(path), { method: "DELETE" });

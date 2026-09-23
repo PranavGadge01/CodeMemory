@@ -18,6 +18,7 @@ export {
   getRevisionQueue,
   markProblemReviewed,
   getSettings,
+  updateSettings,
   getLeetCodeStatus,
   connectLeetCode,
   syncLeetCode,

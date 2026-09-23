@@ -9,7 +9,7 @@
  * No business logic here: these are fetch + map, nothing else.
  */
 
-import { apiGet, apiPost } from "@/lib/api/client";
+import { apiGet, apiPost, apiPut } from "@/lib/api/client";
 import type {
   DashboardDTO,
   AnalyticsDTO,
@@ -21,8 +21,6 @@ import type {
   ProblemListItemDTO,
   SubmissionDTO,
   RevisionQueueItemDTO,
-  ActivityDayDTO,
-  TimelineEventDTO,
 } from "@/lib/api/types";
 import type {
   ActivityDay,
@@ -256,6 +254,10 @@ export function markProblemReviewed(slug: string): Promise<{ status: string }> {
 
 export function getSettings(): Promise<SettingsDTO> {
   return apiGet<SettingsDTO>("/settings");
+}
+
+export function updateSettings(patch: Partial<SettingsDTO>): Promise<SettingsDTO> {
+  return apiPut<SettingsDTO>("/settings", patch);
 }
 
 /* --- LeetCode ---------------------------------------------------------- */
