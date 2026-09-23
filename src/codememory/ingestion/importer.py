@@ -178,6 +178,8 @@ class ImportService:
                     "memory_mb": rec.memory_mb,
                     "submitted_at": rec.timestamp,
                     "submission_hash": rec.submission_hash,
+                    "source_provider": rec.source_provider,
+                    "source_account": rec.source_account,
                 }
                 if rec.submission_id:
                     sub_kwargs["id"] = rec.submission_id

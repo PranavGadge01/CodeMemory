@@ -39,13 +39,7 @@ class LeetCodeImporter:
 
         for idx, raw in enumerate(raw_submissions, 1):
             try:
-                norm_rec = LeetCodeMapper.to_normalized_record(raw)
-                # Tag with the connected account so imported records produce the
-                # same hash as synced records from the same account, keeping
-                # sync → import idempotent.
-                if account:
-                    norm_rec.source_provider = "leetcode"
-                    norm_rec.source_account = account
+                norm_rec = LeetCodeMapper.to_normalized_record(raw, source_account=account)
                 normalized_records.append(norm_rec)
             except Exception as e:
                 errors.append(f"Record #{idx} ({raw.title}): Mapping failed: {e}")

@@ -384,7 +384,9 @@ def test_disconnect_preserves_imported_submissions(tmp_path):
     surface.disconnect()
 
     assert len(_stored_submissions(service)) == 1, "imported history must survive disconnect"
-    assert list(service.list_problems())
+    # After disconnect, no active account → LeetCode-sourced submissions are hidden
+    # from list_problems() to prevent cross-account aggregation.
+    assert len(list(service.list_problems())) == 0
 
 
 def test_reconnect_after_disconnect_keeps_history(tmp_path):
