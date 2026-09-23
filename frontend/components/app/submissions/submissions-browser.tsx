@@ -272,9 +272,21 @@ export function SubmissionsBrowser({
             {sorted.map(({ submission, problem }) => (
               <Tr key={submission.id}>
                 <Td mono className="max-w-[170px]">
-                  <span className="block truncate" title={submission.id}>
-                    {submission.id}
-                  </span>
+                  {problem.slug ? (
+                    <Link
+                      href={`/submissions/${submission.id}`}
+                      title={`Open submission ${submission.id}`}
+                      className="press block truncate text-body-sm font-medium text-text-primary hover:text-accent"
+                    >
+                      <span className="block truncate" title={submission.id}>
+                        ...{submission.id.slice(-12)}
+                      </span>
+                    </Link>
+                  ) : (
+                    <span className="block truncate text-body-sm text-text-muted" title={submission.id}>
+                      ...{submission.id.slice(-12)}
+                    </span>
+                  )}
                 </Td>
                 <Td className="max-w-[260px]">
                   {problem.slug ? (

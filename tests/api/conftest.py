@@ -1,10 +1,15 @@
 import pytest
 from fastapi.testclient import TestClient
 from datetime import datetime, timezone, timedelta
+from pathlib import Path
+from unittest.mock import MagicMock
 
 from codememory.core.service import CodeMemoryService
 from codememory.domain.models import Problem, Submission, Attempt
 from codememory.domain.enums import DifficultyLevel, SubmissionStatus
+from codememory.connectors.account.service import AccountService
+from codememory.connectors.leetcode.models import LeetCodeSubmissionRaw
+from codememory.connectors.leetcode.service import LeetCodeAccountService
 
 from api.app import create_app
 from api.dependencies import get_service
@@ -217,3 +222,96 @@ def streak_client(streak_service):
     app.dependency_overrides[get_service] = lambda: streak_service
     with TestClient(app) as client:
         yield client
+
+
+def _raw(submission_id: str, title: str, slug: str, timestamp: int,
+         status: str = "Accepted", language: str = "python3"):
+    return LeetCodeSubmissionRaw(
+        id=submission_id, submission_id=submission_id,
+        title=title, title_slug=slug, language=language,
+        status=status, timestamp=timestamp,
+    )
+
+
+def _mock_client(submissions, username: str):
+    client = MagicMock()
+    client.fetch_user_profile.return_value = {
+        "username": username,
+        "real_name": username,
+        "user_avatar": None,
+        "ranking": 9999,
+        "solved_all": 1,
+        "solved_easy": 1,
+        "solved_medium": 0,
+        "solved_hard": 0,
+    }
+    client.fetch_user_submissions.return_value = submissions
+    client.fetch_problem_details.return_value = None
+    return client
+
+
+def _make_multi_account_service(tmp_path: Path):
+    """Build a service with two LeetCode accounts (A: jaypatil1229, B: maytrix).
+
+    Account A has 2 accepted submissions; account B has 1 accepted submission.
+    Both are synced into the shared DuckDB via separate connect+sync cycles.
+    The service is left with account B as the active connection.
+    """
+    import time
+    now_ts = int(time.time())
+
+    account_service = AccountService(data_dir=tmp_path / "accounts")
+    service = CodeMemoryService(
+        base_dir=tmp_path / "data",
+        knowledge_dir=tmp_path / "knowledge",
+        db_path=tmp_path / "multi_account.duckdb",
+        account_service=account_service,
+    )
+
+    # Account A: jaypatil1229 — two submissions (both accepted, same problem)
+    surface = LeetCodeAccountService(
+        app_service=service,
+        account_service=account_service,
+        client=_mock_client([
+            _raw("1001", "Two Sum", "two-sum", now_ts),
+            _raw("1002", "Two Sum", "two-sum", now_ts - 86400, status="Accepted", language="python3"),
+        ], "jaypatil1229"),
+    )
+    surface.connect("jaypatil1229")
+    surface.sync()
+
+    # Account B: maytrix — one submission (accepted, different problem)
+    surface_b = LeetCodeAccountService(
+        app_service=service,
+        account_service=account_service,
+        client=_mock_client([
+            _raw("2001", "Add Two Numbers", "add-two-numbers", now_ts - 172800),
+        ], "maytrix"),
+    )
+    surface_b.connect("maytrix")
+    surface_b.sync()
+
+    # Install the surface so service.leetcode returns the last one connected
+    service._leetcode_service = surface_b
+    return service
+
+
+@pytest.fixture
+def multi_account_service(tmp_path: Path):
+    service = _make_multi_account_service(tmp_path)
+    yield service
+    service.close_storage()
+
+
+@pytest.fixture
+def multi_account_client(multi_account_service):
+    app = create_app(service=multi_account_service)
+    app.dependency_overrides[get_service] = lambda: multi_account_service
+    with TestClient(app) as client:
+        yield client
+
+
+@pytest.fixture
+def multi_account_service_factory(tmp_path: Path):
+    """Factory that returns a fresh multi-account service for each call."""
+    yield lambda: _make_multi_account_service(tmp_path)

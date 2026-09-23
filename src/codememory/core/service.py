@@ -276,7 +276,7 @@ class CodeMemoryService:
             a_copy.submissions = matching
             filtered_attempts.append(a_copy)
         if not filtered_attempts:
-            return copy.copy(prob)
+            raise ProblemNotFoundError(identifier)
         prob_copy = copy.copy(prob)
         prob_copy.attempts = filtered_attempts
         return prob_copy
@@ -385,12 +385,23 @@ class CodeMemoryService:
         updated_prob = self.storage.save(prob)
         return updated_prob, sub
 
-    def get_submission(self, submission_id: str) -> Submission | None:
-        """Find submission by ID across all problems."""
+    def get_submission(self, submission_id: str, account: str | None = None) -> Submission | None:
+        """Find submission by ID, scoped to the given account.
+
+        When ``account`` is provided, only submissions from that account are
+        considered. When ``account`` is None (no active LeetCode account),
+        LeetCode-sourced submissions are excluded — matching the isolation
+        guarantees of ``list_problems`` and ``get_problem``.
+        """
+        active = account if account is not None else self.active_account
         for prob in self.list_problems():
             for attempt in prob.attempts:
                 for sub in attempt.submissions:
                     if sub.id == submission_id:
+                        if active is None and sub.source_provider is not None:
+                            continue
+                        if active is not None and sub.source_account != active:
+                            continue
                         return sub
         return None
 
@@ -552,6 +563,131 @@ class CodeMemoryService:
             solved=solved,
         )
 
+    def global_search(self, query: str, limit: int = 20) -> list[dict]:
+        """Deterministic lexical search across problems and submissions.
+
+        Returns a list of result dicts with a ``_search_rank`` key (lower is
+        better) for stable ordering. Each dict is a lightweight projection of
+        either a :class:`Problem` or a :class:`Submission`, keyed by the same
+        field names the API response schemas use.
+
+        Account scoping follows the same rule as ``list_problems`` and
+        ``list_submissions``: LeetCode-sourced records are only returned when
+        their ``source_account`` matches ``service.active_account``; when no
+        account is connected, LeetCode-sourced submissions are hidden entirely.
+        """
+        if not query or not query.strip():
+            return []
+
+        q_lower = query.strip().lower()
+        active = self.active_account
+        max_results = max(1, limit)
+
+        results: list[dict] = []
+
+        # --- Problems ---
+        # Rank: 0 = exact title match, 1 = title starts with, 2 = title contains,
+        # 3 = slug match, 4 = topic match
+        for p in self.list_problems():
+            title_lower = p.title.lower()
+            slug_lower = p.slug.lower()
+
+            if q_lower == title_lower:
+                rank = 0
+            elif title_lower.startswith(q_lower):
+                rank = 1
+            elif q_lower in title_lower:
+                rank = 2
+            elif q_lower in slug_lower:
+                rank = 3
+            elif any(q_lower in t.lower() for t in p.topics):
+                rank = 4
+            else:
+                continue
+
+            results.append({
+                "_type": "problem",
+                "_rank": rank,
+                "id": p.id,
+                "title": p.title,
+                "slug": p.slug,
+                "difficulty": p.difficulty.value if hasattr(p.difficulty, "value") else str(p.difficulty),
+                "platform": p.platform,
+                "topics": p.topics,
+            })
+
+        # --- Submissions ---
+        # Submissions are already filtered by the active account inside
+        # _get_all_submissions-equivalent logic (list_problems scoping).
+        for p in self.list_problems():
+            for a in p.attempts:
+                for s in a.submissions:
+                    title_lower = p.title.lower()
+                    slug_lower = p.slug.lower()
+
+                    # Only match if the query hits the problem title/slug or
+                    # the submission's language or status.
+                    if q_lower in title_lower:
+                        rank = 0
+                    elif q_lower in slug_lower:
+                        rank = 1
+                    elif q_lower in s.language.lower():
+                        rank = 2
+                    elif q_lower in s.status.value.lower():
+                        rank = 3
+                    else:
+                        continue
+
+                    results.append({
+                        "_type": "submission",
+                        "_rank": rank,
+                        "id": s.id,
+                        "title": p.title,
+                        "slug": p.slug,
+                        "language": s.language,
+                        "status": s.status.value if hasattr(s.status, "value") else str(s.status),
+                        "runtime_ms": s.runtime_ms,
+                        "memory_mb": s.memory_mb,
+                        "source_provider": s.source_provider,
+                        "source_account": s.source_account,
+                        "submitted_at": s.submitted_at.isoformat() if hasattr(s.submitted_at, "isoformat") else str(s.submitted_at),
+                    })
+
+        # Sort by rank (exact first), then by recency for ties, then id for stability
+        from datetime import datetime as _dt
+        def _sort_key(r: dict):
+            rank = r["_rank"]
+            submitted_str = r.get("submitted_at")
+            if submitted_str:
+                try:
+                    ts = _dt.fromisoformat(submitted_str.replace("Z", "+00:00"))
+                    if ts.tzinfo is None:
+                        ts = ts.replace(tzinfo=timezone.utc)
+                except (ValueError, TypeError):
+                    ts = _dt.min.replace(tzinfo=timezone.utc)
+            else:
+                ts = _dt.min.replace(tzinfo=timezone.utc)
+            return (rank, -ts.timestamp(), r["id"])
+
+        results.sort(key=_sort_key)
+
+        # Convert metadata keys to camelCase so the API response is consistent
+        # with the rest of the schema (which uses BaseCamelModel alias_generator).
+        camelCase_map = {
+            "runtime_ms": "runtimeMs",
+            "memory_mb": "memoryMb",
+            "source_provider": "sourceProvider",
+            "source_account": "sourceAccount",
+            "submitted_at": "submittedAt",
+        }
+        for r in results:
+            r["metadata"] = {
+                camelCase_map.get(k, k): v for k, v in r.items()
+                if k not in ("_type", "_rank", "id", "title", "slug")
+            }
+
+        return results[:max_results]
+
     def get_revision_queue(self, limit: int = 10, topic: str | None = None, weights: RevisionWeights | None = None) -> list[RevisionQueueItem]:
         """Fetch prioritized revision queue."""
         return self.revision_service.get_revision_queue(limit=limit, topic=topic, weights=weights)
@@ -672,7 +808,7 @@ class CodeMemoryService:
 
     def analyze_solution_evolution_ai(self, problem_identifier: str, force_refresh: bool = False) -> SolutionEvolution:
         """Perform multi-attempt AI solution evolution analysis for a problem."""
-        prob = self.get_problem(problem_identifier)
+        prob = self.get_problem(problem_identifier, account=self.active_account)
         submissions: list[Submission] = []
         for attempt in sorted(prob.attempts, key=lambda a: a.attempt_number):
             submissions.extend(attempt.submissions)

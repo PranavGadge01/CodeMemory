@@ -144,7 +144,7 @@ export interface SubmissionDTO {
   id: string;
   problemId: string;
   attemptId: string | null;
-  code: string;
+  code: string | null;
   /** Lowercase on the wire: "python", not "Python". */
   language: string;
   status: string;
@@ -153,6 +153,8 @@ export interface SubmissionDTO {
   submittedAt: string;
   errorMessage: string | null;
   submissionHash: string;
+  sourceProvider: string | null;
+  sourceAccount: string | null;
 }
 
 export interface AttemptDTO {
@@ -242,7 +244,20 @@ export interface RevisionQueueItemDTO {
   breakdown: RevisionScoreBreakdownDTO;
 }
 
-/* --- Knowledge --------------------------------------------------------- */
+/* --- Search ------------------------------------------------------------ */
+
+export interface SearchResultItemDTO {
+  type: "problem" | "submission" | "knowledge";
+  id: string;
+  title: string;
+  slug: string;
+  metadata: Record<string, unknown>;
+}
+
+export interface SearchResponseDTO {
+  query: string;
+  results: SearchResultItemDTO[];
+}
 
 export interface GraphNodeDTO {
   id: string;
@@ -259,6 +274,26 @@ export interface GraphEdgeDTO {
 export interface KnowledgeGraphDTO {
   nodes: GraphNodeDTO[];
   edges: GraphEdgeDTO[];
+}
+
+export interface EvolutionStepDTO {
+  attemptNumber: number;
+  status: string;
+  approach: string;
+  timeComplexity: string;
+  spaceComplexity: string;
+  runtime: string | null;
+  memory: string | null;
+  timestamp: string;
+}
+
+export interface SolutionEvolutionDTO {
+  problemId: string;
+  problemTitle: string;
+  totalAttempts: number;
+  steps: EvolutionStepDTO[];
+  evolutionNarrative: string;
+  keyBreakthrough: string | null;
 }
 
 export interface KnowledgeClusterDTO {

@@ -1,3 +1,8 @@
+from fastapi.testclient import TestClient
+from api.app import create_app
+from api.dependencies import get_service
+
+
 def test_get_dashboard(client):
     response = client.get("/api/v1/dashboard")
     assert response.status_code == 200
@@ -138,3 +143,136 @@ def test_dashboard_timeline_contains_problem_info(streak_client):
             assert event["language"] is not None, f"Event {event['id']} missing language"
         elif event["kind"] == "imported":
             assert event["problemSlug"] is not None, f"Imported event {event['id']} missing problemSlug"
+
+
+def test_dashboard_account_switching_isolates_data(multi_account_service):
+    """Dashboard must reflect only the currently connected account's data.
+
+    Account A (jaypatil1229) has 2 accepted submissions on 'Two Sum'.
+    Account B (maytrix) has 1 accepted submission on 'Add Two Numbers'.
+
+    When B is active (the fixture leaves B connected), the dashboard must
+    show B's data only — no leakage from A.
+    """
+    from codememory.connectors.account.models import AccountConnection, AccountStatus
+    from datetime import datetime, timezone
+
+    app = create_app(service=multi_account_service)
+    app.dependency_overrides[get_service] = lambda: multi_account_service
+
+    account_service = multi_account_service.leetcode._account_service
+
+    with TestClient(app) as client:
+        # --- Account B (maytrix) is currently active ---
+        resp = client.get("/api/v1/dashboard")
+        assert resp.status_code == 200
+        data_b = resp.json()
+
+        # B has exactly 1 problem, 1 submission, 1 solved
+        assert data_b["overview"]["totalProblems"] == 1
+        assert data_b["overview"]["totalSubmissions"] == 1
+        assert data_b["overview"]["acceptedProblems"] == 1
+
+        # Timeline should only reference 'Add Two Numbers'
+        timeline_slugs = {
+            e["problemSlug"] for e in data_b["timeline"] if e["problemSlug"]
+        }
+        assert timeline_slugs == {"add-two-numbers"}, \
+            f"Expected only add-two-numbers in timeline, got {timeline_slugs}"
+
+        # Activity should exist for B
+        assert len(data_b["activity"]) > 0
+
+        # --- Reconnect account A ---
+        conn_a = AccountConnection(
+            provider="LeetCode",
+            username="jaypatil1229",
+            display_name="Jay Patil",
+            user_avatar=None,
+            status=AccountStatus.CONNECTED,
+            connected_at=datetime.now(timezone.utc),
+            capabilities={"sync": True, "profile": True},
+            metadata={"solved_all": 1, "solved_easy": 1, "solved_medium": 0, "solved_hard": 0, "ranking": 9999},
+        )
+        account_service.save_connection(conn_a)
+
+        resp_a = client.get("/api/v1/dashboard")
+        assert resp_a.status_code == 200
+        data_a = resp_a.json()
+
+        # A has 1 problem ('Two Sum'), 2 submissions, 1 solved
+        assert data_a["overview"]["totalProblems"] == 1
+        assert data_a["overview"]["totalSubmissions"] == 2
+        assert data_a["overview"]["acceptedProblems"] == 1
+
+        timeline_slugs_a = {
+            e["problemSlug"] for e in data_a["timeline"] if e["problemSlug"]
+        }
+        assert timeline_slugs_a == {"two-sum"}, \
+            f"Expected only two-sum in timeline, got {timeline_slugs_a}"
+
+
+def test_dashboard_empty_active_account(multi_account_service):
+    """A newly connected account with zero submissions shows zeros, not other accounts' data.
+
+    Connects a brand-new account C ('maytrix2') that has no submissions,
+    then verifies the dashboard shows zeros — not A's or B's data.
+    """
+    from codememory.connectors.account.models import AccountConnection, AccountStatus
+    from datetime import datetime, timezone
+
+    app = create_app(service=multi_account_service)
+    app.dependency_overrides[get_service] = lambda: multi_account_service
+
+    account_service = multi_account_service.leetcode._account_service
+
+    with TestClient(app) as client:
+        # Connect a new account C with no submissions
+        conn_c = AccountConnection(
+            provider="LeetCode",
+            username="maytrix2",
+            display_name="May Trix",
+            user_avatar=None,
+            status=AccountStatus.CONNECTED,
+            connected_at=datetime.now(timezone.utc),
+            capabilities={"sync": True, "profile": True},
+            metadata={"solved_all": 0, "solved_easy": 0, "solved_medium": 0, "solved_hard": 0, "ranking": 9999},
+        )
+        account_service.save_connection(conn_c)
+
+        resp = client.get("/api/v1/dashboard")
+        assert resp.status_code == 200
+        data = resp.json()
+
+        # No data for account C
+        assert data["overview"]["totalProblems"] == 0
+        assert data["overview"]["totalSubmissions"] == 0
+        assert data["overview"]["acceptedProblems"] == 0
+        assert data["overview"]["currentStreakDays"] == 0
+        assert len(data["activity"]) == 0
+        assert len(data["timeline"]) == 0
+
+
+def test_dashboard_no_connected_account(multi_account_service):
+    """When no LeetCode account is connected, all LeetCode data is excluded.
+
+    With the connection to maytrix disconnected, the dashboard must show no
+    data from any account — not A's, not B's.
+    """
+    app = create_app(service=multi_account_service)
+    app.dependency_overrides[get_service] = lambda: multi_account_service
+
+    account_service = multi_account_service.leetcode._account_service
+    account_service.remove_connection("LeetCode")
+
+    with TestClient(app) as client:
+        resp = client.get("/api/v1/dashboard")
+        assert resp.status_code == 200
+        data = resp.json()
+
+        # No LeetCode data visible — all LeetCode-sourced submissions excluded
+        assert data["overview"]["totalProblems"] == 0
+        assert data["overview"]["totalSubmissions"] == 0
+        assert data["overview"]["acceptedProblems"] == 0
+        assert len(data["activity"]) == 0
+        assert len(data["timeline"]) == 0

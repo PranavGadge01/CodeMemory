@@ -21,6 +21,8 @@ import type {
   ProblemListItemDTO,
   SubmissionDTO,
   RevisionQueueItemDTO,
+  SolutionEvolutionDTO,
+  SearchResponseDTO,
 } from "@/lib/api/types";
 import type {
   ActivityDay,
@@ -32,6 +34,7 @@ import type {
   Problem,
   ProgressOverTime,
   RevisionQueueItem,
+  SearchResult,
   StruggleProblem,
   Submission,
   TimelineEvent,
@@ -48,6 +51,7 @@ import {
   mapProblemListItem,
   mapProgressOverTime,
   mapRevisionQueueItem,
+  mapSearchResult,
   mapStruggleProblem,
   mapSubmission,
   mapTimelineEvent,
@@ -136,6 +140,30 @@ export async function listProblems(params: ProblemListParams = {}): Promise<Prob
 
 export function getProblem(slug: string): Promise<Problem> {
   return apiGet<ProblemDTO>(`/problems/${encodeURIComponent(slug)}`).then(mapProblem);
+}
+
+export interface SolutionEvolutionData {
+  problemId: string;
+  problemTitle: string;
+  totalAttempts: number;
+  steps: SolutionEvolutionStep[];
+  evolutionNarrative: string;
+  keyBreakthrough: string | null;
+}
+
+export interface SolutionEvolutionStep {
+  attemptNumber: number;
+  status: string;
+  approach: string;
+  timeComplexity: string;
+  spaceComplexity: string;
+  runtime: string | null;
+  memory: string | null;
+  timestamp: string;
+}
+
+export function getProblemEvolution(slug: string): Promise<SolutionEvolutionData> {
+  return apiGet<SolutionEvolutionDTO>(`/problems/${encodeURIComponent(slug)}/evolution`);
 }
 
 /* --- Submissions ------------------------------------------------------- */
@@ -258,6 +286,19 @@ export function getSettings(): Promise<SettingsDTO> {
 
 export function updateSettings(patch: Partial<SettingsDTO>): Promise<SettingsDTO> {
   return apiPut<SettingsDTO>("/settings", patch);
+}
+
+/* --- Search ----------------------------------------------------------- */
+
+export type { SearchResult } from "@/lib/types";
+export type { SearchResultItemDTO } from "@/lib/api/types";
+
+/* --- Search ----------------------------------------------------------- */
+
+export function search(query: string, limit?: number): Promise<SearchResult[]> {
+  const params: Record<string, unknown> = { q: query };
+  if (limit !== undefined) params.limit = limit;
+  return apiGet<SearchResponseDTO>("/search", params).then((dto) => dto.results.map(mapSearchResult));
 }
 
 /* --- LeetCode ---------------------------------------------------------- */

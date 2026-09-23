@@ -69,11 +69,8 @@ def list_submissions(
 
 @router.get("/submissions/{id}", response_model=SubmissionOut)
 def get_submission(id: str, service: CodeMemoryService = Depends(get_service)):
-    """Get a single submission by ID across all problems."""
-    # We do a brute force search since we don't have a direct service method
-    # and we aren't adding one for the API layer per constraints.
-    for sub in _get_all_submissions(service):
-        if sub.id == id:
-            return SubmissionOut(**sub.model_dump())
-            
-    raise HTTPException(status_code=404, detail="Submission not found")
+    """Get a single submission by ID, scoped to the active account."""
+    sub = service.get_submission(id, account=service.active_account)
+    if sub is None:
+        raise HTTPException(status_code=404, detail="Submission not found")
+    return SubmissionOut(**sub.model_dump())

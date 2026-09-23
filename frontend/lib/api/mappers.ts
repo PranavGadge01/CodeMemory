@@ -20,6 +20,7 @@ import type {
   ProblemNote,
   ProgressOverTime,
   RevisionQueueItem,
+  SearchResult,
   SolutionAnalysis,
   StruggleProblem,
   Submission,
@@ -47,6 +48,7 @@ import type {
   GraphNodeDTO,
   GraphEdgeDTO,
   KnowledgeClusterDTO,
+  SearchResultItemDTO,
 } from "@/lib/api/types";
 
 const DIFFICULTIES: Difficulty[] = ["Easy", "Medium", "Hard", "Unknown"];
@@ -140,6 +142,8 @@ export function mapSubmission(dto: SubmissionDTO): Submission {
     submittedAt: dto.submittedAt,
     errorMessage: dto.errorMessage,
     submissionHash: dto.submissionHash,
+    sourceProvider: dto.sourceProvider ?? null,
+    sourceAccount: dto.sourceAccount ?? null,
     // The API does not expose a percentile; the UI's "beats" hint renders "—".
     beatsPercent: null,
   };
@@ -506,5 +510,17 @@ export function mapTimelineEvent(dto: TimelineEventDTO): TimelineEvent {
     problemSlug: dto.problemSlug,
     language: dto.language ? mapLanguage(dto.language) : null,
     occurredAt: dto.occurredAt,
+  };
+}
+
+/* --- Search ----------------------------------------------------------- */
+
+export function mapSearchResult(dto: SearchResultItemDTO): SearchResult {
+  return {
+    type: dto.type,
+    id: dto.id,
+    title: dto.title,
+    slug: dto.slug,
+    metadata: dto.metadata,
   };
 }

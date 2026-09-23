@@ -11,6 +11,7 @@ export {
   getDashboard,
   listProblems,
   getProblem,
+  getProblemEvolution,
   listSubmissions,
   getSubmission,
   getAnalytics,
@@ -23,6 +24,7 @@ export {
   connectLeetCode,
   syncLeetCode,
   disconnectLeetCode,
+  search,
   type DashboardData,
   type ProblemListParams,
   type ProblemListResult,
@@ -32,4 +34,6 @@ export {
   type AnalyticsGranularity,
   type KnowledgeData,
   type RevisionListParams,
+  type SolutionEvolutionData,
+  type SearchResult,
 } from "@/lib/api/resources";

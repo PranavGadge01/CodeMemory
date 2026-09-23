@@ -29,7 +29,7 @@ def get_dashboard(
     difficulties = service.analytics_service.get_difficulty_statistics(account=account)
     languages = service.analytics_service.get_language_statistics(account=account)
 
-    progress = service.analytics_service.get_progress_over_time(granularity="day", account=account)
+    progress = service.analytics_service.get_progress_over_time(granularity="week", account=account)
 
     struggles = service.analytics_service.get_struggle_problems(limit=5, account=account)
 

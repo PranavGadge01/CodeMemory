@@ -65,6 +65,7 @@ def create_app(service: Optional[CodeMemoryService] = None) -> FastAPI:
         knowledge,
         revision,
         leetcode,
+        search,
         settings as settings_router
     )
     
@@ -76,6 +77,7 @@ def create_app(service: Optional[CodeMemoryService] = None) -> FastAPI:
     app.include_router(knowledge.router, prefix="/api/v1")
     app.include_router(revision.router, prefix="/api/v1")
     app.include_router(leetcode.router, prefix="/api/v1")
+    app.include_router(search.router, prefix="/api/v1")
     app.include_router(settings_router.router, prefix="/api/v1")
 
     return app
