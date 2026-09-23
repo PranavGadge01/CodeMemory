@@ -203,13 +203,38 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
         # instance may already have reopened the path underneath this one.
         if registered is self.conn:
             _shared_duckdb_connections.pop(self.db_path, None)
+            try:
+                self.conn.close()
+            except Exception:
+                pass
+
+    def __del__(self) -> None:
+        """Safety-net finalization only for non-shared connections.
+
+        A shared connection lives in the process-wide registry and can be in
+        active use by other instances that reused the pooled handle. Closing it
+        from a garbage-collected instance would break those live users mid-query
+        (the registry ping on the next ``__init__`` would re-detect the stale
+        handle, but any in-flight multi-statement build would already be
+        reading rows through a closed connection).
+
+        Shared connections are instead retired through the explicit ``close()``
+        path — called by ``CodeMemoryService.close_storage()`` and the "Clear
+        All Data" lifecycle. Non-shared connections (``shared=False``, used only
+        by the dedicated sync worker) are not pooled, so closing them in
+        ``__del__`` is safe and correct.
+        """
+        if not (hasattr(self, "conn") and self.conn):
+            return
+        registered = _shared_duckdb_connections.get(self.db_path)
+        if registered is self.conn:
+            # Shared — leave it for explicit close().
+            return
+        # Non-shared (dedicated) connection: safe to close now.
         try:
             self.conn.close()
         except Exception:
             pass
-
-    def __del__(self) -> None:
-        self.close()
 
     def health(self) -> bool:
         """Verify the DuckDB connection can execute a trivial query."""
