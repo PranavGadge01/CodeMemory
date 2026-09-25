@@ -12,7 +12,12 @@
  */
 
 import { apiGet, apiPost, apiDelete } from "@/lib/api/client";
-import type { LeetCodeStatusDTO, LeetCodeSyncResultDTO } from "@/lib/api/types";
+import type {
+  LeetCodeAuthStatusDTO,
+  LeetCodeAuthSyncResultDTO,
+  LeetCodeStatusDTO,
+  LeetCodeSyncResultDTO,
+} from "@/lib/api/types";
 
 /**
  * Connection and sync status. Cheap to poll: the backend serves it from the
@@ -51,4 +56,28 @@ export function syncLeetCode(): Promise<LeetCodeSyncResultDTO> {
 /** Drop the connection. Imported submissions stay in the local index. */
 export function disconnectLeetCode(): Promise<{ status: string }> {
   return apiDelete<{ status: string }>("/leetcode/connect");
+}
+
+/** Validate credentials already held by the backend vault. */
+export function validateLeetCodeCredentials(): Promise<LeetCodeAuthStatusDTO> {
+  return apiPost<LeetCodeAuthStatusDTO>("/leetcode/auth/validate");
+}
+
+/** Send credentials directly to the backend vault; callers must clear their form values after success. */
+export function storeLeetCodeCredentials(
+  session: string,
+  csrfToken: string,
+): Promise<LeetCodeAuthStatusDTO> {
+  return apiPost<LeetCodeAuthStatusDTO>("/leetcode/auth/store", {
+    session,
+    csrf_token: csrfToken,
+  });
+}
+
+export function syncAuthenticatedLeetCode(): Promise<LeetCodeAuthSyncResultDTO> {
+  return apiPost<LeetCodeAuthSyncResultDTO>("/leetcode/auth/sync");
+}
+
+export function revokeLeetCodeCredentials(): Promise<LeetCodeAuthStatusDTO> {
+  return apiDelete<LeetCodeAuthStatusDTO>("/leetcode/auth/revoke");
 }
