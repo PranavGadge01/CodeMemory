@@ -53,6 +53,8 @@ class SemanticIndex:
                     "problem_id": row.get("problem_id", ""),
                     "memory_type": row.get("memory_type", ""),
                     "title": row.get("title", ""),
+                    "source_provider": row.get("source_provider", ""),
+                    "source_account": row.get("source_account", ""),
                 }
         except Exception:
             pass
@@ -79,6 +81,8 @@ class SemanticIndex:
                     "embedding_version": data["embedding_version"],
                     "indexed_at": data["indexed_at"],
                     "vector_json": json.dumps(data["vector"]),
+                    "source_provider": data.get("source_provider", ""),
+                    "source_account": data.get("source_account", ""),
                 }
             )
         pl.DataFrame(rows).write_parquet(self.parquet_path)
@@ -104,6 +108,8 @@ class SemanticIndex:
             "embedding_version": self.embedding_version,
             "indexed_at": datetime.now(timezone.utc).isoformat(),
             "vector": vector,
+            "source_provider": doc.source_provider or "",
+            "source_account": doc.source_account or "",
         }
 
     def save(self) -> None:
@@ -114,13 +120,25 @@ class SemanticIndex:
         """Return total number of vectors in index."""
         return len(self._index)
 
-    def search(self, query_vector: List[float], top_k: int = 10) -> List[Tuple[str, float]]:
-        """Search top-K memory IDs by cosine similarity against query vector."""
+    def search(self, query_vector: List[float], top_k: int = 10, account: str | None = None) -> List[Tuple[str, float]]:
+        """Search top-K memory IDs by cosine similarity against query vector.
+
+        When ``account`` is provided, only documents whose ``source_account``
+        matches are considered. When ``account`` is None, documents with no
+        ``source_account`` (legacy/manual) are still returned alongside any
+        that happen to have no account set — but in practice the caller
+        (MemoryService) is responsible for ensuring LeetCode-sourced docs are
+        not exposed cross-account.
+        """
         if not self._index or not query_vector:
             return []
 
         scores: List[Tuple[str, float]] = []
         for m_id, data in self._index.items():
+            if account is not None:
+                doc_account = data.get("source_account", "")
+                if doc_account != account:
+                    continue
             sim = cosine_similarity(query_vector, data["vector"])
             scores.append((m_id, sim))
 

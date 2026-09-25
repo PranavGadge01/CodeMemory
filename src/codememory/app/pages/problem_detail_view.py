@@ -82,7 +82,7 @@ def render_problem_detail_page() -> None:
 
     # ── Similar & Related Problems (Phase 7 Memory Engine) ────────────────────
     st.subheader("🔗 Similar Problems & Shared Concepts")
-    similar_problems = service.memory_engine.find_similar_problem(prob.id, top_k=3)
+    similar_problems = service.memory_find_similar_problem(prob.id, top_k=3)
     if not similar_problems:
         st.info("No similar problems currently recorded in your CodeMemory database.")
     else:

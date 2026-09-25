@@ -216,6 +216,20 @@ class Attempt(BaseModel):
         """Check if any submission in this attempt was accepted."""
         return any(s.status == SubmissionStatus.ACCEPTED for s in self.submissions) or self.status == SubmissionStatus.ACCEPTED
 
+    def _get_source_provider(self) -> str | None:
+        """Return source_provider of the first non-null submission in this attempt."""
+        for sub in self.submissions:
+            if sub.source_provider is not None:
+                return sub.source_provider
+        return None
+
+    def _get_source_account(self) -> str | None:
+        """Return source_account of the first non-null submission in this attempt."""
+        for sub in self.submissions:
+            if sub.source_account is not None:
+                return sub.source_account
+        return None
+
 
 class ProblemNote(BaseModel):
     """Human reasoning, intuition, or mistake note."""
@@ -296,3 +310,28 @@ class Problem(BaseModel):
         if not all_subs:
             return None
         return max(all_subs, key=lambda s: s.submitted_at)
+
+    def _get_source_provider(self) -> str | None:
+        """Return the source_provider of the first non-null submission, or None.
+
+        A problem may have submissions from multiple providers (e.g. LeetCode
+        and manually imported). For memory-provenance purposes we use the first
+        non-null value encountered; if all submissions are manual (None), the
+        problem is considered non-provider-sourced.
+        """
+        for attempt in self.attempts:
+            for sub in attempt.submissions:
+                if sub.source_provider is not None:
+                    return sub.source_provider
+        return None
+
+    def _get_source_account(self) -> str | None:
+        """Return the source_account of the first non-null submission, or None.
+
+        Mirrors ``_get_source_provider`` for account provenance.
+        """
+        for attempt in self.attempts:
+            for sub in attempt.submissions:
+                if sub.source_account is not None:
+                    return sub.source_account
+        return None

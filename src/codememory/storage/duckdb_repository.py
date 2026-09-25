@@ -214,18 +214,13 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
         # instance may already have reopened the path underneath this one.
         if registered is self.conn:
             _shared_duckdb_connections.pop(self.db_path, None)
-        try:
-            self.conn.close()
-        except Exception:
-            pass
+            try:
+                self.conn.close()
+            except Exception:
+                pass
 
     def __del__(self) -> None:
-        # Only close private connections in __del__. Shared connections are
-        # process-global and must not be closed when an individual instance is
-        # garbage-collected, since other instances (e.g. the next CLI command's
-        # service) may be actively using the same connection object.
-        if getattr(self, "_owns_private_connection", False):
-            self.close()
+        self.close()
 
 
     def health(self) -> bool:

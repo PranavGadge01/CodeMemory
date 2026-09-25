@@ -29,22 +29,24 @@ class DocumentPipeline:
                 f"Statement: {p.statement or 'Not specified'}"
             )
             docs.append(
-                MemoryDocument(
-                    memory_id=f"prob_{p.id}",
-                    memory_type=MemoryType.PROBLEM,
-                    problem_id=p.id,
-                    title=p.title,
-                    content=prob_content,
-                    topics=p.topics,
-                    difficulty=diff_str,
-                    platform=plat_str,
-                    status="Solved" if p.latest_accepted_submission else "In Progress",
-                    timestamp=p.created_at,
-                    source="Problem Metadata",
-                    source_reference={"problem_id": p.id, "slug": p.slug},
-                    content_hash=compute_content_hash(prob_content),
-                )
-            )
+                 MemoryDocument(
+                     memory_id=f"prob_{p.id}",
+                     memory_type=MemoryType.PROBLEM,
+                     problem_id=p.id,
+                     title=p.title,
+                     content=prob_content,
+                     topics=p.topics,
+                     difficulty=diff_str,
+                     platform=plat_str,
+                     status="Solved" if p.latest_accepted_submission else "In Progress",
+                     timestamp=p.created_at,
+                     source="Problem Metadata",
+                     source_reference={"problem_id": p.id, "slug": p.slug},
+                     content_hash=compute_content_hash(prob_content),
+                     source_provider=p._get_source_provider(),
+                     source_account=p._get_source_account(),
+                 )
+             )
 
             # 2. Process Attempts and Submissions
             for att in p.attempts:
@@ -57,23 +59,25 @@ class DocumentPipeline:
                 )
 
                 docs.append(
-                    MemoryDocument(
-                        memory_id=f"att_{att.id}",
-                        memory_type=MemoryType.ATTEMPT,
-                        problem_id=p.id,
-                        title=f"{p.title} - Attempt #{att.attempt_number}",
-                        content=att_content,
-                        topics=p.topics,
-                        difficulty=diff_str,
-                        platform=plat_str,
-                        status=att_status_str,
-                        attempt_number=att.attempt_number,
-                        timestamp=att.created_at,
-                        source="Attempt Reasoning",
-                        source_reference={"problem_id": p.id, "attempt_id": att.id, "attempt_number": att.attempt_number},
-                        content_hash=compute_content_hash(att_content),
-                    )
-                )
+                     MemoryDocument(
+                         memory_id=f"att_{att.id}",
+                         memory_type=MemoryType.ATTEMPT,
+                         problem_id=p.id,
+                         title=f"{p.title} - Attempt #{att.attempt_number}",
+                         content=att_content,
+                         topics=p.topics,
+                         difficulty=diff_str,
+                         platform=plat_str,
+                         status=att_status_str,
+                         attempt_number=att.attempt_number,
+                         timestamp=att.created_at,
+                         source="Attempt Reasoning",
+                         source_reference={"problem_id": p.id, "attempt_id": att.id, "attempt_number": att.attempt_number},
+                         content_hash=compute_content_hash(att_content),
+                         source_provider=att._get_source_provider(),
+                         source_account=att._get_source_account(),
+                     )
+                 )
 
                 # Record mistakes if present
                 if att.mistakes or not att.is_accepted:
@@ -97,6 +101,8 @@ class DocumentPipeline:
                             source="Attempt Failure / Mistake Log",
                             source_reference={"problem_id": p.id, "attempt_id": att.id},
                             content_hash=compute_content_hash(mistake_text),
+                            source_provider=att._get_source_provider(),
+                            source_account=att._get_source_account(),
                         )
                     )
 
@@ -127,6 +133,8 @@ class DocumentPipeline:
                             source="Raw Submission Code",
                             source_reference={"problem_id": p.id, "attempt_id": att.id, "submission_id": sub.id},
                             content_hash=compute_content_hash(sub_content),
+                            source_provider=sub.source_provider,
+                            source_account=sub.source_account,
                         )
                     )
 
@@ -162,6 +170,8 @@ class DocumentPipeline:
                                     source="AI Analysis Engine",
                                     source_reference={"problem_id": p.id, "submission_id": sub.id},
                                     content_hash=compute_content_hash(ai_content),
+                                    source_provider=sub.source_provider,
+                                    source_account=sub.source_account,
                                 )
                             )
                         except Exception:

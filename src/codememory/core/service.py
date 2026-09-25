@@ -655,6 +655,52 @@ class CodeMemoryService:
 
         results.sort(key=_sort_key)
 
+        # --- Knowledge (Memory Engine hybrid search) ---
+        # The MemoryEngine provides hybrid vector+keyword search over memory
+        # documents (attempts, submissions, mistakes, notes). When an active
+        # account is connected, the search is automatically scoped to that
+        # account's documents.
+        #
+        # Knowledge results are only surfaced when the lexical search already
+        # found matching problems or submissions, and only when the hybrid
+        # score is high enough to indicate a real match. This prevents the
+        # Knowledge section from showing noise for queries that have no genuine
+        # match — e.g. searching "xyznonexistent" should not return unrelated
+        # documents that happen to share a token.
+        lexical_result_count = len(results)
+        if lexical_result_count > 0:
+            try:
+                knowledge_results = self.memory_search(query=q_lower, top_k=max_results)
+                for kr in knowledge_results:
+                    if kr.score < 0.55:
+                        continue
+                    rank = 5
+                    problem_slug = ""
+                    try:
+                        prob_for_slug = self.storage.get_by_id(kr.problem_id)
+                        if prob_for_slug:
+                            problem_slug = prob_for_slug.slug
+                    except Exception:
+                        pass
+                    results.append({
+                        "_type": "knowledge",
+                        "_rank": rank,
+                        "id": kr.memory_id,
+                        "title": kr.title,
+                        "slug": problem_slug,
+                        "memoryType": kr.memory_type.value,
+                        "problemId": kr.problem_id,
+                        "score": kr.score,
+                        "snippet": kr.snippet,
+                        "source": kr.source,
+                        "sourceProvider": kr.source_provider,
+                        "sourceAccount": kr.source_account,
+                    })
+            except Exception:
+                pass
+
+        results.sort(key=_sort_key)
+
         # Convert metadata keys to camelCase so the API response is consistent
         # with the rest of the schema (which uses BaseCamelModel alias_generator).
         camelCase_map = {
@@ -757,6 +803,38 @@ class CodeMemoryService:
                     if account is None or s.source_account == account:
                         submissions.append(s)
         return self.knowledge_graph_builder.build_graph(problems, submissions)
+
+    # 8. Phase 7 Memory Engine — account-scoped wrappers
+    def memory_index_all(self, force_rebuild: bool = False) -> dict[str, int]:
+        """Index all problems into the memory engine, scoped to the active account."""
+        return self.memory_engine.index_all(force_rebuild=force_rebuild, account=self.active_account)
+
+    def memory_search(
+        self,
+        query: str,
+        filters: dict[str, str] | None = None,
+        top_k: int = 10,
+    ) -> list:
+        """Hybrid memory search scoped to the active account."""
+        return self.memory_engine.search(
+            query=query, filters=filters, top_k=top_k, account=self.active_account
+        )
+
+    def memory_find_similar_problem(self, problem_id: str, top_k: int = 5) -> list:
+        """Find similar problems scoped to the active account."""
+        return self.memory_engine.find_similar_problem(problem_id, top_k=top_k, account=self.active_account)
+
+    def memory_find_common_mistakes(self, topic: str | None = None) -> list:
+        """Find common mistakes scoped to the active account."""
+        return self.memory_engine.find_common_mistakes(topic=topic, account=self.active_account)
+
+    def memory_find_previous_approaches(self, problem_id: str) -> list:
+        """Find previous approaches for a problem, scoped to the active account."""
+        return self.memory_engine.find_previous_approaches(problem_id, account=self.active_account)
+
+    def memory_stats(self) -> dict[str, Any]:
+        """Get memory stats scoped to the active account."""
+        return self.memory_engine.get_memory_stats(account=self.active_account)
 
     def analyze_submission(self, submission_id: str, force_refresh: bool = False) -> SubmissionAnalysis:
         """Perform AI code analysis for a submission using cached identity checks."""

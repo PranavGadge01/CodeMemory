@@ -77,8 +77,14 @@ class HybridRetriever:
         documents: List[MemoryDocument],
         filters: Optional[Dict[str, str]] = None,
         top_k: int = 10,
+        account: str | None = None,
     ) -> List[MemoryResult]:
-        """Perform hybrid retrieval over a collection of MemoryDocuments."""
+        """Perform hybrid retrieval over a collection of MemoryDocuments.
+
+        When ``account`` is provided, only documents whose ``source_account``
+        matches are scored. Documents with a different ``source_account`` are
+        excluded entirely, preventing cross-account memory leakage.
+        """
         if not documents:
             return []
 
@@ -88,12 +94,16 @@ class HybridRetriever:
         q_vector = self.embedding_provider.embed(query) if query else []
         semantic_scores: Dict[str, float] = {}
         if q_vector and self.index.count() > 0:
-            raw_semantic = self.index.search(q_vector, top_k=len(documents))
+            raw_semantic = self.index.search(q_vector, top_k=len(documents), account=account)
             semantic_scores = {m_id: score for m_id, score in raw_semantic}
 
         results: List[MemoryResult] = []
 
         for doc in documents:
+            # Account isolation: when scoped, skip documents from other accounts.
+            if account is not None and doc.source_account != account:
+                continue
+
             # Check structured filters if mandatory matching requested
             if filters and "memory_type" in filters and filters["memory_type"].lower() != doc.memory_type.value.lower():
                 continue
@@ -129,6 +139,8 @@ class HybridRetriever:
                     status=doc.status,
                     source=doc.source,
                     source_reference=doc.source_reference,
+                    source_provider=doc.source_provider,
+                    source_account=doc.source_account,
                     explanation=f"Hybrid score: {final_score:.2f} (Semantic: {s_score:.2f}, Keyword: {k_score:.2f}, Structured: {st_score:.2f})",
                 )
             )
