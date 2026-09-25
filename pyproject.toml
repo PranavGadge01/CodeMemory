@@ -24,6 +24,8 @@ dependencies = [
     "fastapi>=0.141.1",
     "uvicorn[standard]>=0.53.0",
     "python-dotenv>=1.0.0",
+    "cryptography>=44.0.0",
+    "keyring>=25.0.0",
 ]
 
 [project.optional-dependencies]
