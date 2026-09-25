@@ -57,3 +57,14 @@ data/memory_embeddings.parquet
 
 # Log files
 *.log
+
+# Rust toolchain (local install, not source)
+.rust/
+
+# Tauri build output (frontend)
+frontend/src-tauri/target/
+frontend/src-tauri/gen/
+frontend/src-tauri/*.exe
+frontend/src-tauri/*.msi
+frontend/src-tauri/*.app
+frontend/src-tauri/*.dmg
