@@ -1029,12 +1029,7 @@ class TestAuthenticatedSyncEndToEnd:
 
         mock_client.fetch_submission_code.return_value = {"code": "pass", "language": "python3", "runtime": 10.0, "memory": 10.0}
 
-        # Run 1: Page 1 succeeds (returns 1 sub with limit=100, has_next=False because
-        # len(1) < limit(100)), but we simulate has_next=True to force a second page attempt
-        # Actually, with length-based detection, 1 submission < limit of 100 means has_next=False
-        # So we need 100 submissions to get has_next=True... let's use a different approach.
-        # Let's mock fetch_submissions_page directly with the correct return values.
-        # Page 1: returns sub1, has_next=True (simulated), checkpoint saved as offset 100
+        # Run 1: Page 1 succeeds (returns 1 sub, has_next=True simulated), checkpoint saved as offset 20
         # Page 2: throws error
         mock_client.fetch_submissions_page.side_effect = [
             ([sub1], True, None),
@@ -1052,11 +1047,11 @@ class TestAuthenticatedSyncEndToEnd:
         assert r1.status == SyncState.FAILED
 
         # Checkpoint from page 1 must be preserved in connection metadata
-        # The checkpoint is saved as str(offset + 100) = "100"
+        # The checkpoint is saved as str(offset + 20) = "20"
         conn = account_service.get_connection("LeetCode")
-        assert conn.metadata.get("auth_sync_last_key") == "100"
+        assert conn.metadata.get("auth_sync_last_key") == "20"
 
-        # Run 2: Resume from checkpoint (offset=100)
+        # Run 2: Resume from checkpoint (offset=20)
         mock_client.fetch_submissions_page.side_effect = [
             ([sub2], False, None),
         ]
@@ -1065,8 +1060,8 @@ class TestAuthenticatedSyncEndToEnd:
         assert r2.status == SyncState.SUCCESS
         assert r2.records_added == 1
 
-        # Verify page 2 was requested starting with offset=100 (the checkpoint)
-        assert mock_client.fetch_submissions_page.call_args[1]["offset"] == 100
+        # Verify page 2 was requested starting with offset=20 (the checkpoint)
+        assert mock_client.fetch_submissions_page.call_args[1]["offset"] == 20
 
         # Checkpoint cleared on completion
         conn_after = account_service.get_connection("LeetCode")
@@ -1136,7 +1131,7 @@ class TestPaginationArgumentsRegression:
         orch.sync_full_history(service, username="alice")
         first_call = mock_client.fetch_submissions_page.call_args_list[0]
         assert first_call[1]["offset"] == 0
-        assert first_call[1]["limit"] == 100
+        assert first_call[1]["limit"] == 20
         assert "last_key" not in first_call[1]
 
     @patch("codememory.connectors.leetcode.auth_sync.AuthenticatedLeetCodeClient")
@@ -1156,12 +1151,12 @@ class TestPaginationArgumentsRegression:
         orch = AuthenticatedSyncOrchestrator(account_service=account_service, credential_vault=vault, rate_limit_delay=0.0)
         orch.sync_full_history(service, username="alice")
         second_call = mock_client.fetch_submissions_page.call_args_list[1]
-        assert second_call[1]["offset"] == 100
+        assert second_call[1]["offset"] == 20
         assert "last_key" not in second_call[1]
 
     @patch("codememory.connectors.leetcode.auth_sync.AuthenticatedLeetCodeClient")
     def test_pagination_arguments_three_pages_offset_chain(self, mock_client_cls, tmp_path):
-        """Multi-page: offset increments by limit (100) for each subsequent page."""
+        """Multi-page: offset increments by page size (20) for each subsequent page."""
         from codememory.connectors.leetcode.models import LeetCodeSubmissionRaw
         service, account_service, vault = self._make_env(tmp_path, username="alice")
         mock_client = Mock()
@@ -1179,8 +1174,8 @@ class TestPaginationArgumentsRegression:
         assert result.records_added == 3
         calls = mock_client.fetch_submissions_page.call_args_list
         assert calls[0][1]["offset"] == 0
-        assert calls[1][1]["offset"] == 100
-        assert calls[2][1]["offset"] == 200
+        assert calls[1][1]["offset"] == 20
+        assert calls[2][1]["offset"] == 40
         assert len(calls) == 3
 
     @patch("codememory.connectors.leetcode.auth_sync.AuthenticatedLeetCodeClient")
@@ -1195,14 +1190,15 @@ class TestPaginationArgumentsRegression:
             ([sub], False, None),
         ]
         mock_client.fetch_submission_code.return_value = {"code": "x", "language": "python3", "runtime": 1, "memory": 1}
+        # Set a checkpoint with offset 40
         conn = account_service.get_connection("LeetCode")
-        conn.metadata["auth_sync_last_key"] = "200"
+        conn.metadata["auth_sync_last_key"] = "40"
         conn.metadata["auth_sync_last_username"] = "alice"
         account_service.save_connection(conn)
         orch = AuthenticatedSyncOrchestrator(account_service=account_service, credential_vault=vault, rate_limit_delay=0.0)
         orch.sync_full_history(service, username="alice")
         first_call = mock_client.fetch_submissions_page.call_args_list[0]
-        assert first_call[1]["offset"] == 200
+        assert first_call[1]["offset"] == 40
         assert "last_key" not in first_call[1]
 
     @patch("codememory.connectors.leetcode.auth_sync.AuthenticatedLeetCodeClient")
@@ -1211,7 +1207,7 @@ class TestPaginationArgumentsRegression:
         from codememory.connectors.leetcode.models import LeetCodeSubmissionRaw
         service, account_service, vault = self._make_env(tmp_path, username="alice")
         conn = account_service.get_connection("LeetCode")
-        conn.metadata["auth_sync_last_key"] = "300"
+        conn.metadata["auth_sync_last_key"] = "60"
         conn.metadata["auth_sync_last_username"] = "alice"
         account_service.save_connection(conn)
         mock_client = Mock()
@@ -1225,7 +1221,7 @@ class TestPaginationArgumentsRegression:
         assert result.records_added == 1
         assert mock_client.fetch_submissions_page.call_count == 1
         first_call = mock_client.fetch_submissions_page.call_args_list[0]
-        assert first_call[1]["offset"] == 300
+        assert first_call[1]["offset"] == 60
 
     @patch("codememory.connectors.leetcode.auth_sync.AuthenticatedLeetCodeClient")
     def test_pagination_arguments_existing_single_page_unaffected(self, mock_client_cls, tmp_path):
@@ -1244,7 +1240,7 @@ class TestPaginationArgumentsRegression:
         mock_client.fetch_submissions_page.assert_called_once()
         call = mock_client.fetch_submissions_page.call_args_list[0]
         assert call[1]["offset"] == 0
-        assert call[1]["limit"] == 100
+        assert call[1]["limit"] == 20
         assert "last_key" not in call[1]
 
 

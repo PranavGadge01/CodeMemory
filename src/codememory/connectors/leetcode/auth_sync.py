@@ -19,6 +19,12 @@ from codememory.domain.models import generate_slug
 
 logger = logging.getLogger(__name__)
 
+# LeetCode's submissionList API caps the server-side page size. Requesting
+# a larger limit still returns only this many items per page, so we use it
+# for both the request and offset advancement to ensure correct length-based
+# pagination termination.
+LEETCODE_PAGE_SIZE = 20
+
 
 class AuthenticatedSyncOrchestrator:
     """
@@ -131,10 +137,15 @@ class AuthenticatedSyncOrchestrator:
 
             # Process pages one at a time with checkpointing
             while has_next:
-                # Fetch one page of submissions
+                # Fetch one page of submissions.
+                # LeetCode's submissionList API caps the server-side page size at
+                # LEETCODE_PAGE_SIZE submissions regardless of the requested limit.
+                # We request exactly that size so length-based pagination detection
+                # works correctly: when a page returns fewer than LEETCODE_PAGE_SIZE
+                # items, we've exhausted the result set.
                 page_submissions, has_next, _ = client.fetch_submissions_page(
                     username=username,
-                    limit=100,
+                    limit=LEETCODE_PAGE_SIZE,
                     offset=offset,
                 )
 
@@ -258,11 +269,11 @@ class AuthenticatedSyncOrchestrator:
                         self.stats["records_failed"] += 1
 
                 # After successfully processing the page, save checkpoint
-                # using current offset as the resume point for offset-based pagination
-                self.save_checkpoint(conn, str(offset + 100), username)
+                # using next offset as the resume point for offset-based pagination
+                self.save_checkpoint(conn, str(offset + LEETCODE_PAGE_SIZE), username)
 
                 # Prepare for next page
-                offset += 100
+                offset += LEETCODE_PAGE_SIZE
 
                 # Rate limiting - delay between requests
                 if has_next:  # Only delay if we're going to make another request

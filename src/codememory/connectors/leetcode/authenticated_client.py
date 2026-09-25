@@ -269,6 +269,8 @@ class AuthenticatedLeetCodeClient(LeetCodeClient):
 
             # LeetCode's submissionList uses offset-based pagination.
             # has_next is determined by response length vs limit.
+            # Note: LeetCode caps the server-side page size, so callers should
+            # use a limit matching the server's actual page size for accurate detection.
             offset += limit
 
             # Rate limiting - delay between requests
