@@ -173,3 +173,133 @@ def test_sync_reports_unexpected_failure_without_leaking_secrets(
         and "LeetCode sync failed" in record.getMessage()
         for record in caplog.records
     )
+
+
+def test_auth_store_validate_revoke_api(client: TestClient, connected_service: CodeMemoryService):
+    """Verify POST /store, POST /validate, DELETE & POST /revoke and ensure no secrets leak."""
+    stored_state = {"session": None, "csrf": None, "stored": False}
+
+    def fake_store(s: str, c: str) -> None:
+        stored_state["session"] = s
+        stored_state["csrf"] = c
+        stored_state["stored"] = True
+
+    def fake_validate() -> bool:
+        return stored_state["stored"]
+
+    def fake_revoke() -> None:
+        stored_state["session"] = None
+        stored_state["csrf"] = None
+        stored_state["stored"] = False
+
+    connected_service.leetcode.store_authenticated_credentials = fake_store
+    connected_service.leetcode.validate_authenticated_credentials = fake_validate
+    connected_service.leetcode.revoke_authenticated_credentials = fake_revoke
+
+    # 1. Store
+    store_resp = client.post(
+        "/api/v1/leetcode/auth/store",
+        json={"session": "session_secret_token_12345", "csrf_token": "csrf_secret_token_67890"},
+    )
+    assert store_resp.status_code == 200, store_resp.text
+    data = store_resp.json()
+    assert data["credentialsStored"] is True
+    # Secrets must not be in response body
+    assert "session_secret_token" not in store_resp.text
+    assert "csrf_secret_token" not in store_resp.text
+
+    # 2. Validate
+    val_resp = client.post("/api/v1/leetcode/auth/validate")
+    assert val_resp.status_code == 200, val_resp.text
+    assert val_resp.json()["credentialsStored"] is True
+
+    # 3. Revoke via DELETE
+    del_resp = client.delete("/api/v1/leetcode/auth/revoke")
+    assert del_resp.status_code == 200, del_resp.text
+    assert del_resp.json()["credentialsStored"] is False
+
+    # 4. Revoke via POST
+    post_del_resp = client.post("/api/v1/leetcode/auth/revoke")
+    assert post_del_resp.status_code == 200, post_del_resp.text
+    assert post_del_resp.json()["credentialsStored"] is False
+
+
+def test_auth_sync_api_flow(client: TestClient, connected_service: CodeMemoryService):
+    """Verify POST /api/v1/leetcode/auth/sync returns expected camelCase shape and handles flow."""
+    from codememory.connectors.account.models import SyncStatus, SyncState
+
+    mock_result = SyncStatus(
+        provider="LeetCode",
+        status=SyncState.SUCCESS,
+        records_discovered=10,
+        records_added=5,
+        records_skipped=5,
+        records_failed=0,
+        details={"code_fetched": 5, "code_failed": 0},
+    )
+
+    connected_service.leetcode.sync_authenticated_full_history = MagicMock(return_value=mock_result)
+
+    resp = client.post("/api/v1/leetcode/auth/sync")
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    # Confirm exact camelCase field names expected by frontend
+    assert data["status"] == "Success"
+    assert data["recordsDiscovered"] == 10
+    assert data["recordsAdded"] == 5
+    assert data["recordsSkipped"] == 5
+    assert data["recordsFailed"] == 0
+    assert data["codeFetched"] == 5
+    assert data["codeFailed"] == 0
+    assert data["errorMessage"] is None
+
+
+def test_auth_validate_reports_unconfirmed_session(client: TestClient, connected_service: CodeMemoryService):
+    connected_service.leetcode.validate_authenticated_credentials = MagicMock(return_value=False)
+
+    response = client.post("/api/v1/leetcode/auth/validate")
+
+    assert response.status_code == 200
+    assert response.json()["credentialsStored"] is False
+    assert "session was confirmed" in response.json()["validationMessage"]
+
+
+def test_auth_store_reports_upstream_validation_failure_without_secrets(
+    client: TestClient, connected_service: CodeMemoryService,
+):
+    from codememory.connectors.leetcode.errors import LeetCodeError
+
+    secret = "synthetic-session-secret"
+    connected_service.leetcode.store_authenticated_credentials = MagicMock(
+        side_effect=LeetCodeError(f"LeetCode rejected LEETCODE_SESSION={secret}")
+    )
+
+    response = client.post(
+        "/api/v1/leetcode/auth/store",
+        json={"session": secret, "csrf_token": "synthetic-csrf-value"},
+    )
+
+    assert response.status_code == 502
+    assert "Could not validate LeetCode credentials" in response.text
+    assert secret not in response.text
+
+
+def test_auth_sync_api_reports_failed_upstream_sync(client: TestClient, connected_service: CodeMemoryService):
+    """A failed LeetCode sync must not be reported as HTTP success."""
+    from codememory.connectors.account.models import SyncStatus, SyncState
+
+    connected_service.leetcode.sync_authenticated_full_history = MagicMock(return_value=SyncStatus(
+        provider="LeetCode",
+        status=SyncState.FAILED,
+        records_discovered=0,
+        records_added=0,
+        records_skipped=0,
+        records_failed=0,
+        error_message="LeetCode rejected the request with HTTP 400: Unknown argument 'username'.",
+    ))
+
+    resp = client.post("/api/v1/leetcode/auth/sync")
+    assert resp.status_code == 502
+    assert resp.json()["error"]["message"] == (
+        "LeetCode rejected the request with HTTP 400: Unknown argument 'username'."
+    )

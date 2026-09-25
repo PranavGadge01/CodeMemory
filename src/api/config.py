@@ -2,9 +2,11 @@ import os
 from dataclasses import dataclass
 from typing import List
 
-from dotenv import load_dotenv
-
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    def load_dotenv():
+        pass
 
 
 @dataclass

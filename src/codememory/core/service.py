@@ -155,7 +155,7 @@ class CodeMemoryService:
         active = self.active_account
         if active is not None:
             # Filter to problems that have submissions from the active account,
-            # stripping submissions from other accounts.
+            # stripping submissions from other accounts or unattributed/legacy records.
             filtered: list[Problem] = []
             for p in all_problems:
                 kept_attempts = []
@@ -191,23 +191,6 @@ class CodeMemoryService:
             if not is_leetcode_only:
                 unscoped.append(p)
         return unscoped
-        for p in all_problems:
-            kept_attempts = []
-            for a in p.attempts:
-                matching = [s for s in a.submissions if s.source_account == active]
-                if not matching:
-                    continue
-                import copy
-                a_copy = copy.copy(a)
-                a_copy.submissions = matching
-                kept_attempts.append(a_copy)
-            if not kept_attempts:
-                continue
-            import copy
-            p_copy = copy.copy(p)
-            p_copy.attempts = kept_attempts
-            filtered.append(p_copy)
-        return filtered
 
     def add_problem(
         self,
@@ -280,6 +263,7 @@ class CodeMemoryService:
         prob_copy = copy.copy(prob)
         prob_copy.attempts = filtered_attempts
         return prob_copy
+
 
     # 2. Submission & Attempt operations
     def add_submission(

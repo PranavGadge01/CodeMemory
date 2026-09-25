@@ -11,6 +11,8 @@
 
 This document specifies a production-ready authenticated LeetCode synchronization system for CodeMemory that retrieves complete submission history (including source code) while maintaining security, reliability, and user trust. The design extends the existing public sync architecture without replacing it.
 
+> **Implementation status note (2026-09-25):** This document began as a design proposal. Sections 4–5 retain some proposal-era examples and rollout planning; the implementation-status table at the end is authoritative for what the repository currently does. The GraphQL examples below have been corrected to the current client request shape.
+
 ---
 
 ## 1. Problem Statement
@@ -79,21 +81,20 @@ Based on community implementations ([leetcode-graphql-queries](https://github.co
 
 Research identifies these authenticated endpoints:
 
-#### `allUserSubmissions` (Full History)
+#### `submissionList` (Full History — current request shape)
 ```graphql
-query allUserSubmissions($offset: Int!, $limit: Int!, $lastKey: String) {
-  submissionList(offset: $offset, limit: $limit, lastKey: $lastKey) {
+query submissionList($limit: Int!, $offset: Int!, $lastKey: String) {
+  submissionList(limit: $limit, offset: $offset, lastKey: $lastKey) {
     lastKey
     hasNext
     submissions {
       id
-      lang
-      timestamp
-      statusDisplay
-      runtime
-      memory
       title
       titleSlug
+      timestamp
+      statusDisplay
+      lang
+      __typename
     }
   }
 }
@@ -107,14 +108,16 @@ query allUserSubmissions($offset: Int!, $limit: Int!, $lastKey: String) {
 #### `submissionDetails` (Code Retrieval)
 ```graphql
 query submissionDetails($submissionId: Int!) {
-  submissionDetail(submissionId: $submissionId) {
-    id
+  submissionDetails(submissionId: $submissionId) {
     code
-    lang
     runtime
     memory
-    statusDisplay
     timestamp
+    statusCode
+    lang {
+      name
+      verboseName
+    }
     question {
       questionId
       title
@@ -124,13 +127,47 @@ query submissionDetails($submissionId: Int!) {
 }
 ```
 
+The client parses the response object at `data.submissionDetails`; `lang` is
+normalized from `verboseName` (falling back to `name`), and the request's
+submission ID is retained because the detail response does not request an ID
+field. The tests use a mocked response matching this shape. LeetCode's schema
+error identified `submissionDetails` as the replacement for `submissionDetail`;
+the full field structure has not yet been verified by a successful live detail
+request in this environment.
+
 **Rate Limit Observation**: Community reports suggest ~5-10 requests/second sustained is safe; burst limits unknown ([leetcode-query](https://www.npmjs.com/package/leetcode-query)).
 
 ---
 
 ## 4. Detailed Design
 
+### 4.0 Actual Runtime Architecture
+
+The implemented authenticated path is:
+
+```text
+Next.js settings / account UI
+    ↓
+FastAPI authenticated LeetCode routes
+    ↓
+LeetCodeAccountService
+    ↓
+AuthenticatedSyncOrchestrator
+    ↓
+AuthenticatedLeetCodeClient
+    ↓
+LeetCode GraphQL
+```
+
+The authenticated sync is implemented in the Next.js + FastAPI application.
+The Streamlit page described later in this original proposal is not part of the
+current application.
+
 ### 4.1 Credential Management
+
+The storage tree and Python snippet in this subsection are proposal-era examples,
+not the current on-disk layout or implementation. See the implementation-status
+table for the actual per-account encrypted keyring/file behavior.
 
 #### Storage Location
 ```
@@ -239,6 +276,10 @@ Success → Store encrypted → Start sync
 
 ### 4.2 Authenticated Client Extension
 
+The following client listing is an original design sketch, not a copy of the
+current source file. Its query examples above have been corrected, but the
+current implementation lives in `src/codememory/connectors/leetcode/authenticated_client.py`.
+
 ```python
 # src/codememory/connectors/leetcode/authenticated_client.py
 
@@ -297,19 +338,18 @@ class AuthenticatedLeetCodeClient(LeetCodeClient):
         page = 0
         
         query = """
-        query submissionList($offset: Int!, $limit: Int!, $lastKey: String) {
-            submissionList(offset: $offset, limit: $limit, lastKey: $lastKey) {
+        query submissionList($limit: Int!, $offset: Int!, $lastKey: String) {
+            submissionList(limit: $limit, offset: $offset, lastKey: $lastKey) {
                 lastKey
                 hasNext
                 submissions {
                     id
-                    lang
-                    timestamp
-                    statusDisplay
-                    runtime
-                    memory
                     title
                     titleSlug
+                    timestamp
+                    statusDisplay
+                    lang
+                    __typename
                 }
             }
         }
@@ -394,14 +434,16 @@ class AuthenticatedLeetCodeClient(LeetCodeClient):
         """
         query = """
         query submissionDetails($submissionId: Int!) {
-            submissionDetail(submissionId: $submissionId) {
-                id
+            submissionDetails(submissionId: $submissionId) {
                 code
-                lang
                 runtime
                 memory
-                statusDisplay
                 timestamp
+                statusCode
+                lang {
+                    name
+                    verboseName
+                }
                 question {
                     questionId
                     title
@@ -414,10 +456,10 @@ class AuthenticatedLeetCodeClient(LeetCodeClient):
         result = self.execute_query(query, {"submissionId": submission_id})
         data = self._graphql_data(result)
         
-        if not data or "submissionDetail" not in data:
+        if not data or "submissionDetails" not in data:
             return None
-        
-        detail = data["submissionDetail"]
+
+        detail = data["submissionDetails"]
         if not isinstance(detail, dict):
             return None
         
@@ -426,12 +468,12 @@ class AuthenticatedLeetCodeClient(LeetCodeClient):
             question = {}
         
         return {
-            "submission_id": detail.get("id"),
+            "submission_id": str(submission_id),
             "code": detail.get("code", ""),
-            "language": detail.get("lang", "Unknown"),
+            "language": (detail.get("lang") or {}).get("verboseName") or (detail.get("lang") or {}).get("name"),
             "runtime": detail.get("runtime"),
             "memory": detail.get("memory"),
-            "status": detail.get("statusDisplay", "Unknown"),
+            "status": detail.get("statusCode"),
             "timestamp": detail.get("timestamp"),
             "title": question.get("title", ""),
             "title_slug": question.get("titleSlug", ""),
@@ -442,6 +484,10 @@ class AuthenticatedLeetCodeClient(LeetCodeClient):
 ---
 
 ### 4.3 Sync Orchestration
+
+The following orchestration listing is proposal-era pseudocode. The current
+orchestrator processes one page at a time and persists cursors in account
+connection metadata, as summarized in the status table.
 
 ```python
 # src/codememory/connectors/leetcode/authenticated_sync.py
@@ -567,6 +613,9 @@ class AuthenticatedSyncOrchestrator:
 ---
 
 ### 4.4 UI Integration
+
+The Streamlit page below was proposed but not implemented. The current settings
+and account UI is Next.js and calls the FastAPI routes described in section 4.0.
 
 #### Streamlit Page: `app/pages/account_sync.py`
 
@@ -702,6 +751,9 @@ def run_authenticated_sync(username, vault):
 
 ## 5. Implementation Plan
 
+This checklist is retained as the original plan snapshot; completion status is
+tracked in the implementation-status table below.
+
 ### Phase 1: Foundation (Week 1)
 - [ ] Create `authenticated_client.py` extending `LeetCodeClient`
 - [ ] Implement `CredentialVault` with OS keyring integration
@@ -822,6 +874,56 @@ def run_authenticated_sync(username, vault):
 - [leetcode-query npm package](https://www.npmjs.com/package/leetcode-query)
 - [@leetnotion/leetcode-api](https://www.npmjs.com/package/@leetnotion/leetcode-api)
 - [LeetCode Discord Reporter](https://github.com/Harshith1702/leetcode-discord-reporter)
+
+## Implementation Status — September 2026
+
+This table reflects repository code and tests, not the original proposal. Live
+status is reported separately from mocked/unit-test evidence. GraphQL field and
+response details describe what the client currently sends/parses. The current
+`submissionDetails` request returned source details during live verification on
+2026-09-25.
+
+| Requirement | Status | Actual Implementation | Notes |
+|---|---|---|---|
+| Public sync | ✅ IMPLEMENTED | `LeetCodeSyncEngine` uses the unauthenticated public client and recent accepted-submission window. | Remains independently available. |
+| Authenticated sync | ✅ IMPLEMENTED | FastAPI → `LeetCodeAccountService` → `AuthenticatedSyncOrchestrator` → authenticated GraphQL client. | A second full-history sync completed through the live API. |
+| Credentials | ✅ IMPLEMENTED | `LEETCODE_SESSION` and `csrftoken` are held by the backend client and sent only in authenticated request headers. | They are not placed in URLs or API response models. |
+| Encryption | ⚠️ PARTIAL | Credential payloads are Fernet-encrypted before keyring or JSON-file persistence; master key is account-scoped in OS keyring. | Encrypted-file fallback works only when the Fernet key is available. No plaintext fallback exists. This audit did not independently verify restart retrieval/revoke in the normal Windows user session. |
+| Session validation | ✅ IMPLEMENTED | Save and validate issue a one-item authenticated `submissionList` request; invalid/malformed page responses fail validation. | The stored session returned valid through the live API on 2026-09-25. |
+| Revocation | ✅ IMPLEMENTED | Deletes the account-scoped keyring item and encrypted file on a best-effort basis. | A keyring deletion error is logged; file cleanup is still attempted. |
+| Full history | ✅ IMPLEMENTED | `submissionList(limit, offset, lastKey)` reads the session user's history page-by-page. | No username argument; no accepted-only history filter. |
+| Failed submissions | ✅ IMPLEMENTED | History parsing preserves each returned status; only accepted records trigger code detail fetches. | Verified by mocked sync tests. |
+| Source code | ✅ IMPLEMENTED | Accepted IDs are passed as integer `submissionId` to `submissionDetails`; parser reads code, language object, runtime, memory, status code, timestamp, and question fields. | The live second sync fetched 34 source-detail responses with `code_failed=0`; stored code was present on 34 accepted records. Current data contained Java only. |
+| Pagination | ✅ IMPLEMENTED | Uses `limit=100`, increasing `offset`, `lastKey`, and `hasNext`. | Transport and orchestrator tests cover multiple pages. |
+| Checkpointing | ✅ IMPLEMENTED | Last key and associated username are stored in connection metadata after pages with a next cursor. | Checkpoint clears after successful completion; history page failures raise instead of becoming empty final pages. |
+| Resume | ✅ IMPLEMENTED | Orchestrator starts from the saved key and validates checkpoint username against active connection. | Covered by failure/resume tests. |
+| Deduplication | ✅ IMPLEMENTED | Compares account provenance plus submission hash and external submission ID before storage. | Live second sync discovered 60, added 0, skipped 60, and failed 0; stored total remained 67. |
+| Multi-account isolation | ⚠️ PARTIAL | Credential vault keys and stored submission provenance are account-scoped; checkpoint records its username. | Account service retains one active LeetCode connection at a time; parallel synchronization is not implemented. Public submission responses omit source-account provenance, so it was not independently audited through the API. |
+| Rate limiting | ⚠️ PARTIAL | Pages are separated by a delay and transport retries are bounded with backoff/`Retry-After` handling. | Detail requests for accepted submissions have no separate inter-request delay; monitor live behavior before large archives. |
+| Error handling | ✅ IMPLEMENTED | History failures fail the sync; detail failures increment `code_failed` while retaining successfully stored history metadata. | HTTP errors have bounded credential-redacted diagnostics. |
+| FastAPI | ✅ IMPLEMENTED | Authenticated store, validate, sync, and revoke routes expose safe response models; failed sync returns HTTP 502. | Route behavior is covered by API tests. |
+| Next.js | ⚠️ PARTIAL | LeetCode account status, connect, authenticated store/validate/sync/revoke, and sync results use FastAPI. | Other platform cards remain preview-only. Embedded browser access to the local API was blocked, so the UI flow was not independently verified live. |
+| Tests | ✅ IMPLEMENTED | Authenticated, API, network, multi-account, checkpoint, and full-suite tests exist. | Latest full run: 545 passed, 1 deselected, 1 deprecation warning. |
+| Live verification | ⚠️ PARTIAL | Stored session validation and a second full-history sync completed via the local API. | Second sync: 60 discovered, 0 added, 60 skipped, 0 failed, 34 code fetched, 0 code failed. First-sync counters were not retained; restart persistence was not verified. |
+
+### Proposal Items Not Implemented
+
+The initial Streamlit page, auto-refreshing sessions, incremental/delta sync,
+contest history, LeetCode CN, production/beta rollout, video tutorial, 1000+
+account stress testing, parallel multi-account synchronization, automatic
+schema-version detection, and community-query monitoring remain proposals or
+future work. They are not part of the current authenticated sync.
+
+### Evidence Limitations
+
+The test suite demonstrates request serialization and response parsing using
+mocked HTTP responses. During the 2026-09-25 audit, unauthenticated GraphQL
+introspection was rejected with HTTP 403. An authenticated `submissionDetails`
+request did return code details for 34 accepted submissions, but a single
+account and one language do not establish a versioned LeetCode schema contract.
+The second sync saw 60 submissions, below the client's 100-item page size, so
+that run did not independently verify multiple live history pages. Restart
+persistence and first-sync counters were unavailable for independent audit.
 
 ---
 

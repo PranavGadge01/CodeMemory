@@ -85,6 +85,13 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
     ):
         self.db_path = str(db_path)
         self._lock = _lock_for(self.db_path)
+        # Track whether this instance owns a private (non-shared) connection.
+        # Only private connections should be closed in __del__; shared
+        # connections are process-global and belong to the registry, not to any
+        # individual instance. Closing a shared connection in __del__ when the
+        # instance goes out of scope would kill an active connection that other
+        # instances are still using, causing "Connection already closed!" errors.
+        self._owns_private_connection: bool = False
         if self.db_path != ":memory:":
             Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
 
@@ -115,11 +122,15 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
             self.conn = duckdb.connect(self.db_path)
             if shared:
                 _shared_duckdb_connections[self.db_path] = self.conn
+            else:
+                # Private connection: this instance is responsible for closing it.
+                self._owns_private_connection = True
             self._init_tables()
             self._repair_empty_submission_hashes()
         except duckdb.IOException:
             try:
                 self.conn = duckdb.connect(self.db_path, read_only=True)
+                self._owns_private_connection = not shared
             except duckdb.IOException:
                 raise
 
@@ -209,7 +220,13 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
             pass
 
     def __del__(self) -> None:
-        self.close()
+        # Only close private connections in __del__. Shared connections are
+        # process-global and must not be closed when an individual instance is
+        # garbage-collected, since other instances (e.g. the next CLI command's
+        # service) may be actively using the same connection object.
+        if getattr(self, "_owns_private_connection", False):
+            self.close()
+
 
     def health(self) -> bool:
         """Verify the DuckDB connection can execute a trivial query."""

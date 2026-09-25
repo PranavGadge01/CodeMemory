@@ -1,14 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { Check, Trash2, AlertTriangle, UploadCloud, RefreshCw } from "lucide-react";
+import { Check, Trash2, UploadCloud, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PageContainer } from "@/components/app/page-container";
 import { PageHeader } from "@/components/app/page-header";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { SettingRow, SettingsGroup, SelectField, Toggle } from "@/components/app/settings/settings";
 import { useSettings } from "@/components/app/settings/settings-provider";
+import { AccountSection } from "./account-section";
 import { useTheme } from "@/components/system/theme";
 import type { SettingsDTO } from "@/lib/api/types";
 import type { ThemePreference } from "@/lib/theme";
@@ -32,10 +32,7 @@ export function SettingsView() {
   // Appearance settings
   const themePreference = settings.theme as ThemePreference;
 
-  // Account + data UI-only state
-  const [confirmDisconnect, setConfirmDisconnect] = React.useState(false);
-  const [codeforcesConnected, setCodeforcesConnected] = React.useState(false);
-  const [hackerrankConnected, setHackerrankConnected] = React.useState(false);
+  // Data UI state
   const [importSource, setImportSource] = React.useState("json");
   const [importStatus, setImportStatus] = React.useState<ImportStatus>("idle");
   const [rebuildStatus, setRebuildStatus] = React.useState<RebuildStatus>("idle");
@@ -205,68 +202,7 @@ export function SettingsView() {
              </SettingRow>
           </SettingsGroup>
 
-          <SettingsGroup
-            id="account"
-            eyebrow="Account"
-            title="Connected platforms"
-            description="Import is read-only and file-based. CodeMemory never stores account credentials."
-          >
-            <PlatformRow
-               name="LeetCode"
-               username={settings.leetcodeConnected ? "jay.patil" : null}
-               connected={settings.leetcodeConnected}
-               onToggle={() => {
-                 if (settings.leetcodeConnected) {
-                   setConfirmDisconnect(true);
-                 } else {
-                   updateSetting("leetcodeConnected", true);
-                 }
-               }}
-             />
-            <PlatformRow
-              name="Codeforces"
-              username={codeforcesConnected ? "jaypatil" : null}
-              connected={codeforcesConnected}
-              onToggle={() => setCodeforcesConnected((prev) => !prev)}
-            />
-            <PlatformRow
-              name="HackerRank"
-              username={hackerrankConnected ? "jay_patil" : null}
-              connected={hackerrankConnected}
-              onToggle={() => setHackerrankConnected((prev) => !prev)}
-            />
-            {confirmDisconnect ? (
-              <div className="border-t border-warning/20 bg-warning-soft/40 px-5 py-4">
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
-                  <div className="min-w-0 flex-1">
-                    <div className="text-body-sm font-medium text-text-primary">
-                      Disconnect LeetCode?
-                    </div>
-                    <p className="mt-1 text-caption text-text-muted">
-                      Previously imported submissions stay in your local index. Future imports from
-                      this account will need re-connecting.
-                    </p>
-                    <div className="mt-3 flex gap-2">
-                       <Button
-                         variant="danger"
-                         size="sm"
-                         onClick={() => {
-                           updateSetting("leetcodeConnected", false);
-                           setConfirmDisconnect(false);
-                         }}
-                       >
-                        Disconnect
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => setConfirmDisconnect(false)}>
-                        Keep connected
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : null}
-          </SettingsGroup>
+          <AccountSection />
 
           <SettingsGroup
             id="data"
@@ -444,49 +380,6 @@ function SystemThemeNote() {
   return (
     <div className="px-5 py-3 text-caption text-text-faint">
       {`Following your system — currently ${theme}.`}
-    </div>
-  );
-}
-
-function PlatformRow({
-  name,
-  username,
-  connected,
-  onToggle,
-}: {
-  name: string;
-  username: string | null;
-  connected: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-4 px-5 py-4">
-      <div className="min-w-0">
-        <div className="flex items-center gap-2.5">
-          <span className="text-body-sm font-medium text-text-primary">{name}</span>
-          {connected ? (
-            <Badge variant="success">Connected</Badge>
-          ) : (
-            <Badge variant="neutral">Not connected</Badge>
-          )}
-        </div>
-        {username ? (
-          <div className="mt-1 font-technical-sm text-text-faint">@{username}</div>
-        ) : (
-          <div className="mt-1 text-caption text-text-faint">
-            Import a {name} export to connect.
-          </div>
-        )}
-      </div>
-      <Button
-        type="button"
-        variant={connected ? "outline" : "subtle"}
-        size="sm"
-        onClick={onToggle}
-        aria-pressed={connected}
-      >
-        {connected ? "Disconnect" : "Connect"}
-      </Button>
     </div>
   );
 }

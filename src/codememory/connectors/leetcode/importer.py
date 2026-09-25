@@ -39,7 +39,14 @@ class LeetCodeImporter:
 
         for idx, raw in enumerate(raw_submissions, 1):
             try:
+                # Pass source_account into the mapper so it is available during
+                # NormalizedSubmissionRecord.model_post_init, where the canonical
+                # hash is computed. Setting source_account after construction
+                # produces a different hash than the sync path (which includes the
+                # account in the hash), breaking sync → import idempotency.
                 norm_rec = LeetCodeMapper.to_normalized_record(raw, source_account=account)
+                if account:
+                    norm_rec.source_provider = "leetcode"
                 normalized_records.append(norm_rec)
             except Exception as e:
                 errors.append(f"Record #{idx} ({raw.title}): Mapping failed: {e}")
