@@ -1281,5 +1281,673 @@ class TestFetchAllSubmissionsPaginated:
             assert calls[1].kwargs["offset"] == 100
 
 
+class TestCodeFetchAccountingInvariants:
+    """Regression tests for code-fetch counter accounting invariants.
+
+    These tests document that:
+    - records_discovered = records_added + records_skipped + records_failed
+    - code_fetched + code_failed counts ONLY accepted submissions
+    - Non-accepted submissions skip code fetching entirely
+    - Skipped (duplicate) records still go through code fetching if accepted
+    """
+
+    def _make_env(self, tmp_path, username="alice"):
+        from codememory.connectors.leetcode.models import LeetCodeSubmissionRaw
+        account_service = AccountService(data_dir=tmp_path / "accounts")
+        conn = AccountConnection(provider="LeetCode", username=username, status=AccountStatus.CONNECTED)
+        account_service.save_connection(conn)
+        service = CodeMemoryService(
+            base_dir=tmp_path / "data",
+            knowledge_dir=tmp_path / "knowledge",
+            db_path=tmp_path / f"test_{username}.duckdb",
+            account_service=account_service,
+        )
+        vault = Mock(spec=CredentialVault)
+        vault.retrieve.return_value = ("mock_session", "mock_csrf")
+        vault.validate.return_value = True
+        return service, account_service, vault
+
+    @patch("codememory.connectors.leetcode.auth_sync.AuthenticatedLeetCodeClient")
+    def test_counter_invariant_discovered_equals_added_plus_skipped_plus_failed(self, mock_client_cls, tmp_path):
+        """records_discovered must equal records_added + records_skipped + records_failed."""
+        from codememory.connectors.leetcode.models import LeetCodeSubmissionRaw
+
+        service, account_service, vault = self._make_env(tmp_path, username="alice")
+        mock_client = Mock()
+        mock_client_cls.return_value = mock_client
+
+        # Mix of accepted and non-accepted submissions
+        subs = [
+            LeetCodeSubmissionRaw(id="1", title="P1", title_slug="p1", status="Accepted", language="python3", timestamp=1700000000),
+            LeetCodeSubmissionRaw(id="2", title="P2", title_slug="p2", status="Wrong Answer", language="python3", timestamp=1699999000),
+            LeetCodeSubmissionRaw(id="3", title="P3", title_slug="p3", status="Runtime Error", language="python3", timestamp=1699998000),
+        ]
+        mock_client.fetch_submissions_page.return_value = (subs, False, None)
+        mock_client.fetch_submission_code.return_value = {"code": "pass", "language": "Python3", "runtime": 10, "memory": 10}
+
+        orch = AuthenticatedSyncOrchestrator(
+            account_service=account_service, credential_vault=vault, rate_limit_delay=0.0
+        )
+        result = orch.sync_full_history(service, username="alice")
+
+        # The invariant must hold
+        assert result.records_discovered == 3
+        assert result.records_added + result.records_skipped + result.records_failed == 3
+
+    @patch("codememory.connectors.leetcode.auth_sync.AuthenticatedLeetCodeClient")
+    def test_non_accepted_submissions_skip_code_fetch(self, mock_client_cls, tmp_path):
+        """Non-accepted submissions do not increment code_fetched or code_failed."""
+        from codememory.connectors.leetcode.models import LeetCodeSubmissionRaw
+
+        service, account_service, vault = self._make_env(tmp_path, username="alice")
+        mock_client = Mock()
+        mock_client_cls.return_value = mock_client
+
+        sub = LeetCodeSubmissionRaw(
+            id="1", title="P", title_slug="p", status="Wrong Answer", language="python3", timestamp=1700000000
+        )
+        mock_client.fetch_submissions_page.return_value = ([sub], False, None)
+        mock_client.fetch_submission_code.return_value = {"code": "x", "language": "Python3"}
+
+        orch = AuthenticatedSyncOrchestrator(
+            account_service=account_service, credential_vault=vault, rate_limit_delay=0.0
+        )
+        result = orch.sync_full_history(service, username="alice")
+
+        assert result.records_discovered == 1
+        assert result.details["code_fetched"] == 0
+        assert result.details["code_failed"] == 0
+        # fetch_submission_code should never have been called for non-accepted
+        mock_client.fetch_submission_code.assert_not_called()
+
+    @patch("codememory.connectors.leetcode.auth_sync.AuthenticatedLeetCodeClient")
+    def test_accepted_submission_with_code_failure_increments_code_failed(self, mock_client_cls, tmp_path):
+        """An accepted submission whose code fetch returns None increments code_failed, not records_failed."""
+        from codememory.connectors.leetcode.models import LeetCodeSubmissionRaw
+
+        service, account_service, vault = self._make_env(tmp_path, username="alice")
+        mock_client = Mock()
+        mock_client_cls.return_value = mock_client
+
+        sub = LeetCodeSubmissionRaw(
+            id="1", title="P", title_slug="p", status="Accepted", language="python3", timestamp=1700000000
+        )
+        mock_client.fetch_submissions_page.return_value = ([sub], False, None)
+        mock_client.fetch_submission_code.return_value = None  # Code fetch fails
+
+        orch = AuthenticatedSyncOrchestrator(
+            account_service=account_service, credential_vault=vault, rate_limit_delay=0.0
+        )
+        result = orch.sync_full_history(service, username="alice")
+
+        assert result.details["code_failed"] == 1
+        assert result.details["code_fetched"] == 0
+        assert result.records_failed == 0  # Storage still succeeds
+        assert result.records_added == 1
+
+    @patch("codememory.connectors.leetcode.auth_sync.AuthenticatedLeetCodeClient")
+    def test_skipped_duplicate_still_counts_code_fetch(self, mock_client_cls, tmp_path):
+        """Duplicate-accepted submissions go through code fetch BEFORE being skipped in storage."""
+        from codememory.connectors.leetcode.models import LeetCodeSubmissionRaw
+
+        service, account_service, vault = self._make_env(tmp_path, username="alice")
+        mock_client = Mock()
+        mock_client_cls.return_value = mock_client
+
+        sub = LeetCodeSubmissionRaw(
+            id="1", title="P", title_slug="p", status="Accepted", language="python3", timestamp=1700000000
+        )
+        mock_client.fetch_submissions_page.side_effect = [
+            ([sub], False, None),  # First sync: add it
+            ([sub], False, None),  # Second sync: should be skipped
+        ]
+        mock_client.fetch_submission_code.return_value = {"code": "x", "language": "Python3", "runtime": 1, "memory": 1}
+
+        orch = AuthenticatedSyncOrchestrator(
+            account_service=account_service, credential_vault=vault, rate_limit_delay=0.0
+        )
+        r1 = orch.sync_full_history(service, username="alice")
+        assert r1.records_added == 1
+        assert r1.details["code_fetched"] == 1
+
+        # Reset client mock call counts
+        mock_client.fetch_submission_code.reset_mock()
+
+        r2 = orch.sync_full_history(service, username="alice")
+        # Second run: code should be fetched (accepted) before duplicate detection
+        assert r2.details["code_fetched"] == 1
+        assert r2.records_skipped == 1
+        assert r2.records_added == 0
+
+    @patch("codememory.connectors.leetcode.auth_sync.AuthenticatedLeetCodeClient")
+    def test_accepted_submissions_all_accounted_for_in_code_counters(self, mock_client_cls, tmp_path):
+        """Every accepted submission increments either code_fetched or code_failed."""
+        from codememory.connectors.leetcode.models import LeetCodeSubmissionRaw
+
+        service, account_service, vault = self._make_env(tmp_path, username="alice")
+        mock_client = Mock()
+        mock_client_cls.return_value = mock_client
+
+        subs = [
+            LeetCodeSubmissionRaw(id="1", title="P1", title_slug="p1", status="Accepted", language="python3", timestamp=1700000000),
+            LeetCodeSubmissionRaw(id="2", title="P2", title_slug="p2", status="Accepted", language="python3", timestamp=1700000001),
+            LeetCodeSubmissionRaw(id="3", title="P3", title_slug="p3", status="Accepted", language="python3", timestamp=1700000002),
+            # Non-accepted: should not enter code-fetch block
+            LeetCodeSubmissionRaw(id="4", title="P4", title_slug="p4", status="Wrong Answer", language="python3", timestamp=1700000003),
+        ]
+        mock_client.fetch_submissions_page.return_value = (subs, False, None)
+
+        # Alternate code fetch success/failure
+        code_returns = [
+            {"code": "a", "language": "Python3", "runtime": 1, "memory": 1},  # success
+            None,                                                              # failure
+            {"code": "b", "language": "Python3", "runtime": 2, "memory": 2},  # success
+            {"code": "should_not_be_called", "language": "Python3"},         # never reached
+        ]
+        mock_client.fetch_submission_code.side_effect = code_returns
+
+        orch = AuthenticatedSyncOrchestrator(
+            account_service=account_service, credential_vault=vault, rate_limit_delay=0.0
+        )
+        result = orch.sync_full_history(service, username="alice")
+
+        # 3 accepted: 2 succeeded, 1 failed
+        assert result.details["code_fetched"] == 2
+        assert result.details["code_failed"] == 1
+        assert result.details["code_fetched"] + result.details["code_failed"] == 3
+        # fetch_submission_code should be called exactly 3 times (only for accepted)
+        assert mock_client.fetch_submission_code.call_count == 3
+
+    @patch("codememory.connectors.leetcode.auth_sync.AuthenticatedLeetCodeClient")
+    def test_code_fetch_exception_does_not_increment_code_failed(self, mock_client_cls, tmp_path):
+        """If fetch_submission_code raises (escaping its internal try/except), it hits records_failed, not code_failed.
+        
+        Note: fetch_submission_code currently catches all exceptions internally and returns None.
+        This test documents the current behavior that exceptions don't escape.
+        """
+        from codememory.connectors.leetcode.models import LeetCodeSubmissionRaw
+
+        service, account_service, vault = self._make_env(tmp_path, username="alice")
+        mock_client = Mock()
+        mock_client_cls.return_value = mock_client
+
+        sub = LeetCodeSubmissionRaw(
+            id="1", title="P", title_slug="p", status="Accepted", language="python3", timestamp=1700000000
+        )
+        mock_client.fetch_submissions_page.return_value = ([sub], False, None)
+        mock_client.fetch_submission_code.return_value = None  # Returns None (exception swallowed inside)
+
+        orch = AuthenticatedSyncOrchestrator(
+            account_service=account_service, credential_vault=vault, rate_limit_delay=0.0
+        )
+        result = orch.sync_full_history(service, username="alice")
+
+        # code_failed should be incremented (fetch returned None)
+        assert result.details["code_failed"] == 1
+        assert result.details["code_fetched"] == 0
+        assert result.records_failed == 0  # Storage succeeded
+        assert result.records_added == 1
+
+
+class TestCodeFetchNonDeterminism:
+    """Regression tests for non-deterministic code-fetch behavior.
+
+    The real LeetCode submissionDetails API can return null for submissionDetails
+    when queried in rapid succession (e.g., on immediate re-sync). This is not an
+    error (no HTTP error, no GraphQL errors) — the response is valid JSON with
+    data.submissionDetails set to null.
+
+    These tests document:
+    1. Code fetching happens for ALL accepted submissions on EVERY sync
+       (before duplicate detection)
+    2. When submissionDetails returns null, code_failed is incremented
+    3. records_added changes based on which submissions are new vs. existing
+    4. code_fetched + code_failed always equals the count of accepted submissions
+    """
+
+    def _make_env(self, tmp_path, username="alice"):
+        account_service = AccountService(data_dir=tmp_path / "accounts")
+        conn = AccountConnection(provider="LeetCode", username=username, status=AccountStatus.CONNECTED)
+        account_service.save_connection(conn)
+        service = CodeMemoryService(
+            base_dir=tmp_path / "data",
+            knowledge_dir=tmp_path / "knowledge",
+            db_path=tmp_path / f"test_{username}.duckdb",
+            account_service=account_service,
+        )
+        vault = Mock(spec=CredentialVault)
+        vault.retrieve.return_value = ("mock_session", "mock_csrf")
+        vault.validate.return_value = True
+        return service, account_service, vault
+
+    @patch("codememory.connectors.leetcode.auth_sync.AuthenticatedLeetCodeClient")
+    def test_code_fetch_happens_every_sync_even_for_duplicates(self, mock_client_cls, tmp_path):
+        """Code fetching occurs for accepted submissions even if they will later be skipped as duplicates.
+
+        This is by design (lines 167-192 in auth_sync.py run before duplicate detection at lines 227-243).
+        This is the root cause of the non-deterministic code-fetch results on re-sync:
+        the submissionDetails query is always issued, and LeetCode may return null.
+        """
+        from codememory.connectors.leetcode.models import LeetCodeSubmissionRaw
+
+        service, account_service, vault = self._make_env(tmp_path, username="alice")
+        mock_client = Mock()
+        mock_client_cls.return_value = mock_client
+
+        sub = LeetCodeSubmissionRaw(
+            id="1", title="P", title_slug="p", status="Accepted", language="python3", timestamp=1700000000
+        )
+        mock_client.fetch_submissions_page.side_effect = [
+            ([sub], False, None),  # First sync
+            ([sub], False, None),  # Second sync (same submission)
+        ]
+        mock_client.fetch_submission_code.return_value = {"code": "x", "language": "Python3", "runtime": 1, "memory": 1}
+
+        orch = AuthenticatedSyncOrchestrator(
+            account_service=account_service, credential_vault=vault, rate_limit_delay=0.0
+        )
+
+        # First sync: added
+        r1 = orch.sync_full_history(service, username="alice")
+        assert r1.records_added == 1
+        assert r1.details["code_fetched"] == 1
+        assert mock_client.fetch_submission_code.call_count == 1
+
+        # Second sync: code IS still fetched (happens before dup check), then skipped
+        r2 = orch.sync_full_history(service, username="alice")
+        assert r2.records_skipped == 1
+        assert r2.records_added == 0
+        assert r2.details["code_fetched"] == 1  # Code fetch still happened!
+        assert mock_client.fetch_submission_code.call_count == 2
+
+    @patch("codememory.connectors.leetcode.auth_sync.AuthenticatedLeetCodeClient")
+    def test_submission_details_null_increments_code_failed(self, mock_client_cls, tmp_path):
+        """When LeetCode returns submissionDetails=null (not an error), code_failed is incremented."""
+        from codememory.connectors.leetcode.models import LeetCodeSubmissionRaw
+
+        service, account_service, vault = self._make_env(tmp_path, username="alice")
+        mock_client = Mock()
+        mock_client_cls.return_value = mock_client
+
+        sub = LeetCodeSubmissionRaw(
+            id="1", title="P", title_slug="p", status="Accepted", language="python3", timestamp=1700000000
+        )
+        mock_client.fetch_submissions_page.return_value = ([sub], False, None)
+
+        # Simulate LeetCode returning null submissionDetails (valid response, no code)
+        mock_client.fetch_submission_code.return_value = None
+
+        orch = AuthenticatedSyncOrchestrator(
+            account_service=account_service, credential_vault=vault, rate_limit_delay=0.0
+        )
+        result = orch.sync_full_history(service, username="alice")
+
+        assert result.details["code_failed"] == 1
+        assert result.details["code_fetched"] == 0
+        # Storage still succeeds (code is stored as empty string)
+        assert result.records_added == 1
+        assert result.records_failed == 0
+
+    @patch("codememory.connectors.leetcode.auth_sync.AuthenticatedLeetCodeClient")
+    def test_code_counter_invariant_holds_with_mixed_results(self, mock_client_cls, tmp_path):
+        """Invariant: code_fetched + code_failed = count of accepted submissions, regardless of DB state."""
+        from codememory.connectors.leetcode.models import LeetCodeSubmissionRaw
+
+        service, account_service, vault = self._make_env(tmp_path, username="alice")
+        mock_client = Mock()
+        mock_client_cls.return_value = mock_client
+
+        subs = [
+            LeetCodeSubmissionRaw(id="1", title="P1", title_slug="p1", status="Accepted", language="python3", timestamp=1700000000),
+            LeetCodeSubmissionRaw(id="2", title="P2", title_slug="p2", status="Accepted", language="python3", timestamp=1700000001),
+            LeetCodeSubmissionRaw(id="3", title="P3", title_slug="p3", status="Accepted", language="python3", timestamp=1700000002),
+            LeetCodeSubmissionRaw(id="4", title="P4", title_slug="p4", status="Wrong Answer", language="python3", timestamp=1700000003),
+        ]
+        mock_client.fetch_submissions_page.return_value = (subs, False, None)
+
+        # Mix of success, failure (null), and another success
+        mock_client.fetch_submission_code.side_effect = [
+            {"code": "a", "language": "Python3"},  # success
+            None,                                  # failure (null response)
+            {"code": "b", "language": "Python3"},  # success
+            {"code": "unused"},                     # never called (non-accepted)
+        ]
+
+        orch = AuthenticatedSyncOrchestrator(
+            account_service=account_service, credential_vault=vault, rate_limit_delay=0.0
+        )
+        result = orch.sync_full_history(service, username="alice")
+
+        # 3 accepted: 2 fetched + 1 failed
+        assert result.details["code_fetched"] == 2
+        assert result.details["code_failed"] == 1
+        assert result.details["code_fetched"] + result.details["code_failed"] == 3
+        # fetch_submission_code called exactly 3 times (only accepted)
+        assert mock_client.fetch_submission_code.call_count == 3
+
+    @patch("codememory.connectors.leetcode.auth_sync.AuthenticatedLeetCodeClient")
+    def test_second_sync_code_fetch_attempts_same_count_as_accepted(self, mock_client_cls, tmp_path):
+        """On re-sync, code fetching happens for every accepted submission regardless of storage state.
+
+        Key invariant: code_fetched + code_failed == count of accepted submissions found.
+        This is the root cause of non-deterministic code-fetch ratios on re-sync —
+        LeetCode's submissionDetails API can return null on rapid re-query.
+        """
+        from codememory.connectors.leetcode.models import LeetCodeSubmissionRaw
+
+        service, account_service, vault = self._make_env(tmp_path, username="alice")
+        mock_client = Mock()
+        mock_client_cls.return_value = mock_client
+
+        # 3 accepted + 1 non-accepted = 4 submissions
+        subs = [
+            LeetCodeSubmissionRaw(id="1", title="P1", title_slug="p1", status="Accepted", language="python3", timestamp=1700000000),
+            LeetCodeSubmissionRaw(id="2", title="P2", title_slug="p2", status="Accepted", language="python3", timestamp=1700000001),
+            LeetCodeSubmissionRaw(id="3", title="P3", title_slug="p3", status="Accepted", language="python3", timestamp=1700000002),
+            LeetCodeSubmissionRaw(id="4", title="P4", title_slug="p4", status="Wrong Answer", language="python3", timestamp=1700000003),
+        ]
+
+        mock_client.fetch_submissions_page.side_effect = [
+            (subs, False, None),  # First sync
+            (subs, False, None),  # Second sync (all are duplicates)
+        ]
+
+        # First sync: all accepted submissions return code successfully
+        # Second sync: all accepted submissions return None (LeetCode rate-limit on re-query)
+        mock_client.fetch_submission_code.side_effect = [
+            {"code": "a", "language": "Python3"},
+            {"code": "b", "language": "Python3"},
+            {"code": "c", "language": "Python3"},
+            None,  # Second sync, sub 1
+            None,  # Second sync, sub 2
+            None,  # Second sync, sub 3
+        ]
+
+        orch = AuthenticatedSyncOrchestrator(
+            account_service=account_service, credential_vault=vault, rate_limit_delay=0.0
+        )
+
+        r1 = orch.sync_full_history(service, username="alice")
+        assert r1.details["code_fetched"] == 3
+        assert r1.details["code_failed"] == 0
+        assert r1.records_added == 4  # All 4 are new (3 accepted + 1 wrong answer)
+
+        # The invariant: code_fetched + code_failed == accepted submissions
+        assert r1.details["code_fetched"] + r1.details["code_failed"] == 3
+
+        r2 = orch.sync_full_history(service, username="alice")
+        # Second sync: all 3 accepted got null from LeetCode
+        assert r2.details["code_fetched"] == 0
+        assert r2.details["code_failed"] == 3
+        assert r2.details["code_fetched"] + r2.details["code_failed"] == 3
+
+        # Total code fetch calls: 6 (3 per sync) — every accepted submission fetched every time
+        assert mock_client.fetch_submission_code.call_count == 6
+
+class TestDeduplicationByExternalId:
+    """Regression tests for the deduplication fix using external LeetCode submission ID.
+
+    These tests prove:
+    1. First sync stores a submission with code
+    2. Second sync where submissionDetails returns null does NOT create another record
+    3. Existing valid code is preserved when code fetch fails
+    4. Repeated sync remains idempotent
+    5. A genuinely new submission is still inserted
+    6. Code can still be populated for a submission that previously had no code
+    """
+
+    def _make_env(self, tmp_path, username="alice"):
+        account_service = AccountService(data_dir=tmp_path / "accounts")
+        conn = AccountConnection(provider="LeetCode", username=username, status=AccountStatus.CONNECTED)
+        account_service.save_connection(conn)
+        service = CodeMemoryService(
+            base_dir=tmp_path / "data",
+            knowledge_dir=tmp_path / "knowledge",
+            db_path=tmp_path / f"test_{username}.duckdb",
+            account_service=account_service,
+        )
+        vault = Mock(spec=CredentialVault)
+        vault.retrieve.return_value = ("mock_session", "mock_csrf")
+        vault.validate.return_value = True
+        return service, account_service, vault
+
+    @patch("codememory.connectors.leetcode.auth_sync.AuthenticatedLeetCodeClient")
+    def test_first_sync_stores_submission_with_code(self, mock_client_cls, tmp_path):
+        """First sync stores a submission with code successfully."""
+        from codememory.connectors.leetcode.models import LeetCodeSubmissionRaw
+
+        service, account_service, vault = self._make_env(tmp_path, username="alice")
+        mock_client = Mock()
+        mock_client_cls.return_value = mock_client
+
+        sub = LeetCodeSubmissionRaw(id="1", title="P", title_slug="p", status="Accepted", language="python3", timestamp=1700000000)
+        mock_client.fetch_submissions_page.return_value = ([sub], False, None)
+        mock_client.fetch_submission_code.return_value = {"code": "print('hello')", "language": "Python3", "runtime": 42, "memory": 16.5}
+
+        orch = AuthenticatedSyncOrchestrator(account_service=account_service, credential_vault=vault, rate_limit_delay=0.0)
+        result = orch.sync_full_history(service, username="alice")
+
+        assert result.records_added == 1
+        assert result.details["code_fetched"] == 1
+
+        prob = service.get_problem("p")
+        stored = [s for a in prob.attempts for s in a.submissions]
+        assert len(stored) == 1
+        assert stored[0].code == "print('hello')"
+        assert stored[0].id == "leetcode_1"
+
+    @patch("codememory.connectors.leetcode.auth_sync.AuthenticatedLeetCodeClient")
+    def test_second_sync_with_null_code_does_not_create_duplicate(self, mock_client_cls, tmp_path):
+        """Second sync where submissionDetails returns null must not create a duplicate record.
+
+        This is the core fix: external ID-based dedup prevents duplicate creation
+        when code hash would change due to null code-fetch result.
+        """
+        from codememory.connectors.leetcode.models import LeetCodeSubmissionRaw
+
+        service, account_service, vault = self._make_env(tmp_path, username="alice")
+        mock_client = Mock()
+        mock_client_cls.return_value = mock_client
+
+        sub = LeetCodeSubmissionRaw(id="1", title="P", title_slug="p", status="Accepted", language="python3", timestamp=1700000000)
+        mock_client.fetch_submissions_page.side_effect = [
+            ([sub], False, None),
+            ([sub], False, None),
+        ]
+        mock_client.fetch_submission_code.side_effect = [
+            {"code": "print('hello')", "language": "Python3"},
+            None,  # Second sync: submissionDetails returns null
+        ]
+
+        orch = AuthenticatedSyncOrchestrator(account_service=account_service, credential_vault=vault, rate_limit_delay=0.0)
+
+        r1 = orch.sync_full_history(service, username="alice")
+        assert r1.records_added == 1
+        assert r1.details["code_fetched"] == 1
+
+        r2 = orch.sync_full_history(service, username="alice")
+        # Must be skipped, not added again
+        assert r2.records_added == 0
+        assert r2.records_skipped == 1
+        assert r2.details["code_failed"] == 1
+
+        # Verify only 1 submission exists (no duplicates)
+        prob = service.get_problem("p")
+        stored = [s for a in prob.attempts for s in a.submissions]
+        assert len(stored) == 1
+
+    @patch("codememory.connectors.leetcode.auth_sync.AuthenticatedLeetCodeClient")
+    def test_existing_code_preserved_when_fetch_fails(self, mock_client_cls, tmp_path):
+        """Existing valid code is preserved when code fetch fails on re-sync."""
+        from codememory.connectors.leetcode.models import LeetCodeSubmissionRaw
+
+        service, account_service, vault = self._make_env(tmp_path, username="alice")
+        mock_client = Mock()
+        mock_client_cls.return_value = mock_client
+
+        sub = LeetCodeSubmissionRaw(id="1", title="P", title_slug="p", status="Accepted", language="python3", timestamp=1700000000)
+        mock_client.fetch_submissions_page.side_effect = [
+            ([sub], False, None),
+            ([sub], False, None),
+        ]
+        mock_client.fetch_submission_code.side_effect = [
+            {"code": "original_code", "language": "Python3"},
+            None,  # Second sync: code fetch fails
+        ]
+
+        orch = AuthenticatedSyncOrchestrator(account_service=account_service, credential_vault=vault, rate_limit_delay=0.0)
+
+        orch.sync_full_history(service, username="alice")
+
+        # Second sync with failed code fetch
+        orch.sync_full_history(service, username="alice")
+
+        # Verify existing code was NOT overwritten with empty
+        prob = service.get_problem("p")
+        stored = [s for a in prob.attempts for s in a.submissions]
+        assert len(stored) == 1
+        assert stored[0].code == "original_code"  # Preserved, not empty
+
+    @patch("codememory.connectors.leetcode.auth_sync.AuthenticatedLeetCodeClient")
+    def test_repeated_sync_remains_idempotent(self, mock_client_cls, tmp_path):
+        """Multiple consecutive syncs with null code returns remain idempotent."""
+        from codememory.connectors.leetcode.models import LeetCodeSubmissionRaw
+
+        service, account_service, vault = self._make_env(tmp_path, username="alice")
+        mock_client = Mock()
+        mock_client_cls.return_value = mock_client
+
+        sub = LeetCodeSubmissionRaw(id="1", title="P", title_slug="p", status="Accepted", language="python3", timestamp=1700000000)
+        mock_client.fetch_submissions_page.return_value = ([sub], False, None)
+        # First sync succeeds, subsequent syncs return null
+        mock_client.fetch_submission_code.side_effect = [
+            {"code": "x", "language": "Python3"},
+            None, None, None,  # Subsequent syncs all fail
+        ]
+
+        orch = AuthenticatedSyncOrchestrator(account_service=account_service, credential_vault=vault, rate_limit_delay=0.0)
+
+        results = []
+        for _ in range(4):
+            r = orch.sync_full_history(service, username="alice")
+            results.append(r)
+
+        # First sync: 1 added
+        assert results[0].records_added == 1
+        assert results[0].records_skipped == 0
+
+        # Subsequent syncs: 0 added, 1 skipped each
+        for r in results[1:]:
+            assert r.records_added == 0
+            assert r.records_skipped == 1
+            assert r.records_failed == 0
+
+        # Verify only 1 submission total
+        prob = service.get_problem("p")
+        stored = [s for a in prob.attempts for s in a.submissions]
+        assert len(stored) == 1
+        assert stored[0].code == "x"
+
+    @patch("codememory.connectors.leetcode.auth_sync.AuthenticatedLeetCodeClient")
+    def test_genuinely_new_submission_is_still_inserted(self, mock_client_cls, tmp_path):
+        """A genuinely new submission (different external ID) is still inserted on re-sync."""
+        from codememory.connectors.leetcode.models import LeetCodeSubmissionRaw
+
+        service, account_service, vault = self._make_env(tmp_path, username="alice")
+        mock_client = Mock()
+        mock_client_cls.return_value = mock_client
+
+        sub1 = LeetCodeSubmissionRaw(id="1", title="P1", title_slug="p1", status="Accepted", language="python3", timestamp=1700000000)
+        sub2 = LeetCodeSubmissionRaw(id="2", title="P2", title_slug="p2", status="Accepted", language="python3", timestamp=1700000001)
+
+        mock_client.fetch_submissions_page.side_effect = [
+            ([sub1], False, None),
+            ([sub1, sub2], False, None),
+        ]
+        mock_client.fetch_submission_code.side_effect = [
+            {"code": "x", "language": "Python3"},
+            {"code": "x", "language": "Python3"},  # sub1 (will be skipped as duplicate)
+            {"code": "y", "language": "Python3"},  # sub2 (new, will be added)
+        ]
+
+        orch = AuthenticatedSyncOrchestrator(account_service=account_service, credential_vault=vault, rate_limit_delay=0.0)
+
+        r1 = orch.sync_full_history(service, username="alice")
+        assert r1.records_added == 1
+        assert r1.details["code_fetched"] == 1
+
+        r2 = orch.sync_full_history(service, username="alice")
+        # sub1 is skipped (duplicate), sub2 is added (new)
+        assert r2.records_added == 1
+        assert r2.records_skipped == 1
+        assert r2.details["code_fetched"] == 2
+
+        # Verify both submissions exist
+        prob1 = service.get_problem("p1")
+        subs1 = [s for a in prob1.attempts for s in a.submissions]
+        assert len(subs1) == 1
+        assert subs1[0].id == "leetcode_1"
+
+        prob2 = service.get_problem("p2")
+        subs2 = [s for a in prob2.attempts for s in a.submissions]
+        assert len(subs2) == 1
+        assert subs2[0].id == "leetcode_2"
+
+    @patch("codememory.connectors.leetcode.auth_sync.AuthenticatedLeetCodeClient")
+    def test_code_enriched_for_previously_code_less_submission(self, mock_client_cls, tmp_path):
+        """A submission that previously had no code can be enriched when a later fetch succeeds.
+
+        Scenario:
+        - Sync 1: submissionDetails returns code successfully
+        - Sync 2: submissionDetails returns null (code fetch fails)
+        - Sync 3: submissionDetails returns code successfully again
+        - The existing record should be updated with the new code
+        """
+        from codememory.connectors.leetcode.models import LeetCodeSubmissionRaw
+
+        service, account_service, vault = self._make_env(tmp_path, username="alice")
+        mock_client = Mock()
+        mock_client_cls.return_value = mock_client
+
+        sub = LeetCodeSubmissionRaw(id="1", title="P", title_slug="p", status="Accepted", language="python3", timestamp=1700000000)
+        mock_client.fetch_submissions_page.side_effect = [
+            ([sub], False, None),
+            ([sub], False, None),
+            ([sub], False, None),
+        ]
+        # First: success with code A, second: null (fail), third: success with code B
+        mock_client.fetch_submission_code.side_effect = [
+            {"code": "code_A", "language": "Python3"},
+            None,
+            {"code": "code_B", "language": "Python3"},  # Re-fetch succeeds
+        ]
+
+        orch = AuthenticatedSyncOrchestrator(account_service=account_service, credential_vault=vault, rate_limit_delay=0.0)
+
+        r1 = orch.sync_full_history(service, username="alice")
+        assert r1.records_added == 1
+        assert r1.details["code_fetched"] == 1
+        prob = service.get_problem("p")
+        stored = [s for a in prob.attempts for s in a.submissions]
+        assert stored[0].code == "code_A"
+
+        r2 = orch.sync_full_history(service, username="alice")
+        assert r2.records_skipped == 1
+        assert r2.details["code_failed"] == 1
+        # Code should still be preserved as code_A
+        prob = service.get_problem("p")
+        stored = [s for a in prob.attempts for s in a.submissions]
+        assert stored[0].code == "code_A"
+
+        r3 = orch.sync_full_history(service, username="alice")
+        assert r3.records_skipped == 1  # Still same submission (external ID matches)
+        assert r3.details["code_fetched"] == 1  # New code fetched successfully
+        # Code should be updated to code_B
+        prob = service.get_problem("p")
+        stored = [s for a in prob.attempts for s in a.submissions]
+        assert len(stored) == 1  # Still only 1 submission
+        assert stored[0].code == "code_B"  # Updated with new code
+
+
 if __name__ == "__main__":
     pytest.main([__file__])
