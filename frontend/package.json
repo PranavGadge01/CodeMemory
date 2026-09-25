@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:build": "tauri build",
+    "sidecar:build": "cd .. && pyinstaller --noconfirm backend/codememory-api.spec"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",

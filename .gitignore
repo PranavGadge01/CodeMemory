@@ -58,6 +58,9 @@ data/memory_embeddings.parquet
 # Log files
 *.log
 
+# PyInstaller auto-generated spec at root (use backend/codememory-api.spec instead)
+/codememory-api.spec
+
 # Rust toolchain (local install, not source)
 .rust/
 
@@ -68,3 +71,6 @@ frontend/src-tauri/*.exe
 frontend/src-tauri/*.msi
 frontend/src-tauri/*.app
 frontend/src-tauri/*.dmg
+
+# PyInstaller build output
+backend/build/
