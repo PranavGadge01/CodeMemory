@@ -163,7 +163,19 @@ class AuthenticatedSyncOrchestrator:
                             source_account=username
                         )
 
+                        # Check for existing submission by external LeetCode ID BEFORE
+                        # code fetching. This prevents duplicate creation when
+                        # submissionDetails returns null on re-sync (causing code hash
+                        # to differ), and enables code-preservation logic.
+                        external_id = normalized_record.submission_id
+                        existing_submission = None
+                        if external_id:
+                            existing_submission = service.get_submission(external_id)
+                            if existing_submission and existing_submission.source_account != username:
+                                existing_submission = None
+
                         # Check if this is an accepted submission to fetch code
+                        code_data = None
                         if normalized_record.status == SubmissionStatus.ACCEPTED:
                             code_data = client.fetch_submission_code(raw_submission.id)
                             if code_data and code_data.get("code"):
@@ -175,21 +187,33 @@ class AuthenticatedSyncOrchestrator:
                                     normalized_record.runtime_ms = code_data["runtime"]
                                 if code_data.get("memory"):
                                     normalized_record.memory_mb = code_data["memory"]
-                                # Recompute hash with the updated code
-                                from codememory.domain.models import compute_submission_hash
-                                normalized_record.submission_hash = compute_submission_hash(
-                                    problem_title=normalized_record.problem_id or normalized_record.title,
-                                    language=normalized_record.language,
-                                    code=normalized_record.code,
-                                    submitted_at=normalized_record.timestamp,
-                                    status=normalized_record.status.value,
-                                    source_account=username,
-                                )
                                 self.stats["code_fetched"] += 1
                                 logger.debug(f"Fetched code for submission {raw_submission.id}")
                             else:
                                 self.stats["code_failed"] += 1
                                 logger.warning(f"Failed to fetch code for accepted submission {raw_submission.id}")
+
+                                # Preserve existing code if we have a stored submission
+                                # and the new fetch returned None/empty.
+                                # This prevents the hash from changing and causing a
+                                # duplicate insert on re-sync.
+                                if existing_submission and not normalized_record.code:
+                                    normalized_record.code = existing_submission.code or ""
+                                    normalized_record.language = existing_submission.language or normalized_record.language
+                                    normalized_record.runtime_ms = existing_submission.runtime_ms or normalized_record.runtime_ms
+                                    normalized_record.memory_mb = existing_submission.memory_mb or normalized_record.memory_mb
+
+                        # Recompute hash with the final code value
+                        if normalized_record.submission_hash is None or normalized_record.code:
+                            from codememory.domain.models import compute_submission_hash
+                            normalized_record.submission_hash = compute_submission_hash(
+                                problem_title=normalized_record.problem_id or normalized_record.title,
+                                language=normalized_record.language,
+                                code=normalized_record.code,
+                                submitted_at=normalized_record.timestamp,
+                                status=normalized_record.status.value,
+                                source_account=username,
+                            )
 
                         # Store submission using existing service logic
                         # This will handle deduplication via submission hash and external ID
@@ -224,20 +248,54 @@ class AuthenticatedSyncOrchestrator:
                                         url=normalized_record.url,
                                     )
 
-                            # Check for duplicate
+                            # Dedup by external LeetCode submission ID first (primary identity).
+                            # This is stable across code-fetch failures because the ID never changes.
                             is_duplicate = False
-                            if normalized_record.submission_hash:
-                                existing_sub = service.storage.get_by_hash(normalized_record.submission_hash)
-                                if existing_sub and (existing_sub.source_account == username or existing_sub.source_account is None):
-                                    if (existing_sub.code or "") == (normalized_record.code or ""):
-                                        is_duplicate = True
-                            if not is_duplicate and normalized_record.submission_id:
-                                existing_by_id = service.get_submission(normalized_record.submission_id)
-                                if existing_by_id and (existing_by_id.source_account == username or existing_by_id.source_account is None):
-                                    if (existing_by_id.code or "") == (normalized_record.code or ""):
+                            if existing_submission:
+                                is_duplicate = True
+
+                            # Also check hash-based duplicate as a fallback
+                            if not is_duplicate and normalized_record.submission_hash:
+                                existing_by_hash = service.storage.get_by_hash(normalized_record.submission_hash)
+                                if existing_by_hash and (existing_by_hash.source_account == username or existing_by_hash.source_account is None):
+                                    if (existing_by_hash.code or "") == (normalized_record.code or ""):
                                         is_duplicate = True
 
                             if is_duplicate:
+                                # If we successfully fetched new code for an existing submission,
+                                # update the stored record with the new code.
+                                if existing_submission and code_data and code_data.get("code"):
+                                    new_code = code_data["code"]
+                                    if not existing_submission.code or existing_submission.code != new_code:
+                                        # Re-fetch the problem from storage to get a mutable tree
+                                        problem = service.storage.get_by_id(problem.id) or service.storage.get_by_slug(problem.slug)
+                                        if problem:
+                                            for att in problem.attempts:
+                                                for sub_in_tree in att.submissions:
+                                                    if sub_in_tree.id == external_id:
+                                                        sub_in_tree.code = new_code
+                                                        sub_in_tree.language = code_data.get("language") or sub_in_tree.language
+                                                        if code_data.get("runtime"):
+                                                            sub_in_tree.runtime_ms = code_data["runtime"]
+                                                        if code_data.get("memory"):
+                                                            sub_in_tree.memory_mb = code_data["memory"]
+                                                        # Recompute hash with new code
+                                                        from codememory.domain.models import compute_submission_hash as _compute_hash
+                                                        sub_in_tree.submission_hash = _compute_hash(
+                                                            problem_title=problem.slug,
+                                                            language=sub_in_tree.language,
+                                                            code=sub_in_tree.code,
+                                                            submitted_at=sub_in_tree.submitted_at,
+                                                            status=sub_in_tree.status.value if sub_in_tree.status else normalized_record.status.value,
+                                                            source_account=username,
+                                                        )
+                                                        service.storage.save(problem)
+                                                        logger.debug(f"Updated existing submission {external_id} with newly fetched code")
+                                                        break
+                                                else:
+                                                    continue
+                                                break
+
                                 self.stats["records_skipped"] += 1
                                 logger.debug(f"Skipped duplicate submission {raw_submission.id}")
                                 continue
