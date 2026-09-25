@@ -167,11 +167,11 @@ class TestAuthenticatedLeetCodeClient:
                         "id": "123", "title": "Two Sum", "titleSlug": "two-sum",
                         "timestamp": "1700000000", "statusDisplay": "Accepted", "lang": "python3",
                     }],
-                    "hasNext": True,
-                    "lastKey": "cursor-1",
                 }
             }
         }
+        # With limit=100 and 1 submission returned, has_next should be False
+        # (fewer than limit means we've reached the end)
         response = MagicMock()
         response.status = 200
         response.read.return_value = json.dumps(payload).encode("utf-8")
@@ -182,24 +182,27 @@ class TestAuthenticatedLeetCodeClient:
             session_cookie="synthetic-session", csrf_token="synthetic-csrf", opener=opener
         )
 
-        submissions, has_next, last_key = client.fetch_submissions_page("test-user")
+        # Use limit=1 so 1 submission == limit, meaning has_next=True
+        submissions, has_next, last_key = client.fetch_submissions_page("test-user", limit=1)
 
         assert len(submissions) == 1
         assert submissions[0].id == "123"
         assert submissions[0].title_slug == "two-sum"
-        assert has_next is True
-        assert last_key == "cursor-1"
+        assert has_next is True  # 1 submission == limit of 1
+        assert last_key is None  # No lastKey in response
         request = opener.open.call_args.args[0]
         assert "LEETCODE_SESSION=synthetic-session" in request.get_header("Cookie")
         request_body = json.loads(request.data)
         assert "username" not in request_body["variables"]
         assert request_body["variables"] == {
-            "limit": 100, "offset": 0, "lastKey": None,
+            "limit": 1, "offset": 0, "lastKey": None,
         }
         query = " ".join(request_body["query"].split())
         assert "submissionList(limit: $limit, offset: $offset, lastKey: $lastKey)" in query
         assert "submissions {" in query
         assert "submissionList {" not in query
+        # Verify hasNext is NOT a field selection (real API doesn't have this field)
+        assert "hasNext" not in query
 
     def test_graphql_data_parsing_rejects_non_object_data(self):
         assert AuthenticatedLeetCodeClient._graphql_data({"data": {"ok": True}}) == {"ok": True}
@@ -211,7 +214,7 @@ class TestAuthenticatedLeetCodeClient:
             session_cookie="synthetic-session", csrf_token="synthetic-csrf",
         )
         client.execute_query = Mock(return_value={"data": {
-            "submissionList": {"submissions": [], "hasNext": False, "lastKey": None},
+            "submissionList": {"submissions": []},
         }})
 
         assert client.validate_session() is True
@@ -484,14 +487,14 @@ class TestAuthenticatedSyncOrchestrator:
         # Real connection model
         conn = AccountConnection(provider="LeetCode", username="testuser", status=AccountStatus.CONNECTED)
 
-        # Test saving checkpoint
-        orchestrator.save_checkpoint(conn, 'abc123', 'testuser')
-        assert conn.metadata['auth_sync_last_key'] == 'abc123'
+        # Test saving checkpoint (now stores integer offset as string)
+        orchestrator.save_checkpoint(conn, '100', 'testuser')
+        assert conn.metadata['auth_sync_last_key'] == '100'
         assert conn.metadata['auth_sync_last_username'] == 'testuser'
 
-        # Test loading checkpoint
-        last_key, username = orchestrator.load_checkpoint(conn)
-        assert last_key == 'abc123'
+        # Test loading checkpoint (returns integer offset)
+        offset, username = orchestrator.load_checkpoint(conn)
+        assert offset == 100
         assert username == 'testuser'
 
         # Test clearing checkpoint
@@ -514,13 +517,13 @@ class TestAuthenticatedSyncOrchestrator:
             # Mock connection with mismatched username
             conn = Mock(spec=AccountConnection)
             conn.metadata = {
-                'auth_sync_last_key': 'abc123',
+                'auth_sync_last_key': '200',
                 'auth_sync_last_username': 'differentuser'
             }
 
-            last_key, username = orchestrator.load_checkpoint(conn)
-            # Should return None due to username mismatch
-            assert last_key is None
+            offset, username = orchestrator.load_checkpoint(conn)
+            # Should return 0 due to username mismatch
+            assert offset == 0
             assert username is None
 
     def test_checkpoint_saved_after_successful_page(self):
@@ -544,12 +547,12 @@ class TestAuthenticatedSyncOrchestrator:
             mock_account_service.get_connection.return_value = mock_conn
             mock_account_service_class.return_value = mock_account_service
 
-            # Setup mocks for client - return submissions with hasNext=True to simulate more pages
+            # Setup mocks for client - return submissions with has_next=True to simulate more pages
             mock_client = Mock()
             mock_client_class.return_value = mock_client
-            mock_client.fetch_all_submissions_paginated.return_value = [
-                Mock(id="1", title="Test 1"),
-                Mock(id="2", title="Test 2")
+            mock_client.fetch_submissions_page.side_effect = [
+                ([Mock(id="1", title="Test 1"), Mock(id="2", title="Test 2")], True, None),
+                ([], False, None),
             ]
 
             orchestrator = AuthenticatedSyncOrchestrator()
@@ -569,12 +572,12 @@ class TestAuthenticatedSyncOrchestrator:
             result = orchestrator.sync_full_history(mock_service, username='testuser')
 
             # Verify checkpoint was saved (since there are more pages to process in real scenario)
-            # In our mock, fetch_all_submissions_paginated returns all submissions at once,
+            # In our mock, fetch_submissions_page returns all submissions across 2 pages,
             # so we need to verify the save_checkpoint method was called appropriately
             # Actually, in our current implementation, we don't save checkpoint after the final page
             # Let's verify the checkpoint logic works by testing save_checkpoint directly
-            orchestrator.save_checkpoint(mock_conn, 'test_last_key', 'testuser')
-            assert mock_conn.metadata['auth_sync_last_key'] == 'test_last_key'
+            orchestrator.save_checkpoint(mock_conn, '200', 'testuser')
+            assert mock_conn.metadata['auth_sync_last_key'] == '200'
             assert mock_conn.metadata['auth_sync_last_username'] == 'testuser'
 
     def test_checkpoint_preserved_after_failed_page(self):
@@ -623,7 +626,7 @@ class TestAuthenticatedSyncOrchestrator:
             mock_conn = Mock(spec=AccountConnection)
             mock_conn.username = 'testuser'
             mock_conn.status = AccountStatus.CONNECTED
-            mock_conn.metadata = {'auth_sync_last_key': 'saved_checkpoint_key', 'auth_sync_last_username': 'testuser'}
+            mock_conn.metadata = {'auth_sync_last_key': '200', 'auth_sync_last_username': 'testuser'}
             mock_account_service.get_connection.return_value = mock_conn
             mock_account_service_class.return_value = mock_account_service
 
@@ -637,13 +640,13 @@ class TestAuthenticatedSyncOrchestrator:
             # Mock service
             mock_service = Mock()
 
-            # Execute sync - should load checkpoint and pass it to client
+            # Execute sync - should load checkpoint offset=200 and pass it
             result = orchestrator.sync_full_history(mock_service)
 
-            # Verify that fetch_submissions_page was called with the checkpoint
+            # Verify that fetch_submissions_page was called with the checkpoint offset
             mock_client.fetch_submissions_page.assert_called_once()
             call_args = mock_client.fetch_submissions_page.call_args
-            assert call_args[1]['last_key'] == 'saved_checkpoint_key'  # last_key parameter
+            assert call_args[1]['offset'] == 200  # checkpoint offset
             assert call_args[1]['username'] == 'testuser'
 
     def test_checkpoint_cleared_after_successful_completion(self):
@@ -735,25 +738,25 @@ class TestAuthenticatedSyncOrchestrator:
 
             orchestrator = AuthenticatedSyncOrchestrator()
 
-            # Save checkpoint for user1
-            orchestrator.save_checkpoint(mock_conn1, 'checkpoint_user1', 'user1')
-            assert mock_conn1.metadata['auth_sync_last_key'] == 'checkpoint_user1'
+            # Save checkpoint for user1 (offset 100)
+            orchestrator.save_checkpoint(mock_conn1, '100', 'user1')
+            assert mock_conn1.metadata['auth_sync_last_key'] == '100'
             assert mock_conn1.metadata['auth_sync_last_username'] == 'user1'
             assert 'auth_sync_last_key' not in mock_conn2.metadata  # user2 should be unaffected
 
-            # Save checkpoint for user2
-            orchestrator.save_checkpoint(mock_conn2, 'checkpoint_user2', 'user2')
-            assert mock_conn2.metadata['auth_sync_last_key'] == 'checkpoint_user2'
+            # Save checkpoint for user2 (offset 200)
+            orchestrator.save_checkpoint(mock_conn2, '200', 'user2')
+            assert mock_conn2.metadata['auth_sync_last_key'] == '200'
             assert mock_conn2.metadata['auth_sync_last_username'] == 'user2'
-            assert mock_conn1.metadata['auth_sync_last_key'] == 'checkpoint_user1'  # user1 should be unchanged
+            assert mock_conn1.metadata['auth_sync_last_key'] == '100'  # user1 should be unchanged
 
             # Load checkpoints and verify they're independent
-            last_key1, user1 = orchestrator.load_checkpoint(mock_conn1)
-            last_key2, user2 = orchestrator.load_checkpoint(mock_conn2)
+            offset1, user1 = orchestrator.load_checkpoint(mock_conn1)
+            offset2, user2 = orchestrator.load_checkpoint(mock_conn2)
 
-            assert last_key1 == 'checkpoint_user1'
+            assert offset1 == 100
             assert user1 == 'user1'
-            assert last_key2 == 'checkpoint_user2'
+            assert offset2 == 200
             assert user2 == 'user2'
 
 
@@ -1026,9 +1029,15 @@ class TestAuthenticatedSyncEndToEnd:
 
         mock_client.fetch_submission_code.return_value = {"code": "pass", "language": "python3", "runtime": 10.0, "memory": 10.0}
 
-        # Run 1: Page 1 succeeds with checkpoint "page1_checkpoint", Page 2 throws error
+        # Run 1: Page 1 succeeds (returns 1 sub with limit=100, has_next=False because
+        # len(1) < limit(100)), but we simulate has_next=True to force a second page attempt
+        # Actually, with length-based detection, 1 submission < limit of 100 means has_next=False
+        # So we need 100 submissions to get has_next=True... let's use a different approach.
+        # Let's mock fetch_submissions_page directly with the correct return values.
+        # Page 1: returns sub1, has_next=True (simulated), checkpoint saved as offset 100
+        # Page 2: throws error
         mock_client.fetch_submissions_page.side_effect = [
-            ([sub1], True, "page1_checkpoint"),
+            ([sub1], True, None),
             Exception("Network timeout on page 2"),
         ]
 
@@ -1043,10 +1052,11 @@ class TestAuthenticatedSyncEndToEnd:
         assert r1.status == SyncState.FAILED
 
         # Checkpoint from page 1 must be preserved in connection metadata
+        # The checkpoint is saved as str(offset + 100) = "100"
         conn = account_service.get_connection("LeetCode")
-        assert conn.metadata.get("auth_sync_last_key") == "page1_checkpoint"
+        assert conn.metadata.get("auth_sync_last_key") == "100"
 
-        # Run 2: Resume from checkpoint
+        # Run 2: Resume from checkpoint (offset=100)
         mock_client.fetch_submissions_page.side_effect = [
             ([sub2], False, None),
         ]
@@ -1055,8 +1065,8 @@ class TestAuthenticatedSyncEndToEnd:
         assert r2.status == SyncState.SUCCESS
         assert r2.records_added == 1
 
-        # Verify page 2 was requested starting with page1_checkpoint
-        assert mock_client.fetch_submissions_page.call_args[1]["last_key"] == "page1_checkpoint"
+        # Verify page 2 was requested starting with offset=100 (the checkpoint)
+        assert mock_client.fetch_submissions_page.call_args[1]["offset"] == 100
 
         # Checkpoint cleared on completion
         conn_after = account_service.get_connection("LeetCode")
@@ -1083,6 +1093,196 @@ class TestAuthenticatedSyncEndToEnd:
         subs = [s for a in prob.attempts for s in a.submissions]
         assert len(subs) == 1
         assert subs[0].source_account == "alice"
+
+
+
+class TestPaginationArgumentsRegression:
+    """Regression tests for authenticated pagination using offset-based paging.
+
+    The real LeetCode API does not return hasNext/lastKey fields. Pagination
+    continues while each page returns exactly `limit` items; the loop stops
+    when a page returns fewer than limit items.
+    """
+
+    def _make_env(self, tmp_path, username="alice"):
+        account_service = AccountService(data_dir=tmp_path / "accounts")
+        conn = AccountConnection(provider="LeetCode", username=username, status=AccountStatus.CONNECTED)
+        account_service.save_connection(conn)
+        service = CodeMemoryService(
+            base_dir=tmp_path / "data",
+            knowledge_dir=tmp_path / "knowledge",
+            db_path=tmp_path / f"test_{username}.duckdb",
+            account_service=account_service,
+        )
+        vault = Mock(spec=CredentialVault)
+        vault.retrieve.return_value = ("mock_session", "mock_csrf")
+        vault.validate.return_value = True
+        return service, account_service, vault
+
+    @patch("codememory.connectors.leetcode.auth_sync.AuthenticatedLeetCodeClient")
+    def test_pagination_arguments_page1_offset_zero(self, mock_client_cls, tmp_path):
+        """First page request must use offset=0 (no last_key parameter)."""
+        from codememory.connectors.leetcode.models import LeetCodeSubmissionRaw
+        service, account_service, vault = self._make_env(tmp_path, username="alice")
+        mock_client = Mock()
+        mock_client_cls.return_value = mock_client
+        sub = LeetCodeSubmissionRaw(id="1", title="P1", title_slug="p1", status="Accepted", language="python3", timestamp=1700000000)
+        mock_client.fetch_submissions_page.side_effect = [
+            ([sub], True, None),
+            ([], False, None),
+        ]
+        mock_client.fetch_submission_code.return_value = {"code": "x", "language": "python3", "runtime": 1, "memory": 1}
+        orch = AuthenticatedSyncOrchestrator(account_service=account_service, credential_vault=vault, rate_limit_delay=0.0)
+        orch.sync_full_history(service, username="alice")
+        first_call = mock_client.fetch_submissions_page.call_args_list[0]
+        assert first_call[1]["offset"] == 0
+        assert first_call[1]["limit"] == 100
+        assert "last_key" not in first_call[1]
+
+    @patch("codememory.connectors.leetcode.auth_sync.AuthenticatedLeetCodeClient")
+    def test_pagination_arguments_page2_offset_increments_correctly(self, mock_client_cls, tmp_path):
+        """Second page request: offset must be incremented to 100."""
+        from codememory.connectors.leetcode.models import LeetCodeSubmissionRaw
+        service, account_service, vault = self._make_env(tmp_path, username="alice")
+        mock_client = Mock()
+        mock_client_cls.return_value = mock_client
+        sub1 = LeetCodeSubmissionRaw(id="1", title="P1", title_slug="p1", status="Accepted", language="python3", timestamp=1700000000)
+        sub2 = LeetCodeSubmissionRaw(id="2", title="P2", title_slug="p2", status="Accepted", language="python3", timestamp=1700000000)
+        mock_client.fetch_submissions_page.side_effect = [
+            ([sub1], True, None),
+            ([sub2], False, None),
+        ]
+        mock_client.fetch_submission_code.return_value = {"code": "x", "language": "python3", "runtime": 1, "memory": 1}
+        orch = AuthenticatedSyncOrchestrator(account_service=account_service, credential_vault=vault, rate_limit_delay=0.0)
+        orch.sync_full_history(service, username="alice")
+        second_call = mock_client.fetch_submissions_page.call_args_list[1]
+        assert second_call[1]["offset"] == 100
+        assert "last_key" not in second_call[1]
+
+    @patch("codememory.connectors.leetcode.auth_sync.AuthenticatedLeetCodeClient")
+    def test_pagination_arguments_three_pages_offset_chain(self, mock_client_cls, tmp_path):
+        """Multi-page: offset increments by limit (100) for each subsequent page."""
+        from codememory.connectors.leetcode.models import LeetCodeSubmissionRaw
+        service, account_service, vault = self._make_env(tmp_path, username="alice")
+        mock_client = Mock()
+        mock_client_cls.return_value = mock_client
+        subs = [LeetCodeSubmissionRaw(id=str(i), title=f"P{i}", title_slug=f"p{i}", status="Accepted", language="python3", timestamp=1700000000) for i in range(1, 4)]
+        mock_client.fetch_submissions_page.side_effect = [
+            ([subs[0]], True, None),
+            ([subs[1]], True, None),
+            ([subs[2]], False, None),
+        ]
+        mock_client.fetch_submission_code.return_value = {"code": "x", "language": "python3", "runtime": 1, "memory": 1}
+        orch = AuthenticatedSyncOrchestrator(account_service=account_service, credential_vault=vault, rate_limit_delay=0.0)
+        result = orch.sync_full_history(service, username="alice")
+        assert result.records_discovered == 3
+        assert result.records_added == 3
+        calls = mock_client.fetch_submissions_page.call_args_list
+        assert calls[0][1]["offset"] == 0
+        assert calls[1][1]["offset"] == 100
+        assert calls[2][1]["offset"] == 200
+        assert len(calls) == 3
+
+    @patch("codememory.connectors.leetcode.auth_sync.AuthenticatedLeetCodeClient")
+    def test_pagination_arguments_checkpoint_resume_uses_offset(self, mock_client_cls, tmp_path):
+        """Resume from checkpoint: must pass the checkpoint offset."""
+        from codememory.connectors.leetcode.models import LeetCodeSubmissionRaw
+        service, account_service, vault = self._make_env(tmp_path, username="alice")
+        mock_client = Mock()
+        mock_client_cls.return_value = mock_client
+        sub = LeetCodeSubmissionRaw(id="2", title="P2", title_slug="p2", status="Accepted", language="python3", timestamp=1700000000)
+        mock_client.fetch_submissions_page.side_effect = [
+            ([sub], False, None),
+        ]
+        mock_client.fetch_submission_code.return_value = {"code": "x", "language": "python3", "runtime": 1, "memory": 1}
+        conn = account_service.get_connection("LeetCode")
+        conn.metadata["auth_sync_last_key"] = "200"
+        conn.metadata["auth_sync_last_username"] = "alice"
+        account_service.save_connection(conn)
+        orch = AuthenticatedSyncOrchestrator(account_service=account_service, credential_vault=vault, rate_limit_delay=0.0)
+        orch.sync_full_history(service, username="alice")
+        first_call = mock_client.fetch_submissions_page.call_args_list[0]
+        assert first_call[1]["offset"] == 200
+        assert "last_key" not in first_call[1]
+
+    @patch("codememory.connectors.leetcode.auth_sync.AuthenticatedLeetCodeClient")
+    def test_pagination_arguments_no_duplicates_on_resume(self, mock_client_cls, tmp_path):
+        """Resume must use the checkpoint offset, ensuring no duplicate fetch."""
+        from codememory.connectors.leetcode.models import LeetCodeSubmissionRaw
+        service, account_service, vault = self._make_env(tmp_path, username="alice")
+        conn = account_service.get_connection("LeetCode")
+        conn.metadata["auth_sync_last_key"] = "300"
+        conn.metadata["auth_sync_last_username"] = "alice"
+        account_service.save_connection(conn)
+        mock_client = Mock()
+        mock_client_cls.return_value = mock_client
+        sub = LeetCodeSubmissionRaw(id="99", title="P99", title_slug="p99", status="Accepted", language="python3", timestamp=1700000000)
+        mock_client.fetch_submissions_page.return_value = ([sub], False, None)
+        mock_client.fetch_submission_code.return_value = {"code": "x", "language": "python3", "runtime": 1, "memory": 1}
+        orch = AuthenticatedSyncOrchestrator(account_service=account_service, credential_vault=vault, rate_limit_delay=0.0)
+        result = orch.sync_full_history(service, username="alice")
+        assert result.records_discovered == 1
+        assert result.records_added == 1
+        assert mock_client.fetch_submissions_page.call_count == 1
+        first_call = mock_client.fetch_submissions_page.call_args_list[0]
+        assert first_call[1]["offset"] == 300
+
+    @patch("codememory.connectors.leetcode.auth_sync.AuthenticatedLeetCodeClient")
+    def test_pagination_arguments_existing_single_page_unaffected(self, mock_client_cls, tmp_path):
+        """Single-page sync must still work: offset=0, no last_key."""
+        from codememory.connectors.leetcode.models import LeetCodeSubmissionRaw
+        service, account_service, vault = self._make_env(tmp_path, username="alice")
+        mock_client = Mock()
+        mock_client_cls.return_value = mock_client
+        sub = LeetCodeSubmissionRaw(id="1", title="P1", title_slug="p1", status="Accepted", language="python3", timestamp=1700000000)
+        mock_client.fetch_submissions_page.return_value = ([sub], False, None)
+        mock_client.fetch_submission_code.return_value = {"code": "x", "language": "python3", "runtime": 1, "memory": 1}
+        orch = AuthenticatedSyncOrchestrator(account_service=account_service, credential_vault=vault, rate_limit_delay=0.0)
+        result = orch.sync_full_history(service, username="alice")
+        assert result.records_discovered == 1
+        assert result.records_added == 1
+        mock_client.fetch_submissions_page.assert_called_once()
+        call = mock_client.fetch_submissions_page.call_args_list[0]
+        assert call[1]["offset"] == 0
+        assert call[1]["limit"] == 100
+        assert "last_key" not in call[1]
+
+
+class TestFetchAllSubmissionsPaginated:
+    """Regression tests for AuthenticatedLeetCodeClient.fetch_all_submissions_paginated."""
+
+    def _make_client(self):
+        client = AuthenticatedLeetCodeClient.__new__(AuthenticatedLeetCodeClient)
+        client._session_cookie = None
+        client.last_error = None
+        client.last_error_kind = None
+        return client
+
+    def test_fetch_all_submissions_paginated_page1_offset_zero(self):
+        """First page: offset=0, no last_key."""
+        from codememory.connectors.leetcode.models import LeetCodeSubmissionRaw
+        client = self._make_client()
+        sub = LeetCodeSubmissionRaw(id="1", title="P", title_slug="p", status="Accepted", language="python3", timestamp=1700000000)
+        with patch.object(client, 'fetch_submissions_page', return_value=([sub], False, None)) as mock_page:
+            result = client.fetch_all_submissions_paginated("user", limit=100, delay_between_requests=0.0)
+            assert len(result) == 1
+            mock_page.assert_called_once_with(username="user", limit=100, offset=0)
+
+    def test_fetch_all_submissions_paginated_page2_offset_increments(self):
+        """Second page: offset must increment to 100."""
+        from codememory.connectors.leetcode.models import LeetCodeSubmissionRaw
+        client = self._make_client()
+        sub1 = LeetCodeSubmissionRaw(id="1", title="P1", title_slug="p1", status="Accepted", language="python3", timestamp=1700000000)
+        sub2 = LeetCodeSubmissionRaw(id="2", title="P2", title_slug="p2", status="Accepted", language="python3", timestamp=1700000000)
+        with patch.object(client, 'fetch_submissions_page', side_effect=[
+            ([sub1], True, None),
+            ([sub2], False, None),
+        ]) as mock_page:
+            result = client.fetch_all_submissions_paginated("user", limit=100, delay_between_requests=0.0)
+            assert len(result) == 2
+            calls = mock_page.call_args_list
+            assert calls[0].kwargs["offset"] == 0
+            assert calls[1].kwargs["offset"] == 100
 
 
 if __name__ == "__main__":

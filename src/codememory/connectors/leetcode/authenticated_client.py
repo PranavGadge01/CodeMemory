@@ -123,13 +123,16 @@ class AuthenticatedLeetCodeClient(LeetCodeClient):
         """
         Fetch a single page of submissions for a user using GraphQL query.
 
-        Uses the submissionList query with pagination via offset and lastKey.
+        Uses the submissionList query with offset-based pagination. Continuation
+        is determined by response length: when a page returns fewer items than
+        requested, we've exhausted the result set.
 
         Args:
             username: LeetCode username
             limit: Number of submissions to fetch per page (max 100)
             offset: Offset for pagination
-            last_key: Pagination key to resume from (for checkpoint resume)
+            last_key: Reserved for backward compatibility (currently unused;
+                      the real API uses offset-based pagination only)
 
         Returns:
             Tuple of (submissions_list, has_next, next_last_key)
@@ -140,8 +143,10 @@ class AuthenticatedLeetCodeClient(LeetCodeClient):
         if limit > 100:
             limit = 100  # GraphQL API limit
 
-        # The authenticated session identifies the current user. The current
-        # schema returns page entries under ``submissions``.
+        # The authenticated session identifies the current user.
+        # LeetCode's submissionList uses offset-based pagination. The hasNext
+        # and lastKey fields are not part of the real schema and return null,
+        # so we determine continuation by comparing the returned count to limit.
         query = """
         query submissionList($limit: Int!, $offset: Int!, $lastKey: String) {
             submissionList(limit: $limit, offset: $offset, lastKey: $lastKey) {
@@ -154,8 +159,6 @@ class AuthenticatedLeetCodeClient(LeetCodeClient):
                     lang
                     __typename
                 }
-                hasNext
-                lastKey
             }
         }
         """
@@ -207,9 +210,12 @@ class AuthenticatedLeetCodeClient(LeetCodeClient):
                     logger.warning(f"Skipping malformed LeetCode submission at index {index}: {exc}")
                     continue
 
-            # Check pagination info
-            has_next = submission_list_data.get("hasNext", False)
-            next_last_key = submission_list_data.get("lastKey")
+            # Determine if there are more pages using length-based detection.
+            # The real LeetCode API does not return hasNext/lastKey fields;
+            # when a page returns fewer items than requested, we've exhausted
+            # the result set.
+            has_next = len(page_submissions) >= limit
+            next_last_key = None
 
             logger.info(f"Fetched {len(page_submissions)} submissions from page: offset={offset}, limit={limit}, lastKey={last_key}")
             return page_submissions, has_next, next_last_key
@@ -228,13 +234,15 @@ class AuthenticatedLeetCodeClient(LeetCodeClient):
         """
         Fetch all submissions for a user using paginated GraphQL queries.
 
-        Uses the submissionList query with pagination via offset and lastKey.
+        Uses the submissionList query with offset-based pagination. Continuation
+        is determined by response length: when a page returns fewer items than
+        requested, we've exhausted the result set.
 
         Args:
             username: LeetCode username
             limit: Number of submissions to fetch per page (max 100)
             delay_between_requests: Delay in seconds between paginated requests
-            last_key: Pagination key to resume from (for checkpoint resume)
+            last_key: Reserved for backward compatibility (ignored)
 
         Returns:
             List of LeetCodeSubmissionRaw objects
@@ -248,21 +256,19 @@ class AuthenticatedLeetCodeClient(LeetCodeClient):
         all_submissions = []
         offset = 0
         has_next = True
-        # Use provided last_key for resume, or start from beginning if None
-        current_last_key = last_key
 
         while has_next:
-            page_submissions, has_next, current_last_key = self.fetch_submissions_page(
+            page_submissions, has_next, _ = self.fetch_submissions_page(
                 username=username,
                 limit=limit,
                 offset=offset,
-                last_key=current_last_key
             )
 
             all_submissions.extend(page_submissions)
             logger.info(f"Fetched {len(page_submissions)} submissions from page (total: {len(all_submissions)})")
 
-            # Prepare for next page
+            # LeetCode's submissionList uses offset-based pagination.
+            # has_next is determined by response length vs limit.
             offset += limit
 
             # Rate limiting - delay between requests

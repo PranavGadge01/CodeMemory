@@ -112,32 +112,30 @@ class AuthenticatedSyncOrchestrator:
                 logger.info(f"Using provided username: {username}")
 
             # Step 4.5: Load checkpoint for resume capability
-            last_key = None
+            checkpoint_offset = 0
             checkpoint_username = None
             conn = self._account_service.get_connection("LeetCode")
             if conn:
-                last_key, checkpoint_username = self.load_checkpoint(conn)
-                if last_key is not None:
-                    logger.info(f"Resuming sync from checkpoint: {last_key} for user {checkpoint_username}")
+                checkpoint_offset, checkpoint_username = self.load_checkpoint(conn)
+                if checkpoint_offset > 0:
+                    logger.info(f"Resuming sync from checkpoint offset: {checkpoint_offset} for user {checkpoint_username}")
                 else:
                     logger.info("No checkpoint found, starting from beginning")
 
             # Step 5: Fetch submissions page by page with checkpointing
-            logger.info(f"Fetching all submissions for user: {username} starting from checkpoint: {last_key}")
+            logger.info(f"Fetching all submissions for user: {username} starting from offset: {checkpoint_offset}")
 
             # Initialize pagination variables
-            offset = 0
+            offset = checkpoint_offset
             has_next = True
-            current_last_key = last_key
 
             # Process pages one at a time with checkpointing
             while has_next:
                 # Fetch one page of submissions
-                page_submissions, has_next, next_last_key = client.fetch_submissions_page(
+                page_submissions, has_next, _ = client.fetch_submissions_page(
                     username=username,
                     limit=100,
                     offset=offset,
-                    last_key=current_last_key
                 )
 
                 logger.info(f"Fetched {len(page_submissions)} submissions from page (offset={offset})")
@@ -260,14 +258,11 @@ class AuthenticatedSyncOrchestrator:
                         self.stats["records_failed"] += 1
 
                 # After successfully processing the page, save checkpoint
-                if next_last_key is not None:
-                    self.save_checkpoint(conn, next_last_key, username)
-                    logger.debug(f"Saved checkpoint after page: {next_last_key}")
-                # If next_last_key is None, we've reached the end and will clear checkpoint later if successful
+                # using current offset as the resume point for offset-based pagination
+                self.save_checkpoint(conn, str(offset + 100), username)
 
                 # Prepare for next page
                 offset += 100
-                current_last_key = next_last_key
 
                 # Rate limiting - delay between requests
                 if has_next:  # Only delay if we're going to make another request
@@ -371,7 +366,7 @@ class AuthenticatedSyncOrchestrator:
         if self._account_service:
             self._account_service.save_connection(conn)
 
-    def load_checkpoint(self, conn: AccountConnection) -> tuple[Optional[str], Optional[str]]:
+    def load_checkpoint(self, conn: AccountConnection) -> tuple[int, Optional[str]]:
         """
         Load pagination checkpoint from account connection metadata.
 
@@ -379,18 +374,24 @@ class AuthenticatedSyncOrchestrator:
             conn: Account connection to load checkpoint from
 
         Returns:
-            Tuple of (last_key, username) or (None, None) if no checkpoint
+            Tuple of (offset, username) or (0, None) if no checkpoint
         """
-        last_key = conn.metadata.get(self._get_checkpoint_key())
+        checkpoint_str = conn.metadata.get(self._get_checkpoint_key())
         username = conn.metadata.get(self._get_checkpoint_username_key())
 
         # Validate that username matches current connected account (if any)
         current_conn = self._account_service.get_connection("LeetCode")
         if username and current_conn and current_conn.username != username:
             logger.warning(f"Checkpoint username {username} doesn't match current account {current_conn.username if current_conn else 'None'}")
-            return None, None
+            return 0, None
 
-        return last_key, username
+        if checkpoint_str is not None:
+            try:
+                return int(checkpoint_str), username
+            except (TypeError, ValueError):
+                logger.warning(f"Invalid checkpoint offset '{checkpoint_str}', starting from beginning")
+                return 0, None
+        return 0, None
 
     def clear_checkpoint(self, conn: AccountConnection) -> None:
         """Clear pagination checkpoint from account connection metadata."""
