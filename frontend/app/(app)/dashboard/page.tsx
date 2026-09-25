@@ -19,8 +19,8 @@ import { ErrorState, PageSkeleton, EmptyDataState } from "@/components/app/data-
 
 export const metadata = { title: "Overview" };
 
-// The solution-evolution panel is narrative content rather than API data — the
-// backend exposes no endpoint for it — so its fixture stays in place.
+// The backend does not expose a dashboard-level evolution story. Keep the
+// curated sample clearly identified as an example rather than user data.
 const STORY_SLUG = "3sum";
 
 export default async function DashboardPage() {
@@ -43,7 +43,7 @@ export default async function DashboardPage() {
         <PageHeader
           eyebrow="Overview"
           title={greeting()}
-          description="Your coding memory, as it stands today. Everything below is generated from your own submission history."
+          description="Your coding memory, as it stands today. Activity and metrics use your indexed history; the example evolution below is illustrative."
           actions={
             <>
               <Button variant="outline" size="sm" asChild>
@@ -170,6 +170,11 @@ export default async function DashboardPage() {
         <Reveal>
           {story ? (
             <Surface className="overflow-hidden">
+              <SurfaceHeader
+                eyebrow="Example"
+                title="How solution evolution works"
+                description="Illustrative sample story, not generated from your submission history."
+              />
               <SolutionEvolution story={story} />
             </Surface>
           ) : null}

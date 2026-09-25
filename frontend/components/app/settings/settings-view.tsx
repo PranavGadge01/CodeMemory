@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { Check, Trash2, UploadCloud, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PageContainer } from "@/components/app/page-container";
 import { PageHeader } from "@/components/app/page-header";
@@ -21,9 +20,6 @@ const SECTIONS = [
   { id: "about", label: "About" },
 ];
 
-type ImportStatus = "idle" | "working" | "done";
-type RebuildStatus = "idle" | "working" | "done";
-
 export function SettingsView() {
   const [active, setActive] = React.useState("appearance");
 
@@ -31,23 +27,6 @@ export function SettingsView() {
 
   // Appearance settings
   const themePreference = settings.theme as ThemePreference;
-
-  // Data UI state
-  const [importSource, setImportSource] = React.useState("json");
-  const [importStatus, setImportStatus] = React.useState<ImportStatus>("idle");
-  const [rebuildStatus, setRebuildStatus] = React.useState<RebuildStatus>("idle");
-  const [confirmClear, setConfirmClear] = React.useState(false);
-  const [clearPhrase, setClearPhrase] = React.useState("");
-
-  const onImport = React.useCallback(() => {
-    setImportStatus("working");
-    window.setTimeout(() => setImportStatus("done"), 900);
-  }, []);
-
-  const onRebuild = React.useCallback(() => {
-    setRebuildStatus("working");
-    window.setTimeout(() => setRebuildStatus("done"), 1200);
-  }, []);
 
   const updateSetting = React.useCallback(
     <K extends keyof SettingsDTO>(key: K, value: SettingsDTO[K]) => {
@@ -207,137 +186,16 @@ export function SettingsView() {
           <SettingsGroup
             id="data"
             eyebrow="Data & sync"
-            title="Import and index"
-            description="Mock in this build — no file is read and no index is written."
+            title="Data management"
+            description="The current API does not expose file import, index rebuild, or data deletion actions in this screen."
           >
-            <SettingRow label="Import source" htmlFor="import-source" description="CodeMemory imports JSON, CSV and JSONL exports.">
-              <SelectField
-                id="import-source"
-                value={importSource}
-                onChange={setImportSource}
-                options={[
-                  { label: "LeetCode export (JSON)", value: "json" },
-                  { label: "CSV", value: "csv" },
-                  { label: "JSONL", value: "jsonl" },
-                ]}
-              />
+            <SettingRow label="Automatic sync" description="Read-only status reported by the backend. No frequency setting is available here.">
+              <span className="font-technical-sm text-text-secondary" role="status">
+                {settings.autosyncEnabled ? "Enabled" : "Disabled"}
+              </span>
             </SettingRow>
-            <div className="px-5 py-4">
-              <div className="eyebrow mb-2">Dataset</div>
-              <div className="flex flex-col items-center justify-center gap-3 rounded-md border border-dashed border-border-strong bg-surface-card px-6 py-10 text-center">
-                <UploadCloud className="h-5 w-5 text-text-faint" aria-hidden="true" />
-                <div className="text-body-sm text-text-secondary">
-                  Drop a {importSource.toUpperCase()} export here
-                </div>
-                <div className="text-caption text-text-faint">
-                  Deduplicated by SHA-256. Nothing is uploaded anywhere.
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onImport}
-                  disabled={importStatus === "working"}
-                >
-                  {importStatus === "working" ? (
-                    <>
-                      <RefreshCw className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-                      Validating…
-                    </>
-                  ) : importStatus === "done" ? (
-                    <>
-                      <Check className="h-3.5 w-3.5 text-success" aria-hidden="true" />
-                      Preview ready
-                    </>
-                  ) : (
-                    "Choose a file"
-                  )}
-                </Button>
-              </div>
-            </div>
-            <SettingRow
-              label="Rebuild memory index"
-              description="Re-embeds memory documents whose content hash changed."
-            >
-              <Button
-                variant="subtle"
-                size="sm"
-                onClick={onRebuild}
-                disabled={rebuildStatus === "working"}
-              >
-                {rebuildStatus === "working" ? (
-                  <>
-                    <RefreshCw className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-                    Rebuilding…
-                  </>
-                ) : rebuildStatus === "done" ? (
-                  <>
-                    <Check className="h-3.5 w-3.5 text-success" aria-hidden="true" />
-                    63 documents indexed
-                  </>
-                ) : (
-                  "Rebuild index"
-                )}
-              </Button>
-            </SettingRow>
-            <SettingRow label="Sync frequency" htmlFor="sync-frequency" description="How often the local index refreshes while the app is open.">
-              <SelectField
-                id="sync-frequency"
-                value="manual"
-                onChange={() => {}}
-                options={[
-                  { label: "Manual only", value: "manual" },
-                  { label: "Every 15 minutes", value: "15m" },
-                  { label: "Every hour", value: "1h" },
-                ]}
-              />
-            </SettingRow>
-
-            <div className="border-t border-error/20 bg-error-soft/30 px-5 py-4">
-              <div className="eyebrow text-error">Danger zone</div>
-              <div className="mt-2 text-body-sm font-medium text-text-primary">
-                Clear all data
-              </div>
-              <p className="mt-1 text-caption text-text-muted">
-                Deletes the local DuckDB index, every Parquet shard and the Markdown knowledge
-                base. This cannot be undone.
-              </p>
-              {confirmClear ? (
-                <div className="mt-4">
-                  <label htmlFor="clear-phrase" className="text-caption text-text-secondary">
-                    Type <span className="font-mono text-error">clear everything</span> to confirm
-                  </label>
-                  <input
-                    id="clear-phrase"
-                    type="text"
-                    value={clearPhrase}
-                    onChange={(event) => setClearPhrase(event.target.value)}
-                    placeholder="clear everything"
-                    className="mt-2 h-9 w-full max-w-xs rounded-md border border-border bg-surface px-3 text-body-sm text-text-primary focus:border-error focus:outline-none focus:ring-1 focus:ring-error/40"
-                  />
-                  <div className="mt-3 flex gap-2">
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      disabled={clearPhrase.trim().toLowerCase() !== "clear everything"}
-                      onClick={() => {
-                        setConfirmClear(false);
-                        setClearPhrase("");
-                      }}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                      Clear all data
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setConfirmClear(false)}>
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <Button variant="danger" size="sm" className="mt-4" onClick={() => setConfirmClear(true)}>
-                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                  Clear all data
-                </Button>
-              )}
+            <div className="border-t border-border-soft px-5 py-4 text-body-sm text-text-muted">
+              Import, rebuild, and clear operations are unavailable through the current frontend API. No file or data changes have been made.
             </div>
           </SettingsGroup>
 

@@ -5,236 +5,209 @@ import { useRouter } from "next/navigation";
 import { Code2, Swords, Terminal } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { apiGet, apiPost, apiDelete } from "@/lib/api/client";
+import {
+  disconnectLeetCode,
+  getLeetCodeStatus,
+  revokeLeetCodeCredentials,
+  storeLeetCodeCredentials,
+  syncAuthenticatedLeetCode,
+  validateLeetCodeCredentials,
+} from "@/lib/api/leetcode";
+import type { LeetCodeAuthSyncResultDTO } from "@/lib/api/types";
 import { SettingsGroup } from "./settings-group";
 import { ConfirmAction } from "./confirm-action";
 import { Button } from "@/components/ui/button";
 
-type PlatformId = "leetcode" | "codeforces" | "hackerrank";
-
-interface PlatformState {
-  connected: boolean;
-  connecting: boolean;
-  handle: string;
-}
-
-// LeetCode authenticated sync states
-interface LeetCodeAuthState {
-  credentialsStored: boolean;
-  validationMessage: string | null;
-  validating: boolean;
-  syncing: boolean;
-  lastSyncStatus: string | null;
-  lastSyncTime: string | null;
-  syncProgress: {
-    recordsDiscovered: number;
-    recordsAdded: number;
-    recordsSkipped: number;
-    recordsFailed: number;
-    codeFetched: number;
-    codeFailed: number;
-    status: string;
-    errorMessage: string | null;
-  } | null;
-}
-
-const PLATFORMS: {
-  id: PlatformId;
-  name: string;
-  icon: LucideIcon;
-  /** Handle shown for the preview-only platform connections. */
-  handle: string;
-  description: string;
-}[] = [
+const PREVIEW_PLATFORMS: { name: string; icon: LucideIcon; description: string }[] = [
   {
-    id: "leetcode",
-    name: "LeetCode",
-    icon: Code2,
-    handle: "",
-    description: "Submissions, contest history and problem metadata.",
-  },
-  {
-    id: "codeforces",
     name: "Codeforces",
     icon: Swords,
-    handle: "codememory",
-    description: "Rating history and contest submissions.",
+    description: "Rating history and contest submissions are not connected yet.",
   },
   {
-    id: "hackerrank",
     name: "HackerRank",
     icon: Terminal,
-    handle: "codememory",
-    description: "Skill assessments and practice submissions.",
+    description: "Skill assessments and practice submissions are not connected yet.",
   },
 ];
 
-/**
- * LeetCode connection state is loaded from FastAPI. Other platform rows remain
- * local preview states until their integrations are implemented.
- */
+interface AuthState {
+  checked: boolean;
+  credentialsStored: boolean;
+  validating: boolean;
+  syncing: boolean;
+  message: string | null;
+  error: string | null;
+  lastSyncStatus: string | null;
+  lastSyncTime: string | null;
+  syncProgress: LeetCodeAuthSyncResultDTO | null;
+}
+
+const EMPTY_AUTH_STATE: AuthState = {
+  checked: false,
+  credentialsStored: false,
+  validating: false,
+  syncing: false,
+  message: null,
+  error: null,
+  lastSyncStatus: null,
+  lastSyncTime: null,
+  syncProgress: null,
+};
+
 export function AccountSection() {
   const router = useRouter();
-  const [platforms, setPlatforms] = React.useState<Record<PlatformId, PlatformState>>({
-    leetcode: { connected: false, connecting: false, handle: "" },
-    codeforces: { connected: false, connecting: false, handle: "codememory" },
-    hackerrank: { connected: false, connecting: false, handle: "codememory" },
-  });
-
-  // LeetCode authenticated sync state
-  const [authState, setAuthState] = React.useState<LeetCodeAuthState>({
-    credentialsStored: false,
-    validationMessage: null,
-    validating: false,
-    syncing: false,
-    lastSyncStatus: null,
-    lastSyncTime: null,
-    syncProgress: null,
-  });
-
-  // Form state for credentials
+  const [connected, setConnected] = React.useState(false);
+  const [username, setUsername] = React.useState<string | null>(null);
+  const [auth, setAuth] = React.useState<AuthState>(EMPTY_AUTH_STATE);
+  const [formOpen, setFormOpen] = React.useState(false);
+  const [consentGiven, setConsentGiven] = React.useState(false);
   const [session, setSession] = React.useState("");
   const [csrfToken, setCsrfToken] = React.useState("");
-  const [consentGiven, setConsentGiven] = React.useState(false);
+  const syncInFlight = React.useRef(false);
 
-  // Check if credentials are already stored on mount
   React.useEffect(() => {
-    (async () => {
-      try {
-        const account = await apiGet<any>("/leetcode/status");
-        setPlatforms(prev => ({
-          ...prev,
-          leetcode: {
-            connected: Boolean(account?.connected),
-            connecting: false,
-            handle: account?.username || "",
-          },
-        }));
-      } catch {
-        // An unavailable backend must not show a fabricated connected account.
-      }
-      try {
-        const status = await apiPost<any>("/leetcode/auth/validate");
-        setAuthState(prev => ({
-          ...prev,
-          credentialsStored: Boolean(status?.credentialsStored),
-          validationMessage: status?.validationMessage || null,
-        }));
-      } catch {
-        setAuthState(prev => ({
-          ...prev,
-          validationMessage: "Could not check the stored LeetCode session. Try again when the backend is available.",
-        }));
-      }
-    })();
+    let active = true;
+
+    void Promise.allSettled([getLeetCodeStatus(), validateLeetCodeCredentials()]).then(
+      ([accountResult, authResult]) => {
+        if (!active) return;
+
+        if (accountResult.status === "fulfilled") {
+          setConnected(accountResult.value.connected);
+          setUsername(accountResult.value.username);
+        }
+
+        if (authResult.status === "fulfilled") {
+          setConnected(authResult.value.connected);
+          setUsername(authResult.value.username);
+          setAuth((prev) => ({
+            ...prev,
+            checked: true,
+            credentialsStored: authResult.value.credentialsStored,
+            message: authResult.value.validationMessage,
+            lastSyncStatus: authResult.value.syncState,
+            lastSyncTime: authResult.value.lastSuccessfulSync,
+          }));
+        } else {
+          setAuth((prev) => ({
+            ...prev,
+            checked: true,
+            error: "Could not check the stored LeetCode session. Try again when the backend is available.",
+          }));
+        }
+      },
+    );
+
+    return () => {
+      active = false;
+    };
   }, []);
 
-  const connect = (platform: PlatformId, handle: string) => {
-    if (platform === "leetcode") {
-      router.push("/connect");
-      return;
-    }
-    setPlatforms((prev) => ({ ...prev, [platform]: { ...prev[platform], connecting: true } }));
-
-    window.setTimeout(() => {
-      setPlatforms((prev) => ({
-        ...prev,
-        [platform]: { connected: true, connecting: false, handle },
-      }));
-    }, 900);
-  };
-
-  const disconnect = async (platform: PlatformId) => {
-    if (platform === "leetcode") {
-      try {
-        await apiDelete<any>("/leetcode/connect");
-      } catch (error) {
-        alert(`Failed to disconnect LeetCode: ${error instanceof Error ? error.message : String(error)}`);
-        return;
-      }
-    }
-    setPlatforms((prev) => ({
-      ...prev,
-      [platform]: { ...prev[platform], connected: false, connecting: false },
-    }));
-  };
-
-  // Authenticated LeetCode functions
-  const validateAndSaveCredentials = async () => {
-    setAuthState(prev => ({ ...prev, validating: true }));
+  const disconnect = async () => {
     try {
-      // Call backend to store credentials
-      const res = await apiPost<any>("/leetcode/auth/store", { session, csrf_token: csrfToken });
-      setAuthState(prev => ({ ...prev, credentialsStored: Boolean(res?.credentialsStored), validationMessage: null, validating: false }));
-      setConsentGiven(true);
-    } catch (error) {
-      setAuthState(prev => ({ ...prev, validating: false }));
-      alert(`Failed to validate credentials: ${error instanceof Error ? error.message : String(error)}`);
+      await disconnectLeetCode();
+      setConnected(false);
+      setUsername(null);
+    } catch {
+      setAuth((prev) => ({ ...prev, error: "Could not disconnect the LeetCode account. Please try again." }));
+    }
+  };
+
+  const saveCredentials = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setAuth((prev) => ({ ...prev, validating: true, error: null, message: null }));
+
+    try {
+      const result = await storeLeetCodeCredentials(session, csrfToken);
+      setSession("");
+      setCsrfToken("");
+      setConsentGiven(false);
+      setFormOpen(false);
+      setAuth((prev) => ({
+        ...prev,
+        validating: false,
+        credentialsStored: result.credentialsStored,
+        message: result.credentialsStored ? "Credentials stored securely." : result.validationMessage,
+      }));
+      setConnected(result.connected);
+      setUsername(result.username);
+    } catch {
+      setAuth((prev) => ({
+        ...prev,
+        validating: false,
+        error: "Could not validate and store the credentials. Check that the backend is available and try again.",
+      }));
     }
   };
 
   const syncFullHistory = async () => {
-    setAuthState((prev) => ({ ...prev, syncing: true, syncProgress: {
-      recordsDiscovered: 0,
-      recordsAdded: 0,
-      recordsSkipped: 0,
-      recordsFailed: 0,
-      codeFetched: 0,
-      codeFailed: 0,
-      status: "syncing",
-      errorMessage: null,
-    } }));
+    if (syncInFlight.current || !auth.credentialsStored) return;
+    syncInFlight.current = true;
+    setAuth((prev) => ({ ...prev, syncing: true, error: null, syncProgress: null }));
+
     try {
-      // Real backend call to sync full history
-      const res = await apiPost<any>("/leetcode/auth/sync");
-      // Update UI with backend response (BaseCamelModel serializes as camelCase)
-      setAuthState((prev) => ({
+      const result = await syncAuthenticatedLeetCode();
+      setAuth((prev) => ({
         ...prev,
         syncing: false,
-        lastSyncStatus: res.status,
-        lastSyncTime: new Date().toLocaleString(),
-        syncProgress: {
-          recordsDiscovered: res.recordsDiscovered ?? 0,
-          recordsAdded: res.recordsAdded ?? 0,
-          recordsSkipped: res.recordsSkipped ?? 0,
-          recordsFailed: res.recordsFailed ?? 0,
-          codeFetched: res.codeFetched ?? 0,
-          codeFailed: res.codeFailed ?? 0,
-          status: res.status,
-          errorMessage: res.errorMessage ?? null,
-        },
+        lastSyncStatus: result.status,
+        lastSyncTime: new Date().toISOString(),
+        syncProgress: result,
       }));
-    } catch (error) {
-      setAuthState((prev) => ({
+    } catch {
+      setAuth((prev) => ({
         ...prev,
         syncing: false,
-        syncProgress: {
-          ...(prev.syncProgress || {
-            recordsDiscovered: 0,
-            recordsAdded: 0,
-            recordsSkipped: 0,
-            recordsFailed: 0,
-            codeFetched: 0,
-            codeFailed: 0,
-            status: "failed",
-            errorMessage: null,
-          }),
-          status: "failed",
-          errorMessage: error instanceof Error ? error.message : String(error),
-        }
+        lastSyncStatus: "failed",
+        error: "Authenticated sync failed. Check that your LeetCode account is connected and the stored session is valid, then retry.",
       }));
+    } finally {
+      syncInFlight.current = false;
     }
   };
 
   const revokeCredentials = async () => {
+    setAuth((prev) => ({ ...prev, error: null }));
     try {
-      await apiDelete<any>("/leetcode/auth/revoke");
-      setAuthState((prev) => ({ ...prev, credentialsStored: false, validationMessage: null, syncProgress: null, lastSyncStatus: null, lastSyncTime: null }));
+      await revokeLeetCodeCredentials();
+      setAuth((prev) => ({
+        ...prev,
+        credentialsStored: false,
+        message: "Stored credentials were revoked.",
+        lastSyncStatus: null,
+        lastSyncTime: null,
+        syncProgress: null,
+      }));
       setSession("");
       setCsrfToken("");
       setConsentGiven(false);
-    } catch (error) {
-      alert(`Failed to revoke credentials: ${error instanceof Error ? error.message : String(error)}`);
+      setFormOpen(false);
+    } catch {
+      setAuth((prev) => ({ ...prev, error: "Could not revoke the stored credentials. Please try again." }));
+    }
+  };
+
+  const retryValidation = async () => {
+    setAuth((prev) => ({ ...prev, error: null, checked: false }));
+    try {
+      const result = await validateLeetCodeCredentials();
+      setConnected(result.connected);
+      setUsername(result.username);
+      setAuth((prev) => ({
+        ...prev,
+        checked: true,
+        credentialsStored: result.credentialsStored,
+        message: result.validationMessage,
+        lastSyncStatus: result.syncState,
+        lastSyncTime: result.lastSuccessfulSync,
+      }));
+    } catch {
+      setAuth((prev) => ({
+        ...prev,
+        checked: true,
+        error: "Could not check the stored LeetCode session. Try again when the backend is available.",
+      }));
     }
   };
 
@@ -243,280 +216,211 @@ export function AccountSection() {
       id="account"
       eyebrow="03"
       title="Account"
-      description="Connect LeetCode to sync your submission history. Other platform connections are preview-only."
+      description="Connect a public LeetCode profile, then optionally store credentials securely for full submission history."
     >
-      {PLATFORMS.map((platform) => {
-        const state = platforms[platform.id];
-        const Icon = platform.icon;
-
-        return (
-          <div key={platform.id} className="flex flex-col gap-3 px-5 py-4">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex min-w-0 items-start gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border bg-surface-card text-text-muted">
-                  <Icon className="h-[18px] w-[18px]" aria-hidden="true" strokeWidth={1.75} />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-body-sm font-medium text-text-primary">
-                      {platform.name}
-                    </span>
-                    <ConnectionBadge connected={state.connected} connecting={state.connecting} />
-                  </div>
-                  {state.connected ? (
-                    <div className="mt-1 font-technical-sm text-text-muted">
-                      @{state.handle}
-                    </div>
-                  ) : (
-                    <div className="mt-1 text-body-sm text-text-muted">{platform.description}</div>
-                  )}
-                </div>
+      <div className="px-5 py-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
+            <PlatformIcon icon={Code2} />
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-body-sm font-medium text-text-primary">LeetCode</span>
+                <ConnectionBadge connected={connected} connecting={false} />
               </div>
-
-              {state.connected ? (
-                <>
-                  {platform.id === "leetcode" && (
-                    <>
-                      {/* LeetCode Account Actions */}
-                      {/* Authenticated Sync Section */}
-                      <div className="mt-4 p-4 border border-border/50 rounded-lg">
-                        <div className="flex items-center justify-between mb-3">
-                          <h3 className="text-font-semibold text-text-primary">Full History (Authenticated)</h3>
-                          <Button variant="ghost" size="sm" onClick={() => setConsentGiven(!consentGiven)}>
-                            {consentGiven ? "Hide Form" : "Add Credentials"}
-                          </Button>
-                        </div>
-
-                        {authState.validationMessage && (
-                          <div role="status" className="mb-3 text-sm text-destructive">
-                            {authState.validationMessage}
-                          </div>
-                        )}
-
-                        {/* Credential Status */}
-                        <div className="mb-3 p-3 bg-surface-card border border-border/25 rounded">
-                          <div className="flex items-center gap-2 text-text-muted text-sm">
-                            <span className="h-3 w-3 rounded-full">
-                              {authState.credentialsStored ? (
-                                <span className="bg-success" />
-                              ) : (
-                                <span className="bg-text-disabled" />
-                              )}
-                            </span>
-                            <span>
-                              {authState.credentialsStored ? "Credentials stored" : "No credentials stored"}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Last Sync Info */}
-                        {authState.lastSyncStatus || authState.lastSyncTime ? (
-                          <div className="mb-3 p-3 bg-surface-card border border-border/25 rounded">
-                            <div className="flex items-center gap-2 text-text-muted text-sm">
-                              <span className="h-3 w-3 rounded-full">
-                                {authState.lastSyncStatus === "success" ? (
-                                  <span className="bg-success" />
-                                ) : authState.lastSyncStatus === "failed" ? (
-                                  <span className="bg-destructive" />
-                                ) : (
-                                  <span className="bg-muted" />
-                                )}
-                              </span>
-                              <span>
-                                Last sync: {authState.lastSyncStatus || "Never"} {
-                                  authState.lastSyncTime && authState.lastSyncStatus !== null ? (
-                                    <span className="ml-1">({authState.lastSyncTime})</span>
-                                  ) : null
-                                }
-                              </span>
-                            </div>
-                          </div>
-                        ) : null}
-
-                        {/* Sync Progress */}
-                        {authState.syncing ? (
-                          <div className="mb-3 p-3 bg-surface-card border border-border/25 rounded">
-                            <div className="space-y-2">
-                              <div className="flex items-center gap-2 text-text-muted text-sm">
-                                <span className="h-3 w-3 rounded-full bg-info" />
-                                <span>Syncing...</span>
-                              </div>
-                              {authState.syncProgress && (
-                                <div className="text-xs text-text-muted">
-                                  <div className="grid grid-cols-2 gap-2">
-                                    <div>Discovered: {authState.syncProgress.recordsDiscovered}</div>
-                                    <div>Added: {authState.syncProgress.recordsAdded}</div>
-                                    <div>Skipped: {authState.syncProgress.recordsSkipped}</div>
-                                    <div>Failed: {authState.syncProgress.recordsFailed}</div>
-                                    <div>Code fetched: {authState.syncProgress.codeFetched}</div>
-                                    <div>Code failed: {authState.syncProgress.codeFailed}</div>
-                                  </div>
-                                  {authState.syncProgress.errorMessage && (
-                                    <div className="mt-1 text-destructive text-xs">{authState.syncProgress.errorMessage}</div>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        ) : null}
-
-                        {/* Credential Form */}
-                        {consentGiven && !authState.credentialsStored && (
-                          <form className="space-y-3" onSubmit={(e) => {
-                            e.preventDefault();
-                            validateAndSaveCredentials();
-                          }}>
-                            <div className="space-y-2">
-                              <label className="flex flex-col gap-1 text-text-sm font-medium">
-                                LEETCODE_SESSION
-                                <input
-                                  type="password"
-                                  value={session}
-                                  onChange={(e) => setSession(e.target.value)}
-                                  placeholder="Enter your LEETCODE_SESSION cookie"
-                                  className="input input-sm w-full"
-                                />
-                              </label>
-
-                              <label className="flex flex-col gap-1 text-text-sm font-medium">
-                                csrftoken
-                                <input
-                                  type="password"
-                                  value={csrfToken}
-                                  onChange={(e) => setCsrfToken(e.target.value)}
-                                  placeholder="Enter your csrftoken cookie"
-                                  className="input input-sm w-full"
-                                />
-                              </label>
-
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="checkbox"
-                                  checked={consentGiven}
-                                  onChange={(e) => setConsentGiven(e.target.checked)}
-                                  className="h-4 w-4"
-                                />
-                                <span className="text-text-sm">
-                                  I understand that storing these credentials allows CodeMemory to access my full LeetCode submission history.
-                                </span>
-                              </div>
-                            </div>
-
-                            <Button
-                              type="submit"
-                              variant="primary"
-                              size="sm"
-                              disabled={authState.validating || !(session.trim() && csrfToken.trim())}
-                              className="w-full"
-                            >
-                              {authState.validating ? "Validating..." : "Validate & Save"}
-                            </Button>
-                          </form>
-                        )}
-
-                        {/* Action Buttons */}
-                        <div className="flex flex-col sm:flex-row sm:gap-2 mt-4">
-                          {authState.credentialsStored && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              disabled={authState.syncing}
-                              onClick={syncFullHistory}
-                              className="w-full sm:w-auto"
-                            >
-                              {authState.syncing ? "Syncing..." : "Sync Full History"}
-                            </Button>
-                          )}
-
-                          {authState.credentialsStored && (
-                            <Button
-                              variant="danger"
-                              size="sm"
-                              onClick={revokeCredentials}
-                              className="w-full sm:w-auto ml-2 sm:ml-0"
-                            >
-                              Revoke Credentials
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                  {platform.id === "leetcode" && !state.connected ? (
-                    <Button
-                      variant="subtle"
-                      size="sm"
-                      disabled={state.connecting}
-                      onClick={() => connect(platform.id, platform.handle)}
-                    >
-                      {state.connecting ? "Connecting…" : "Connect"}
-                    </Button>
-                  ) : (
-                    <ConfirmAction
-                      triggerLabel="Disconnect"
-                      triggerVariant="outline"
-                      description={
-                        <span>
-                          Disconnect <span className="text-text-primary">{platform.name}</span>? Your
-                          imported history stays in the local index; new submissions stop arriving.
-                        </span>
-                      }
-                      confirmLabel="Disconnect"
-                      onConfirm={() => disconnect(platform.id)}
-                    />
-                  )}
-                </>
-              ) : (
-                <Button
-                  variant="subtle"
-                  size="sm"
-                  disabled={state.connecting}
-                  onClick={() => connect(platform.id, platform.handle)}
-                >
-                  {state.connecting ? "Connecting…" : "Connect"}
-                </Button>
-              )}
+              <p className="mt-1 text-body-sm text-text-muted">
+                {connected && username ? `Connected as @${username}.` : "Public profile sync is not connected."}
+              </p>
             </div>
           </div>
-        );
-      })}
+          {connected ? (
+            <ConfirmAction
+              triggerLabel="Disconnect"
+              triggerVariant="outline"
+              description={<span>Disconnect LeetCode? Previously imported history stays in the local index.</span>}
+              confirmLabel="Disconnect"
+              onConfirm={disconnect}
+            />
+          ) : (
+            <Button variant="subtle" size="sm" onClick={() => router.push("/connect")}>
+              Connect LeetCode
+            </Button>
+          )}
+        </div>
+
+        <section aria-labelledby="authenticated-sync-heading" className="mt-5 rounded-lg border border-border-soft bg-surface-elevated p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 id="authenticated-sync-heading" className="text-body-sm font-semibold text-text-primary">
+                Full history sync
+              </h3>
+              <p className="mt-1 text-caption text-text-muted">
+                Stores credentials in the backend vault and never displays them after saving.
+              </p>
+            </div>
+            {!auth.credentialsStored && auth.checked ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  if (formOpen) {
+                    setSession("");
+                    setCsrfToken("");
+                    setConsentGiven(false);
+                  }
+                  setFormOpen(!formOpen);
+                  setAuth((prev) => ({ ...prev, error: null }));
+                }}
+              >
+                {formOpen ? "Close form" : "Add credentials"}
+              </Button>
+            ) : null}
+          </div>
+
+          <div className="mt-3 text-caption text-text-muted" role="status" aria-live="polite">
+            {auth.checked
+              ? auth.credentialsStored
+                ? "Authenticated credentials are stored."
+                : "No authenticated credentials are stored."
+              : "Checking stored credentials…"}
+          </div>
+
+          {auth.message ? <p className="mt-2 text-caption text-text-secondary" role="status">{auth.message}</p> : null}
+          {auth.error ? (
+            <div className="mt-3 flex flex-wrap items-center gap-3" role="alert">
+              <p className="text-body-sm text-error">{auth.error}</p>
+              {!auth.credentialsStored ? (
+                <Button variant="ghost" size="sm" onClick={retryValidation}>Retry check</Button>
+              ) : null}
+            </div>
+          ) : null}
+
+          {auth.lastSyncStatus || auth.lastSyncTime ? (
+            <p className="mt-3 text-caption text-text-muted">
+              Last sync: {auth.lastSyncStatus ?? "unknown"}
+              {auth.lastSyncTime ? ` · ${new Date(auth.lastSyncTime).toLocaleString()}` : ""}
+            </p>
+          ) : null}
+
+          {auth.syncProgress ? <SyncSummary result={auth.syncProgress} /> : null}
+
+          {formOpen && !auth.credentialsStored ? (
+            <form className="mt-4 space-y-3 border-t border-border-soft pt-4" onSubmit={saveCredentials}>
+              <label className="block text-caption font-medium text-text-secondary" htmlFor="leetcode-session">
+                LEETCODE_SESSION
+                <input
+                  id="leetcode-session"
+                  type="password"
+                  autoComplete="off"
+                  value={session}
+                  onChange={(event) => setSession(event.target.value)}
+                  className="input input-sm mt-1 w-full"
+                  required
+                />
+              </label>
+              <label className="block text-caption font-medium text-text-secondary" htmlFor="leetcode-csrftoken">
+                csrftoken
+                <input
+                  id="leetcode-csrftoken"
+                  type="password"
+                  autoComplete="off"
+                  value={csrfToken}
+                  onChange={(event) => setCsrfToken(event.target.value)}
+                  className="input input-sm mt-1 w-full"
+                  required
+                />
+              </label>
+              <label className="flex items-start gap-2 text-caption text-text-secondary">
+                <input
+                  type="checkbox"
+                  checked={consentGiven}
+                  onChange={(event) => setConsentGiven(event.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-accent)]"
+                />
+                <span>I understand these credentials let CodeMemory access my full LeetCode submission history.</span>
+              </label>
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                disabled={auth.validating || !consentGiven || !session.trim() || !csrfToken.trim()}
+              >
+                {auth.validating ? "Validating and saving…" : "Validate and save"}
+              </Button>
+            </form>
+          ) : null}
+
+          {auth.credentialsStored ? (
+            <div className="mt-4 flex flex-col gap-2 border-t border-border-soft pt-4 sm:flex-row">
+              <Button variant="outline" size="sm" disabled={auth.syncing || !connected} onClick={syncFullHistory}>
+                {auth.syncing ? "Syncing…" : "Sync full history"}
+              </Button>
+              {!connected ? <span className="self-center text-caption text-text-muted">Connect the public profile before syncing.</span> : null}
+              <ConfirmAction
+                triggerLabel="Revoke credentials"
+                triggerVariant="danger"
+                description={<span>Remove the stored LeetCode session from the backend credential vault?</span>}
+                confirmLabel="Revoke credentials"
+                onConfirm={revokeCredentials}
+              />
+            </div>
+          ) : null}
+        </section>
+      </div>
+
+      {PREVIEW_PLATFORMS.map((platform) => (
+        <div key={platform.name} className="flex items-start justify-between gap-4 border-t border-border-soft px-5 py-4">
+          <div className="flex min-w-0 items-start gap-3">
+            <PlatformIcon icon={platform.icon} />
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-body-sm font-medium text-text-primary">{platform.name}</span>
+                <ConnectionBadge connected={false} connecting={false} />
+              </div>
+              <p className="mt-1 text-body-sm text-text-muted">{platform.description}</p>
+            </div>
+          </div>
+          <Button variant="outline" size="sm" disabled>Coming soon</Button>
+        </div>
+      ))}
     </SettingsGroup>
   );
 }
 
+function PlatformIcon({ icon: Icon }: { icon: LucideIcon }) {
+  return (
+    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border bg-surface-card text-text-muted">
+      <Icon className="h-[18px] w-[18px]" aria-hidden="true" strokeWidth={1.75} />
+    </div>
+  );
+}
+
+function SyncSummary({ result }: { result: LeetCodeAuthSyncResultDTO }) {
+  return (
+    <div className="mt-3 rounded-md border border-border-soft bg-surface-card p-3" role="status" aria-live="polite">
+      <div className="text-body-sm font-medium text-text-primary">Sync {result.status}</div>
+      <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-caption text-text-muted sm:grid-cols-3">
+        <div><dt className="inline">Discovered: </dt><dd className="inline">{result.recordsDiscovered}</dd></div>
+        <div><dt className="inline">Added: </dt><dd className="inline">{result.recordsAdded}</dd></div>
+        <div><dt className="inline">Skipped: </dt><dd className="inline">{result.recordsSkipped}</dd></div>
+        <div><dt className="inline">Failed: </dt><dd className="inline">{result.recordsFailed}</dd></div>
+        <div><dt className="inline">Code fetched: </dt><dd className="inline">{result.codeFetched}</dd></div>
+        <div><dt className="inline">Code failed: </dt><dd className="inline">{result.codeFailed}</dd></div>
+      </dl>
+    </div>
+  );
+}
+
 function ConnectionBadge({ connected, connecting }: { connected: boolean; connecting: boolean }) {
-  if (connecting) {
-    return (
-      <span className="inline-flex items-center gap-1.5 rounded-sm border border-info/25 bg-info-soft px-1.5 py-0.5 font-technical-sm font-medium text-info">
-        <span
-          className="h-1.5 w-1.5 rounded-full bg-info"
-          aria-hidden="true"
-          style={{ animation: "cm-pulse 1.2s ease-in-out infinite" }}
-        />
-        Connecting
-      </span>
-    );
-  }
-
-  if (connected) {
-    return (
-      <span className="inline-flex items-center gap-1.5 rounded-sm border border-success/25 bg-success-soft px-1.5 py-0.5 font-technical-sm font-medium text-success">
-        <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true" />
-        Connected
-      </span>
-    );
-  }
-
+  const label = connecting ? "Connecting" : connected ? "Connected" : "Not connected";
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-sm border border-border bg-surface-card px-1.5 py-0.5",
-        "font-technical-sm font-medium text-text-muted",
+        "inline-flex items-center gap-1.5 rounded-sm border px-1.5 py-0.5 font-technical-sm font-medium",
+        connected ? "border-success/25 bg-success-soft text-success" : "border-border bg-surface-card text-text-muted",
       )}
     >
-      <span className="h-1.5 w-1.5 rounded-full bg-text-disabled" aria-hidden="true" />
-      Not connected
+      <span className={cn("h-1.5 w-1.5 rounded-full", connected ? "bg-success" : "bg-text-disabled")} aria-hidden="true" />
+      {label}
     </span>
   );
 }

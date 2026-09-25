@@ -27,8 +27,21 @@ export default async function KnowledgePage() {
   const state = await toAsyncState(
     (async () => {
       const knowledge = await getKnowledge();
-      const problems = await listProblems({ page: 1, pageSize: 100 }).then((list) =>
-        Promise.all(list.items.map((item) => getProblem(item.slug))),
+      const list = await listProblems({ page: 1, pageSize: 100 });
+      const edgeCounts = new Map<string, number>();
+      for (const edge of knowledge.graph.edges) {
+        edgeCounts.set(edge.sourceId, (edgeCounts.get(edge.sourceId) ?? 0) + 1);
+        edgeCounts.set(edge.targetId, (edgeCounts.get(edge.targetId) ?? 0) + 1);
+      }
+      const mostConnected = list.items
+        .map((item) => ({ item, degree: edgeCounts.get(`prob_${item.id}`) ?? 0 }))
+        .sort((a, b) => b.degree - a.degree)
+        .slice(0, 8);
+      const problems = await Promise.all(
+        mostConnected.map(async ({ item, degree }) => ({
+          problem: await getProblem(item.slug),
+          degree,
+        })),
       );
       return { knowledge, problems };
     })(),
@@ -212,16 +225,7 @@ export default async function KnowledgePage() {
             />
             {graph.nodes.length > 0 ? (
               <div className="flex flex-col">
-                {problems
-                  .map((problem) => ({
-                    problem,
-                    degree: graph.edges.filter(
-                      (edge) => edge.sourceId === problem.id || edge.targetId === problem.id,
-                    ).length,
-                  }))
-                  .sort((a, b) => b.degree - a.degree)
-                  .slice(0, 8)
-                  .map(({ problem, degree }) => (
+                {problems.map(({ problem, degree }) => (
                     <Link
                       key={problem.id}
                       href={`/problems?slug=${problem.slug}`}

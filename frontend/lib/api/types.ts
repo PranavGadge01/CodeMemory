@@ -368,6 +368,22 @@ export interface LeetCodeSyncResultDTO {
   errorMessage: string | null;
 }
 
+export interface LeetCodeAuthStatusDTO extends LeetCodeStatusDTO {
+  credentialsStored: boolean;
+  validationMessage: string | null;
+}
+
+export interface LeetCodeAuthSyncResultDTO {
+  status: string;
+  recordsDiscovered: number;
+  recordsAdded: number;
+  recordsSkipped: number;
+  recordsFailed: number;
+  codeFetched: number;
+  codeFailed: number;
+  errorMessage: string | null;
+}
+
 /* --- Health ------------------------------------------------------------ */
 
 export interface HealthDTO {
