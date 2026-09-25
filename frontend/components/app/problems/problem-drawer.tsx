@@ -18,6 +18,8 @@ import {
   solveStatus,
   submissionCount,
 } from "@/lib/mock/derive";
+import { getProblemEvolution } from "@/lib/api";
+import type { SolutionEvolutionData } from "@/lib/api/resources";
 import {
   formatDateTime,
   formatMemory,
@@ -87,6 +89,28 @@ export function ProblemDrawer({
   React.useEffect(() => {
     if (open) panelRef.current?.focus();
   }, [open]);
+
+  const [evolution, setEvolution] = React.useState<SolutionEvolutionData | null>(null);
+  const [evolutionError, setEvolutionError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!open || problem === null) return;
+    let cancelled = false;
+    getProblemEvolution(problem.slug).then((data) => {
+      if (!cancelled) {
+        setEvolution(data);
+        setEvolutionError(null);
+      }
+    }).catch((err: unknown) => {
+      if (!cancelled) {
+        setEvolutionError(err instanceof Error ? err.message : String(err));
+        setEvolution(null);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, problem]);
 
   if (!isClient || problem === null) return null;
 
@@ -212,13 +236,42 @@ export function ProblemDrawer({
           ) : null}
 
           <Separator />
-          <SectionLabel eyebrow="Attempts" meta={`${attemptCount(problem)} total`} />
+          <SectionLabel eyebrow="Attempt history" meta={`${attemptCount(problem)} total`} />
 
-          <div className="flex flex-col">
-            {problem.attempts.map((attempt) => (
-              <AttemptRow key={attempt.id} attempt={attempt} />
-            ))}
-          </div>
+          {problem.attempts.length === 0 ? (
+            <div className="px-5 py-5 text-body-sm text-text-faint">
+              No attempts yet.
+            </div>
+          ) : (
+            <div className="flex flex-col">
+              {problem.attempts
+                .slice()
+                .sort((a, b) => a.attemptNumber - b.attemptNumber)
+                .map((attempt) => (
+                  <AttemptRow key={attempt.id} attempt={attempt} />
+                ))}
+            </div>
+          )}
+
+          {evolution && evolution.steps.length > 0 ? (
+            <>
+              <Separator />
+              <SectionLabel
+                eyebrow="Solution evolution"
+                meta={`${evolution.totalAttempts} attempt${evolution.totalAttempts === 1 ? "" : "s"}`}
+              />
+              <div className="px-5 py-4">
+                <p className="text-body-sm text-text-secondary">{evolution.evolutionNarrative}</p>
+                {evolution.keyBreakthrough ? (
+                  <p className="mt-2 text-caption text-accent">{evolution.keyBreakthrough}</p>
+                ) : null}
+              </div>
+            </>
+          ) : evolution && evolution.steps.length === 0 ? (
+            <Separator />
+          ) : evolutionError ? (
+            <Separator />
+          ) : null}
 
           <Separator />
           <SectionLabel
@@ -296,7 +349,6 @@ function SectionLabel({ eyebrow, meta }: { eyebrow: string; meta?: string }) {
 }
 
 function AttemptRow({ attempt }: { attempt: Attempt }) {
-  const submission = attempt.submissions[0];
   const approach = attempt.approachSummary.replace(/^Attempt\s+\d+\s*—\s*/, "");
 
   return (
@@ -306,25 +358,45 @@ function AttemptRow({ attempt }: { attempt: Attempt }) {
           <div className="font-technical-sm font-medium text-text-primary">
             {`Attempt ${attempt.attemptNumber}`}
           </div>
-          <div className="mt-0.5 text-body-sm text-text-secondary">{approach}</div>
+          {approach ? (
+            <div className="mt-0.5 text-body-sm text-text-secondary">{approach}</div>
+          ) : null}
         </div>
         <StatusBadge status={attempt.status} />
       </div>
 
-      {submission ? (
-        <div className="mt-2.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 font-technical-sm text-text-muted">
-          <span>{submission.language}</span>
-          <Dot />
-          <span>{formatRuntime(submission.runtimeMs)}</span>
-          <Dot />
-          <span>{formatMemory(submission.memoryMb)}</span>
-          <Dot />
-          <span title={formatDateTime(submission.submittedAt)}>
-            {formatRelative(submission.submittedAt)}
-          </span>
-        </div>
-      ) : (
+      {attempt.submissions.length === 0 ? (
         <div className="mt-2.5 font-technical-sm text-text-faint">No submission recorded</div>
+      ) : (
+        <div className="mt-2.5 flex flex-col gap-1.5">
+          {attempt.submissions
+            .slice()
+            .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
+            .map((sub) => (
+              <Link
+                key={sub.id}
+                href={`/submissions/${sub.id}`}
+                className="press flex items-center justify-between gap-3 rounded-md px-3 py-1.5 font-technical-sm text-text-secondary hover:bg-surface-hover hover:text-text-primary"
+              >
+                <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                  <span>{sub.language}</span>
+                  <Dot />
+                  <span>{formatRuntime(sub.runtimeMs)}</span>
+                  <Dot />
+                  <span>{formatMemory(sub.memoryMb)}</span>
+                  <Dot />
+                  <StatusBadge status={sub.status} />
+                  <Dot />
+                  <span title={formatDateTime(sub.submittedAt)}>
+                    {formatRelative(sub.submittedAt)}
+                  </span>
+                </div>
+                <span className="font-mono text-xs text-text-faint" title={sub.id}>
+                  ...{sub.id.slice(-8)}
+                </span>
+              </Link>
+            ))}
+        </div>
       )}
 
       {attempt.analysis ? (

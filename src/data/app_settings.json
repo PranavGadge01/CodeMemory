@@ -1,0 +1,12 @@
+{
+  "theme": "system",
+  "accent_emphasis": true,
+  "compact_density": false,
+  "reduced_motion": false,
+  "code_font_size": "13",
+  "default_code_language": "python3",
+  "default_difficulty": "all",
+  "show_failed_attempts": true,
+  "auto_expand_evolution": false,
+  "timestamp_display": "local"
+}

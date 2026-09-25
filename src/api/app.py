@@ -1,5 +1,6 @@
 import logging
 from contextlib import asynccontextmanager
+from typing import Optional
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -14,23 +15,32 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting CodeMemory FastAPI server...")
-    service = CodeMemoryService(
-        db_path=settings.db_path,
-        # In a real environment, we would also configure knowledge/data dirs if the service took them.
-    )
+    # A caller may inject its own service (tests isolate this from the dev
+    # database); without one the server builds its own from settings.
+    service = app.state._injected_service
+    owns_service = service is None
+    if owns_service:
+        service = CodeMemoryService(
+            base_dir=settings.data_dir,
+            knowledge_dir=settings.knowledge_dir,
+            db_path=settings.db_path,
+        )
     app.state.service = service
     yield
     # Shutdown
     logger.info("Shutting down CodeMemory FastAPI server...")
-    service.close_storage()
+    if owns_service:
+        service.close_storage()
 
-def create_app() -> FastAPI:
+def create_app(service: Optional[CodeMemoryService] = None) -> FastAPI:
     app = FastAPI(
         title="CodeMemory Local API",
         description="Local thin transport layer for the CodeMemory Next.js UI.",
         version="1.0.0",
         lifespan=lifespan,
     )
+    # Stashed before the lifespan runs so it can pick the injected instance up.
+    app.state._injected_service = service
 
     app.add_middleware(
         CORSMiddleware,
@@ -55,6 +65,7 @@ def create_app() -> FastAPI:
         knowledge,
         revision,
         leetcode,
+        search,
         settings as settings_router
     )
     
@@ -66,6 +77,23 @@ def create_app() -> FastAPI:
     app.include_router(knowledge.router, prefix="/api/v1")
     app.include_router(revision.router, prefix="/api/v1")
     app.include_router(leetcode.router, prefix="/api/v1")
+    app.include_router(search.router, prefix="/api/v1")
     app.include_router(settings_router.router, prefix="/api/v1")
 
     return app
+
+
+def main() -> None:
+    """Entry point for ``codememory-api`` console script."""
+    import uvicorn
+
+    uvicorn.run(
+        "api.app:create_app",
+        host=settings.host,
+        port=settings.port,
+        log_level=settings.log_level,
+    )
+
+
+if __name__ == "__main__":
+    main()

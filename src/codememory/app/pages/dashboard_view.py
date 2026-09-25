@@ -92,7 +92,7 @@ def render_dashboard_page() -> None:
 
     with c_right:
         st.subheader("🧠 Personal DSA Memory Engine")
-        mem_stats = service.memory_engine.get_memory_stats()
+        mem_stats = service.memory_stats()
         st.markdown(f"- **Total Memory Documents**: `{mem_stats['total_documents']}`")
         st.markdown(f"- **Indexed Vectors**: `{mem_stats['indexed_vectors']}`")
         st.markdown(f"- **Tracked Problems**: `{mem_stats['unique_problems']}`")

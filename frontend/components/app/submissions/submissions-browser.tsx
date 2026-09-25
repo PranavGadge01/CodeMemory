@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowUp, RotateCcw, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/primitives";
@@ -9,7 +10,6 @@ import { FilterChip, SearchInput } from "@/components/ui/search-input";
 import { Surface } from "@/components/ui/surface";
 import { TableHead, TableWrapper, Tbody, Td, Th, Tr } from "@/components/app/data-table";
 import { StatusBadge } from "@/components/ui/badges";
-import { submissionsOf } from "@/lib/mock/derive";
 import {
   formatBeats,
   formatDateTime,
@@ -18,7 +18,7 @@ import {
   formatRelative,
   formatRuntime,
 } from "@/lib/format";
-import type { Language, Problem, Submission, SubmissionStatus } from "@/lib/types";
+import type { Problem, Submission, SubmissionStatus } from "@/lib/types";
 
 type SortKey = "timestamp" | "runtime" | "memory";
 type SortState = { key: SortKey; dir: "asc" | "desc" };
@@ -50,21 +50,45 @@ const DEFAULT_DIR: Record<SortKey, "asc" | "desc"> = {
   memory: "asc",
 };
 
-export function SubmissionsBrowser({ problems }: { problems: Problem[] }) {
-  const [query, setQuery] = React.useState("");
-  const [status, setStatus] = React.useState<SubmissionStatus | "All">("All");
-  const [language, setLanguage] = React.useState<Language | "All">("All");
+export const QUERY_KEYS = {
+  q: "q",
+  status: "status",
+  language: "language",
+} as const;
+
+export function SubmissionsBrowser({
+  rows,
+  problems,
+  filteredTotal,
+  params,
+}: {
+  /** Submission/problem pairs, already filtered and ordered by the backend. */
+  rows: SubmissionRow[];
+  /** Problems backing the rows — the source of the language and status chips. */
+  problems: Problem[];
+  filteredTotal: number;
+  params: { q: string; status: string; language: string };
+}) {
+  const router = useRouter();
+
+  const query = params.q;
+  const status: SubmissionStatus | "All" = STATUS_ORDER.includes(
+    params.status as SubmissionStatus,
+  )
+    ? (params.status as SubmissionStatus)
+    : "All";
+  // The mapped language may not be in the UI union when the backend sends a
+  // language the frontend has never labelled, so the guard is over `string`.
+  const language: string = params.language || "All";
   const [sort, setSort] = React.useState<SortState>({ key: "timestamp", dir: "desc" });
 
-  const rows = React.useMemo(() => {
-    const flattened: SubmissionRow[] = [];
-    for (const problem of problems) {
-      for (const submission of submissionsOf(problem)) {
-        flattened.push({ submission, problem });
-      }
-    }
-    return flattened;
-  }, [problems]);
+  // The chips are derived from the problems backing the page rather than from
+  // the rows alone, so the counts stay stable while a filter is narrowing the
+  // set the table shows.
+  const allSubmissions = React.useMemo(
+    () => problems.flatMap((problem) => problem.attempts.flatMap((attempt) => attempt.submissions)),
+    [problems],
+  );
 
   const availableStatuses = React.useMemo(
     () => STATUS_ORDER.filter((value) => rows.some((row) => row.submission.status === value)),
@@ -72,25 +96,40 @@ export function SubmissionsBrowser({ problems }: { problems: Problem[] }) {
   );
 
   const availableLanguages = React.useMemo(() => {
-    const set = new Set<Language>();
+    const set = new Set<string>();
     for (const row of rows) set.add(row.submission.language);
     return [...set].sort((a, b) => a.localeCompare(b));
   }, [rows]);
 
-  const filtered = React.useMemo(() => {
-    const needle = query.trim().toLowerCase();
+  /**
+   * Push one filter into the query string. The backend applies it — the
+   * endpoint filters on `problem`, `status` and `language` — so the browser
+   * never re-filters the rows it was handed.
+   */
+  const setParam = React.useCallback(
+    (key: string, value: string) => {
+      const next = new URLSearchParams(window.location.search);
+      if (value === "") next.delete(key);
+      else next.set(key, value);
+      const qs = next.toString();
+      router.replace(qs ? `/submissions?${qs}` : "/submissions", { scroll: false });
+    },
+    [router],
+  );
 
-    return rows.filter(({ submission, problem }) => {
-      if (status !== "All" && submission.status !== status) return false;
-      if (language !== "All" && submission.language !== language) return false;
-      if (needle) {
-        const haystack = `${submission.id} ${problem.title} ${problem.slug}`.toLowerCase();
-        if (!haystack.includes(needle)) return false;
-      }
-      return true;
-    });
-  }, [rows, query, status, language]);
+  const hasFilters = query.trim() !== "" || status !== "All" || language !== "All";
 
+  const resetFilters = React.useCallback(() => {
+    const next = new URLSearchParams(window.location.search);
+    next.delete(QUERY_KEYS.q);
+    next.delete(QUERY_KEYS.status);
+    next.delete(QUERY_KEYS.language);
+    const qs = next.toString();
+    router.replace(qs ? `/submissions?${qs}` : "/submissions", { scroll: false });
+  }, [router]);
+
+  // The backend already filtered and ordered the rows; sorting has no backend
+  // equivalent, so the header sort is applied to the page the server returned.
   const sorted = React.useMemo(() => {
     const direction = sort.dir === "asc" ? 1 : -1;
 
@@ -115,8 +154,8 @@ export function SubmissionsBrowser({ problems }: { problems: Problem[] }) {
     const byTime = (a: SubmissionRow, b: SubmissionRow) =>
       new Date(b.submission.submittedAt).getTime() - new Date(a.submission.submittedAt).getTime();
 
-    return [...filtered].sort((a, b) => byKey(a, b) * direction || byTime(a, b));
-  }, [filtered, sort]);
+    return [...rows].sort((a, b) => byKey(a, b) * direction || byTime(a, b));
+  }, [rows, sort]);
 
   const handleSort = React.useCallback((key: string) => {
     const sortKey = key as SortKey;
@@ -127,35 +166,31 @@ export function SubmissionsBrowser({ problems }: { problems: Problem[] }) {
     );
   }, []);
 
-  const hasFilters = query.trim() !== "" || status !== "All" || language !== "All";
-
-  const resetFilters = React.useCallback(() => {
-    setQuery("");
-    setStatus("All");
-    setLanguage("All");
-  }, []);
-
   return (
     <Surface className="overflow-hidden">
       <div className="flex flex-col gap-3 border-b border-border-soft p-4">
         <SearchInput
           value={query}
-          onChange={setQuery}
-          placeholder="Search submission id or problem…"
+          onChange={(value) => setParam(QUERY_KEYS.q, value)}
+          placeholder="Search problem title or slug…"
           className="sm:max-w-sm"
-          aria-label="Search by submission id or problem title"
+          aria-label="Search by problem title or slug"
         />
 
         <div className="flex flex-wrap items-center gap-1.5">
-          <FilterChip active={status === "All"} onClick={() => setStatus("All")} count={rows.length}>
+          <FilterChip
+            active={status === "All"}
+            onClick={() => setParam(QUERY_KEYS.status, "")}
+            count={allSubmissions.length}
+          >
             All statuses
           </FilterChip>
           {availableStatuses.map((value) => (
             <FilterChip
               key={value}
               active={status === value}
-              onClick={() => setStatus(value)}
-              count={rows.filter((row) => row.submission.status === value).length}
+              onClick={() => setParam(QUERY_KEYS.status, value)}
+              count={allSubmissions.filter((sub) => sub.status === value).length}
             >
               {value}
             </FilterChip>
@@ -165,8 +200,8 @@ export function SubmissionsBrowser({ problems }: { problems: Problem[] }) {
         <div className="flex flex-wrap items-center gap-1.5">
           <FilterChip
             active={language === "All"}
-            onClick={() => setLanguage("All")}
-            count={rows.length}
+            onClick={() => setParam(QUERY_KEYS.language, "")}
+            count={allSubmissions.length}
           >
             All languages
           </FilterChip>
@@ -174,8 +209,8 @@ export function SubmissionsBrowser({ problems }: { problems: Problem[] }) {
             <FilterChip
               key={value}
               active={language === value}
-              onClick={() => setLanguage(value)}
-              count={rows.filter((row) => row.submission.language === value).length}
+              onClick={() => setParam(QUERY_KEYS.language, value)}
+              count={allSubmissions.filter((sub) => sub.language === value).length}
             >
               {value}
             </FilterChip>
@@ -185,7 +220,7 @@ export function SubmissionsBrowser({ problems }: { problems: Problem[] }) {
 
       <div className="flex items-center justify-between gap-3 border-b border-border-soft px-4 py-2.5">
         <span className="font-technical-sm text-text-muted">
-          {`Showing ${formatNumber(sorted.length)} of ${formatNumber(rows.length)} submissions`}
+          {`Showing ${formatNumber(sorted.length)} of ${formatNumber(filteredTotal)} submissions`}
         </span>
         {hasFilters ? (
           <button
@@ -202,12 +237,18 @@ export function SubmissionsBrowser({ problems }: { problems: Problem[] }) {
       {sorted.length === 0 ? (
         <EmptyState
           icon={<Search className="h-4 w-4" aria-hidden="true" />}
-          title="No submissions match these filters"
-          description="Try a different search term, or clear the status and language filters."
+          title={hasFilters ? "No submissions match these filters" : "No submissions yet"}
+          description={
+            hasFilters
+              ? "Try a different search term, or clear the status and language filters."
+              : "Submissions appear here once a submission history has been imported."
+          }
           action={
-            <Button variant="subtle" size="sm" onClick={resetFilters}>
-              Clear all filters
-            </Button>
+            hasFilters ? (
+              <Button variant="subtle" size="sm" onClick={resetFilters}>
+                Clear all filters
+              </Button>
+            ) : null
           }
         />
       ) : (
@@ -231,18 +272,36 @@ export function SubmissionsBrowser({ problems }: { problems: Problem[] }) {
             {sorted.map(({ submission, problem }) => (
               <Tr key={submission.id}>
                 <Td mono className="max-w-[170px]">
-                  <span className="block truncate" title={submission.id}>
-                    {submission.id}
-                  </span>
+                  {problem.slug ? (
+                    <Link
+                      href={`/submissions/${submission.id}`}
+                      title={`Open submission ${submission.id}`}
+                      className="press block truncate text-body-sm font-medium text-text-primary hover:text-accent"
+                    >
+                      <span className="block truncate" title={submission.id}>
+                        ...{submission.id.slice(-12)}
+                      </span>
+                    </Link>
+                  ) : (
+                    <span className="block truncate text-body-sm text-text-muted" title={submission.id}>
+                      ...{submission.id.slice(-12)}
+                    </span>
+                  )}
                 </Td>
                 <Td className="max-w-[260px]">
-                  <Link
-                    href={`/problems?slug=${problem.slug}`}
-                    title={`Open ${problem.title}`}
-                    className="press block truncate text-body-sm font-medium text-text-primary hover:text-accent"
-                  >
-                    {problem.title}
-                  </Link>
+                  {problem.slug ? (
+                    <Link
+                      href={`/problems?slug=${problem.slug}`}
+                      title={`Open ${problem.title}`}
+                      className="press block truncate text-body-sm font-medium text-text-primary hover:text-accent"
+                    >
+                      {problem.title}
+                    </Link>
+                  ) : (
+                    <span className="block truncate text-body-sm text-text-muted">
+                      {problem.title}
+                    </span>
+                  )}
                 </Td>
                 <Td>
                   <StatusBadge status={submission.status} />

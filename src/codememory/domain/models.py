@@ -79,11 +79,17 @@ def compute_submission_hash(
     code: str,
     submitted_at: datetime | str | None,
     status: str,
+    source_account: str | None = None,
 ) -> str:
     """Generate the canonical deterministic SHA256 hash for a submission.
 
     This is the ONE submission identity hash in CodeMemory. Every entry point
     (file import, connector normalization, live sync) must funnel through here.
+
+    When ``source_account`` provenance is available it is folded into the hash
+    so that equivalent submissions from different accounts produce distinct
+    hashes and therefore do not cross-deduplicate. Legacy submissions without
+    an ``source_account`` keep their original hash (backward compatible).
     """
     code_clean = (code or "").strip()
     lang_clean = (language or "").strip().lower()
@@ -91,7 +97,11 @@ def compute_submission_hash(
     dt_str = canonical_timestamp(submitted_at)
     status_str = str(status).strip()
 
-    raw = f"{title_clean}:{lang_clean}:{status_str}:{dt_str}:{code_clean}"
+    if source_account is not None:
+        account_clean = str(source_account).strip()
+        raw = f"{account_clean}:{title_clean}:{lang_clean}:{status_str}:{dt_str}:{code_clean}"
+    else:
+        raw = f"{title_clean}:{lang_clean}:{status_str}:{dt_str}:{code_clean}"
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
@@ -145,6 +155,8 @@ class Submission(BaseModel):
     submitted_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     error_message: str | None = None
     submission_hash: str = ""
+    source_provider: str | None = None
+    source_account: str | None = None
 
     @field_validator("submitted_at", mode="before")
     @classmethod
@@ -157,6 +169,9 @@ class Submission(BaseModel):
         The hash is intentionally NOT gated on ``code``: a submission without
         source code is still a real submission, and hashing it is what prevents
         code-less records from collapsing into a single stored row.
+
+        Provenance (``source_account``) is included in the hash when present so
+        that equivalent submissions from different accounts get distinct hashes.
         """
         if not self.submission_hash:
             self.submission_hash = compute_submission_hash(
@@ -165,6 +180,7 @@ class Submission(BaseModel):
                 code=self.code,
                 submitted_at=self.submitted_at,
                 status=self.status.value,
+                source_account=self.source_account,
             )
 
 
@@ -199,6 +215,20 @@ class Attempt(BaseModel):
     def is_accepted(self) -> bool:
         """Check if any submission in this attempt was accepted."""
         return any(s.status == SubmissionStatus.ACCEPTED for s in self.submissions) or self.status == SubmissionStatus.ACCEPTED
+
+    def _get_source_provider(self) -> str | None:
+        """Return source_provider of the first non-null submission in this attempt."""
+        for sub in self.submissions:
+            if sub.source_provider is not None:
+                return sub.source_provider
+        return None
+
+    def _get_source_account(self) -> str | None:
+        """Return source_account of the first non-null submission in this attempt."""
+        for sub in self.submissions:
+            if sub.source_account is not None:
+                return sub.source_account
+        return None
 
 
 class ProblemNote(BaseModel):
@@ -280,3 +310,28 @@ class Problem(BaseModel):
         if not all_subs:
             return None
         return max(all_subs, key=lambda s: s.submitted_at)
+
+    def _get_source_provider(self) -> str | None:
+        """Return the source_provider of the first non-null submission, or None.
+
+        A problem may have submissions from multiple providers (e.g. LeetCode
+        and manually imported). For memory-provenance purposes we use the first
+        non-null value encountered; if all submissions are manual (None), the
+        problem is considered non-provider-sourced.
+        """
+        for attempt in self.attempts:
+            for sub in attempt.submissions:
+                if sub.source_provider is not None:
+                    return sub.source_provider
+        return None
+
+    def _get_source_account(self) -> str | None:
+        """Return the source_account of the first non-null submission, or None.
+
+        Mirrors ``_get_source_provider`` for account provenance.
+        """
+        for attempt in self.attempts:
+            for sub in attempt.submissions:
+                if sub.source_account is not None:
+                    return sub.source_account
+        return None

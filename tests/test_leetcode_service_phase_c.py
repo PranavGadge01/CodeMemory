@@ -67,11 +67,12 @@ def _raw(**overrides) -> LeetCodeSubmissionRaw:
     return LeetCodeSubmissionRaw(**base)
 
 
-def _make_service(tmp_path: Path) -> CodeMemoryService:
+def _make_service(tmp_path: Path, account_service=None) -> CodeMemoryService:
     return CodeMemoryService(
         base_dir=tmp_path / "data",
         knowledge_dir=tmp_path / "knowledge",
         db_path=tmp_path / "phase_c.duckdb",
+        account_service=account_service,
     )
 
 
@@ -90,17 +91,18 @@ def _mock_client(submissions=None, *, profile=_PROFILE_SENTINEL) -> MagicMock:
 def _surface(
     tmp_path: Path, client: MagicMock | None = None
 ) -> tuple[LeetCodeAccountService, CodeMemoryService]:
-    service = _make_service(tmp_path)
+    account_service = AccountService(data_dir=tmp_path / "accounts")
+    service = _make_service(tmp_path, account_service=account_service)
     surface = LeetCodeAccountService(
         app_service=service,
-        account_service=AccountService(data_dir=tmp_path / "accounts"),
+        account_service=account_service,
         client=client or _mock_client(),
     )
     return surface, service
 
 
 def _stored_submissions(service: CodeMemoryService) -> list:
-    return [s for p in service.list_problems() for a in p.attempts for s in a.submissions]
+    return [s for p in service.storage.list_all() for a in p.attempts for s in a.submissions]
 
 
 def _account_file(tmp_path: Path) -> dict:
@@ -382,7 +384,9 @@ def test_disconnect_preserves_imported_submissions(tmp_path):
     surface.disconnect()
 
     assert len(_stored_submissions(service)) == 1, "imported history must survive disconnect"
-    assert list(service.list_problems())
+    # After disconnect, no active account → LeetCode-sourced submissions are hidden
+    # from list_problems() to prevent cross-account aggregation.
+    assert len(list(service.list_problems())) == 0
 
 
 def test_reconnect_after_disconnect_keeps_history(tmp_path):

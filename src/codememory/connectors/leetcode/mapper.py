@@ -70,7 +70,9 @@ class LeetCodeMapper:
         }
 
     @classmethod
-    def to_normalized_record(cls, raw: LeetCodeSubmissionRaw) -> NormalizedSubmissionRecord:
+    def to_normalized_record(
+        cls, raw: LeetCodeSubmissionRaw, source_account: str | None = None
+    ) -> NormalizedSubmissionRecord:
         """Map a raw LeetCode submission into the canonical CodeMemory record.
 
         Deliberately thin: timestamp parsing, runtime/memory parsing and hash
@@ -78,6 +80,10 @@ class LeetCodeMapper:
         entry point converges on one normalized representation. Only the
         LeetCode-specific vocabulary mappings (numeric status codes, language
         identifiers) are applied here, in the transport layer where they belong.
+
+        ``source_account`` is passed in so it is available during the record's
+        ``model_post_init`` hash computation — provenance must be assigned BEFORE
+        the hash is derived so cross-account submissions get distinct hashes.
         """
         slug = raw.title_slug or generate_slug(raw.title)
 
@@ -102,4 +108,6 @@ class LeetCodeMapper:
             memory=raw.memory,
             reasoning=raw.reasoning or raw.notes,
             submission_id=external_id,
+            source_provider="leetcode",
+            source_account=source_account,
         )

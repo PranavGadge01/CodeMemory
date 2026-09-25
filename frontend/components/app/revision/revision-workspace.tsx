@@ -4,7 +4,11 @@ import * as React from "react";
 import Link from "next/link";
 import { Check, Clock } from "lucide-react";
 import type { RevisionQueueItem } from "@/lib/types";
-import { getRevisionQueue } from "@/lib/data";
+import {
+  getRevisionQueue,
+  markProblemReviewed,
+  ApiError,
+} from "@/lib/api";
 import { StatStrip } from "@/components/app/stat-strip";
 import { Surface, SurfaceHeader } from "@/components/ui/surface";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +16,7 @@ import { DifficultyBadge } from "@/components/ui/badges";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/primitives";
 import { ScoreBreakdown } from "@/components/app/revision/score-breakdown";
+import { ErrorState } from "@/components/app/data-states";
 import { formatRelative } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -39,38 +44,150 @@ const CONFIDENCE_VALUE: Record<RevisionQueueItem["confidence"], number> = {
   High: 3,
 };
 
+const TOPICS: { value: string; label: string }[] = [
+  { value: "all", label: "All topics" },
+  { value: "dynamic-programming", label: "Dynamic Programming" },
+  { value: "array", label: "Array" },
+  { value: "tree", label: "Tree" },
+  { value: "graph", label: "Graph" },
+];
+
 /**
  * Revision workspace.
  *
  * The queue is a focused list, not a table: one row per thing to revisit, with
- * the scoring breakdown for whichever row has focus. "Mark reviewed" and
- * "Snooze 7d" are local UI state only — there is no backend to call yet, so
- * both simply retire the row from the current session.
+ * the scoring breakdown for whichever row has focus. "Mark reviewed" records
+ * the review through the API; "Snooze 7d" stays a local UI action because the
+ * backend exposes no snooze.
  */
 export function RevisionWorkspace() {
-  const [queue, setQueue] = React.useState<RevisionQueueItem[]>(() => getRevisionQueue());
-  const [selectedId, setSelectedId] = React.useState<string | null>(() => queue[0]?.problemId ?? null);
+  const [queue, setQueue] = React.useState<RevisionQueueItem[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<ApiError | null>(null);
+  const [topic, setTopic] = React.useState("all");
+  // Bumped by Retry/Refresh: those refetch the *same* topic, which alone would
+  // leave the effect's dependency list unchanged and skip the request.
+  const [refreshKey, setRefreshKey] = React.useState(0);
+  const [selectedId, setSelectedId] = React.useState<string | null>(null);
+  const [reviewing, setReviewing] = React.useState(false);
+  const [reviewError, setReviewError] = React.useState<ApiError | null>(null);
+
+  const load = React.useCallback(async (topicFilter: string) => {
+    try {
+      const next = await getRevisionQueue({
+        limit: 50,
+        topic: topicFilter !== "all" ? topicFilter : undefined,
+      });
+      setQueue(next);
+      setSelectedId(next[0]?.problemId ?? null);
+      setError(null);
+    } catch (failure) {
+      setError(
+        failure instanceof ApiError
+          ? failure
+          : new ApiError("Unexpected error", "ERROR", 0),
+      );
+      setQueue([]);
+      setSelectedId(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    // The await is what keeps this legal: every setState below happens in the
+    // continuation, never synchronously in the effect body.
+    void (async () => {
+      await load(topic);
+    })();
+  }, [topic, refreshKey, load]);
 
   const selected = React.useMemo(
     () => queue.find((item) => item.problemId === selectedId) ?? null,
     [queue, selectedId],
   );
 
-  function retire(id: string) {
+  /**
+   * Refetch. Topic changes and retries both flip loading back on here, from the
+   * handler rather than the effect — the effect only ever reads, never sets.
+   */
+  function reload(nextTopic: string) {
+    setTopic(nextTopic);
+    setRefreshKey((previous) => previous + 1);
+    setLoading(true);
+  }
+
+  async function markReviewed() {
+    if (!selected) return;
+    const item = selected;
+    setReviewing(true);
+    setReviewError(null);
+    try {
+      await markProblemReviewed(item.slug);
+      setQueue((previous) => {
+        const next = previous.filter((candidate) => candidate.problemId !== item.problemId);
+        // Move focus to the next item in priority order rather than leaving the
+        // panel pointing at something that is no longer queued.
+        setSelectedId(next[0]?.problemId ?? null);
+        return next;
+      });
+    } catch (failure) {
+      setReviewError(
+        failure instanceof ApiError
+          ? failure
+          : new ApiError("Unexpected error", "ERROR", 0),
+      );
+    } finally {
+      setReviewing(false);
+    }
+  }
+  /** Local-only: the backend has no snooze, so the row retires for this session. */
+  function snooze() {
+    if (!selected) return;
+    const item = selected;
     setQueue((previous) => {
-      const next = previous.filter((item) => item.problemId !== id);
-      const stillSelected = next.find((item) => item.problemId === selectedId);
-      // Move focus to the next item in priority order rather than leaving the
-      // panel pointing at something that is no longer queued.
-      if (!stillSelected) setSelectedId(next[0]?.problemId ?? null);
+      const next = previous.filter((candidate) => candidate.problemId !== item.problemId);
+      setSelectedId(next[0]?.problemId ?? null);
       return next;
     });
   }
 
-  function restore() {
-    const fresh = getRevisionQueue();
-    setQueue(fresh);
-    setSelectedId(fresh[0]?.problemId ?? null);
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-6">
+        <StatStrip
+          className="sm:grid-cols-4 lg:grid-cols-4"
+          stats={[
+            { label: "In queue", value: "—" },
+            { label: "Overdue", value: "—" },
+            { label: "Avg confidence", value: "—" },
+            { label: "Next scheduled", value: "—" },
+          ]}
+        />
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+          <Surface className="lg:col-span-7">
+            <SurfaceHeader eyebrow="Queue" title="What to revisit" />
+            <div className="p-5">
+              <div className="animate-pulse rounded-md bg-surface-card" aria-hidden="true">
+                <div className="h-12 border-b border-border-soft" />
+                <div className="h-12 border-b border-border-soft" />
+                <div className="h-12" />
+              </div>
+            </div>
+          </Surface>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col gap-6">
+        <Surface>
+          <ErrorState error={error} onRetry={() => reload(topic)} />
+        </Surface>
+      </div>
+    );
   }
 
   const overdue = queue.filter((item) => item.status === "Overdue").length;
@@ -101,9 +218,12 @@ export function RevisionWorkspace() {
             title="What to revisit"
             description="Ordered by priority score. Select a row to see how it was computed."
             action={
-              <span className="font-technical-sm text-text-faint">
-                {queue.length} item{queue.length === 1 ? "" : "s"}
-              </span>
+              <div className="flex items-center gap-3">
+                <TopicSelect value={topic} onChange={reload} />
+                <span className="font-technical-sm text-text-faint">
+                  {queue.length} item{queue.length === 1 ? "" : "s"}
+                </span>
+              </div>
             }
           />
           {queue.length === 0 ? (
@@ -112,8 +232,8 @@ export function RevisionWorkspace() {
               title="Queue cleared"
               description="Everything has been reviewed or snoozed for this session. New items appear as your submission history grows."
               action={
-                <Button variant="outline" size="sm" onClick={restore}>
-                  Restore queue
+                <Button variant="outline" size="sm" onClick={() => reload(topic)}>
+                  Refresh queue
                 </Button>
               }
             />
@@ -143,12 +263,25 @@ export function RevisionWorkspace() {
               {selected ? (
                 <>
                   <ScoreBreakdown item={selected} />
+                  {reviewError ? (
+                    <div className="mt-4">
+                      <ErrorState
+                        error={reviewError}
+                        onRetry={() => void markReviewed()}
+                      />
+                    </div>
+                  ) : null}
                   <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-border-soft pt-4">
-                    <Button variant="primary" size="sm" onClick={() => retire(selected.problemId)}>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => void markReviewed()}
+                      disabled={reviewing}
+                    >
                       <Check className="h-3.5 w-3.5" aria-hidden="true" />
-                      Mark reviewed
+                      {reviewing ? "Recording…" : "Mark reviewed"}
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => retire(selected.problemId)}>
+                    <Button variant="outline" size="sm" onClick={snooze}>
                       <Clock className="h-3.5 w-3.5" aria-hidden="true" />
                       Snooze 7d
                     </Button>
@@ -229,6 +362,44 @@ function PriorityScore({ value }: { value: number }) {
       </span>
       <span className="h-1 w-12 overflow-hidden rounded-full bg-surface-card" aria-hidden="true">
         <span className="block h-full bg-accent" style={{ width: `${pct}%` }} />
+      </span>
+    </div>
+  );
+}
+
+function TopicSelect({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="relative">
+      <label htmlFor="revision-topic" className="sr-only">
+        Filter queue by topic
+      </label>
+      <select
+        id="revision-topic"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className={cn(
+          "h-8 appearance-none rounded-md border border-border bg-surface-card pl-2.5 pr-8 text-body-sm text-text-primary",
+          "transition-colors duration-micro ease-standard",
+          "hover:border-border-strong focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/40",
+        )}
+      >
+        {TOPICS.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <span
+        className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-text-faint"
+        aria-hidden="true"
+      >
+        ▾
       </span>
     </div>
   );

@@ -725,12 +725,12 @@ def main(args: list[str] | None = None) -> None:
 
             if act == "index":
                 console.print("[bold cyan]Indexing CodeMemory documents...[/bold cyan]")
-                res = service.memory_engine.index_all(force_rebuild=False)
+                res = service.memory_index_all(force_rebuild=False)
                 console.print(f"[bold green]Indexing Complete![/bold green] Total docs: {res['total_documents']}, Newly indexed: [green]{res['indexed']}[/green], Skipped: [yellow]{res['skipped']}[/yellow], Vector index size: [cyan]{res['vector_count']}[/cyan]")
 
             elif act == "rebuild":
                 console.print("[bold yellow]Rebuilding Memory Vector Index from scratch...[/bold yellow]")
-                res = service.memory_engine.index_all(force_rebuild=True)
+                res = service.memory_index_all(force_rebuild=True)
                 console.print(f"[bold green]Rebuild Complete![/bold green] Total vectors indexed: [cyan]{res['vector_count']}[/cyan]")
 
             elif act == "search":
@@ -739,7 +739,7 @@ def main(args: list[str] | None = None) -> None:
                     console.print("[bold red]Error:[/bold red] Please provide a search query string.")
                     return
                 console.print(f"[bold cyan]Hybrid Memory Search for:[/bold cyan] '{query_str}'\n")
-                results = service.memory_engine.search(query_str, top_k=5)
+                results = service.memory_search(query_str, top_k=5)
                 if not results:
                     console.print("[yellow]No matching memory records found.[/yellow]")
                 else:
@@ -753,7 +753,7 @@ def main(args: list[str] | None = None) -> None:
                 if not prob_id:
                     console.print("[bold red]Error:[/bold red] Please specify a Problem Title, Slug, or ID.")
                     return
-                sim_res = service.memory_engine.find_similar_problem(prob_id, top_k=5)
+                sim_res = service.memory_find_similar_problem(prob_id, top_k=5)
                 console.print(f"[bold cyan]Problems Similar to '{prob_id}':[/bold cyan]\n")
                 if not sim_res:
                     console.print("[yellow]No similar problems found.[/yellow]")
@@ -764,7 +764,7 @@ def main(args: list[str] | None = None) -> None:
 
             elif act == "mistakes":
                 console.print(f"[bold cyan]Historical Mistake & Failure Memory Records:[/bold cyan]\n")
-                mistakes = service.memory_engine.find_common_mistakes(topic=target)
+                mistakes = service.memory_find_common_mistakes(topic=target)
                 if not mistakes:
                     console.print("[yellow]No mistake records found.[/yellow]")
                 else:
@@ -773,7 +773,7 @@ def main(args: list[str] | None = None) -> None:
                         console.print(f"   {m.snippet}\n")
 
             elif act == "stats":
-                stats = service.memory_engine.get_memory_stats()
+                stats = service.memory_stats()
                 console.print("[bold cyan]CodeMemory Personal Memory Statistics[/bold cyan]")
                 console.print(f" • Total Memory Documents: [green]{stats['total_documents']}[/green]")
                 console.print(f" • Indexed Embeddings: [cyan]{stats['indexed_vectors']}[/cyan]")

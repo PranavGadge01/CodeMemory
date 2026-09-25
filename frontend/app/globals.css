@@ -161,6 +161,45 @@
 }
 
 @layer utilities {
+  /* --- Settings-driven appearance overrides --- */
+
+  /* Compact density: tighter row padding across tables and lists */
+  :root[data-density="compact"] {
+    --row-padding-y: 0.375rem;
+    --row-padding-x: 0.625rem;
+  }
+  :root[data-density="comfortable"] {
+    --row-padding-y: 0.625rem;
+    --row-padding-x: 0.75rem;
+  }
+
+  /* Accent emphasis: toggle the orange on selected/active states */
+  :root[data-accent="off"] {
+    --color-accent: var(--color-text-muted);
+    --color-accent-hover: var(--color-text-muted);
+    --color-accent-pressed: var(--color-text-muted);
+    --color-accent-soft: transparent;
+    --color-accent-border: rgba(255, 255, 255, 0.08);
+  }
+
+  /* Reduced motion override: when the user enables it, disable all non-essential
+     animations and transitions regardless of the OS preference. */
+  :root[data-reduced-motion="on"] {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* Code font size: consumed by syntax-highlighted views */
+  :root {
+    --code-font-size: 13px;
+  }
+
   .text-display-xl {
     font-size: clamp(2.75rem, 6vw, 4rem);
     line-height: 1.05;

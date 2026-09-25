@@ -329,6 +329,11 @@ class LeetCodeClient:
 
         Never retries. Raises a subclass of :class:`LeetCodeError`.
         """
+        try:
+            operation = self._operation_name(json.loads(payload).get("query", ""))
+        except (TypeError, ValueError, UnicodeDecodeError):
+            operation = "graphql"
+
         req = urllib.request.Request(
             LEETCODE_GRAPHQL_URL, data=payload, headers=self._headers(), method="POST"
         )
@@ -337,7 +342,16 @@ class LeetCodeClient:
                 status = int(getattr(response, "status", 200) or 200)
                 body = response.read()
         except urllib.error.HTTPError as exc:
-            raise self._classify_http_error(exc) from exc
+            safe_message = self._safe_http_error_message(exc)
+            error = self._classify_http_error(exc)
+            error.safe_response_message = safe_message
+            logger.warning(
+                "LeetCode GraphQL '%s' returned HTTP %s: %s",
+                operation,
+                getattr(error, "status_code", exc.code),
+                safe_message,
+            )
+            raise error from exc
         except urllib.error.URLError as exc:
             raise self._classify_url_error(exc) from exc
         except TimeoutError as exc:
@@ -353,6 +367,52 @@ class LeetCodeClient:
             raise LeetCodePermanentError(f"LeetCode returned HTTP {status} (not retried)", status_code=status)
 
         return self._parse_body(body)
+
+    def _safe_http_error_message(self, response: urllib.error.HTTPError) -> str:
+        """Extract a bounded, credential-redacted message from an HTTP error.
+
+        Never log a raw response body: retain only GraphQL error messages or
+        top-level ``message``/``detail`` strings. This diagnoses 4xx responses
+        without exposing credentials if the server echoes them.
+        """
+        try:
+            raw = response.read(65537)
+        except Exception:
+            return "response body unavailable"
+        if not raw:
+            return "empty response body"
+        if len(raw) > 65536:
+            return "response body exceeded diagnostic size limit"
+
+        try:
+            parsed = json.loads(raw.decode("utf-8", errors="replace"))
+        except (TypeError, ValueError):
+            return f"non-JSON response body ({len(raw)} bytes)"
+
+        messages: List[str] = []
+        if isinstance(parsed, dict):
+            errors = parsed.get("errors")
+            if errors:
+                messages = _extract_graphql_messages(errors)
+            else:
+                for key in ("message", "detail"):
+                    value = parsed.get(key)
+                    if isinstance(value, str):
+                        messages.append(value)
+        if not messages:
+            return "response body contained no safe error message"
+
+        message = "; ".join(messages)
+        for secret in (getattr(self, "session_cookie", None), getattr(self, "csrf_token", None)):
+            if isinstance(secret, str) and secret:
+                message = message.replace(secret, "<redacted>")
+        message = re.sub(r"(?i)\bbearer\s+[^\s,;]+", "Bearer <redacted>", message)
+        message = re.sub(
+            r"(?i)\b(leetcode_session|csrftoken|authorization|cookie)\b(\s*[=:]\s*)[^\s,;]+",
+            r"\1\2<redacted>",
+            message,
+        )
+        return message[:500]
 
     def _retry_delay(self, exc: LeetCodeError, attempt: int) -> float:
         """Compute the backoff delay before the next retry, in seconds.
@@ -411,7 +471,10 @@ class LeetCodeClient:
         except LeetCodeError as exc:
             # Built from status codes/categories only — no headers, cookies or
             # request bodies are included, so this is safe to surface.
+            diagnostic = getattr(exc, "safe_response_message", None)
             self.last_error = str(exc)
+            if diagnostic:
+                self.last_error = f"{self.last_error}: {diagnostic}"
             self.last_error_kind = type(exc).__name__
             logger.warning("LeetCode GraphQL '%s' failed: %s", operation, exc)
             return None

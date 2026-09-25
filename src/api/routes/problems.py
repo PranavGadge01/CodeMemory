@@ -6,7 +6,7 @@ from codememory.domain.exceptions import ProblemNotFoundError
 
 from api.dependencies import get_service
 from api.schemas.common import PaginatedResponse
-from api.schemas.problems import ProblemOut, ProblemListItemOut
+from api.schemas.problems import ProblemOut, ProblemListItemOut, SolutionEvolutionOut
 
 router = APIRouter(tags=["problems"])
 
@@ -19,7 +19,11 @@ def list_problems(
     status: Optional[str] = None,
     service: CodeMemoryService = Depends(get_service)
 ):
-    """List problems with python-side filtering and pagination."""
+    """List problems with python-side filtering and pagination.
+
+    When a LeetCode account is connected, only problems with submissions from
+    that account are returned.
+    """
     all_problems = service.list_problems()
     
     # Apply filters
@@ -65,7 +69,28 @@ def list_problems(
 def get_problem(slug: str, service: CodeMemoryService = Depends(get_service)):
     """Get a problem by its slug."""
     try:
-        problem = service.get_problem(slug)
+        problem = service.get_problem(slug, account=service.active_account)
         return ProblemOut(**problem.model_dump())
+    except ProblemNotFoundError:
+        raise HTTPException(status_code=404, detail="Problem not found")
+
+
+@router.get("/problems/{slug}/evolution", response_model=SolutionEvolutionOut)
+def get_problem_evolution(slug: str, service: CodeMemoryService = Depends(get_service)):
+    """Get solution evolution summary for a problem.
+
+    When a LeetCode account is connected, only that account's submissions are
+    used to build the evolution timeline.
+    """
+    try:
+        evolution = service.get_solution_evolution(slug)
+        return SolutionEvolutionOut(
+            problem_id=evolution.problem_id,
+            problem_title=evolution.problem_title,
+            total_attempts=evolution.total_attempts,
+            steps=[s.model_dump(mode="json") for s in evolution.steps],
+            evolution_narrative=evolution.evolution_narrative,
+            key_breakthrough=evolution.key_breakthrough,
+        )
     except ProblemNotFoundError:
         raise HTTPException(status_code=404, detail="Problem not found")

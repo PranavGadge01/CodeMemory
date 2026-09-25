@@ -1,6 +1,7 @@
 """Structured Pydantic models for analytics results."""
 
 from datetime import datetime
+from typing import Optional
 from pydantic import BaseModel, Field
 
 
@@ -17,6 +18,9 @@ class AnalyticsOverview(BaseModel):
     first_attempt_acceptance_rate_pct: float = 0.0
     repeated_problem_rate_pct: float = 0.0
     avg_solving_time_minutes: float | None = None
+    current_streak_days: int = 0
+    longest_streak_days: int = 0
+    active_days_last_30: int = 0
 
 
 class TopicStat(BaseModel):
@@ -86,3 +90,45 @@ class StruggleProblem(BaseModel):
     failed_submissions: int = 0
     status: str
     topics: list[str] = Field(default_factory=list)
+
+
+class ActivityDay(BaseModel):
+    """Daily activity metrics for the activity heatmap."""
+
+    date: str  # ISO date "YYYY-MM-DD"
+    submissions: int = 0
+    accepted: int = 0
+    solved: int = 0
+    minutes_active: int = 0
+
+
+class StreakInfo(BaseModel):
+    """Streak statistics computed from activity data."""
+
+    current_streak_days: int = 0
+    longest_streak_days: int = 0
+    active_days_last_30: int = 0
+
+
+class TimelineEvent(BaseModel):
+    """Single chronological event for the dashboard timeline."""
+
+    id: str
+    kind: str  # "solved", "attempted", "learned", "imported"
+    title: str
+    detail: str
+    problem_id: Optional[str] = None
+    problem_slug: Optional[str] = None
+    language: Optional[str] = None
+    occurred_at: datetime
+
+
+class KnowledgeCluster(BaseModel):
+    """A group of related problems sharing a common topic or concept."""
+
+    id: str
+    title: str
+    description: str
+    topic_id: str
+    problem_ids: list[str] = Field(default_factory=list)
+    mastery_pct: int = 0

@@ -51,11 +51,12 @@ def _raw(**overrides) -> LeetCodeSubmissionRaw:
     return LeetCodeSubmissionRaw(**base)
 
 
-def _make_service(tmp_path: Path) -> CodeMemoryService:
+def _make_service(tmp_path: Path, account_service=None) -> CodeMemoryService:
     return CodeMemoryService(
         base_dir=tmp_path / "data",
         knowledge_dir=tmp_path / "knowledge",
         db_path=tmp_path / "phase_b.duckdb",
+        account_service=account_service,
     )
 
 
@@ -72,17 +73,17 @@ def _profile_client(submissions) -> MagicMock:
 
 
 def _connected_engine(tmp_path: Path, client) -> tuple[LeetCodeSyncEngine, CodeMemoryService, AccountService]:
-    service = _make_service(tmp_path)
     acct = AccountService(data_dir=tmp_path / "accounts")
     acct.save_connection(
         AccountConnection(provider="LeetCode", username="syncuser", status=AccountStatus.CONNECTED)
     )
+    service = _make_service(tmp_path, account_service=acct)
     engine = LeetCodeSyncEngine(account_service=acct, client=client)
     return engine, service, acct
 
 
 def _stored_submissions(service: CodeMemoryService) -> list:
-    return [s for p in service.list_problems() for a in p.attempts for s in a.submissions]
+    return [s for p in service.storage.list_all() for a in p.attempts for s in a.submissions]
 
 
 # ─────────────────────────────────────────────────────────────────────────────

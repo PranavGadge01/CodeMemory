@@ -39,11 +39,14 @@ from codememory.connectors.account.models import (
     SyncStatus,
 )
 from codememory.connectors.account.service import AccountService
+from codememory.connectors.leetcode.auth_sync import AuthenticatedSyncOrchestrator
+from codememory.connectors.leetcode.authenticated_client import AuthenticatedLeetCodeClient
 from codememory.connectors.leetcode.errors import LeetCodeError
 from codememory.connectors.leetcode.sync import (
     UNAVAILABLE_FIELDS,
     LeetCodeSyncEngine,
 )
+from codememory.connectors.leetcode.vault import CredentialVault
 
 if TYPE_CHECKING:
     from codememory.core.service import CodeMemoryService
@@ -299,6 +302,54 @@ class LeetCodeAccountService:
         reconnect starts from a valid account state without needing any deletion.
         """
         return self._engine.disconnect_account()
+
+    def store_authenticated_credentials(self, session: str, csrf_token: str) -> None:
+        """Validate a session with LeetCode before securely storing it."""
+        conn = self._account_service.get_connection(PROVIDER)
+        account_identifier = conn.username if conn and conn.username else "default"
+        vault = CredentialVault(account_identifier=account_identifier)
+        if not vault.validate(session, csrf_token):
+            raise LeetCodeError("LeetCode session or CSRF token has an invalid format")
+        self._validate_authenticated_session(session, csrf_token)
+        vault.store(session, csrf_token)
+
+    def validate_authenticated_credentials(self) -> bool:
+        """Validate stored credentials against LeetCode, not just their format."""
+        conn = self._account_service.get_connection(PROVIDER)
+        account_identifier = conn.username if conn and conn.username else "default"
+        vault = CredentialVault(account_identifier=account_identifier)
+        session, csrf_token = vault.retrieve()
+        if not session or not csrf_token or not vault.validate(session, csrf_token):
+            return False
+        try:
+            self._validate_authenticated_session(session, csrf_token)
+        except LeetCodeError as exc:
+            logger.info("Stored LeetCode session could not be validated: %s", safe_error_message(exc))
+            return False
+        return True
+
+    def _validate_authenticated_session(self, session: str, csrf_token: str) -> None:
+        """Make one authenticated read-only request without storing submissions."""
+        client = AuthenticatedLeetCodeClient(
+            session_cookie=session,
+            csrf_token=csrf_token,
+        )
+        client.validate_session()
+
+    def revoke_authenticated_credentials(self) -> None:
+        """Remove stored authenticated credentials from the vault."""
+        conn = self._account_service.get_connection(PROVIDER)
+        account_identifier = conn.username if conn and conn.username else "default"
+        vault = CredentialVault(account_identifier=account_identifier)
+        vault.revoke()
+
+    def sync_authenticated_full_history(self) -> SyncStatus:
+        """Perform authenticated full-history sync using stored credentials."""
+        conn = self._account_service.get_connection("LeetCode")
+        username = conn.username if conn and conn.status == AccountStatus.CONNECTED else None
+        account_identifier = username if username else "default"
+        orchestrator = AuthenticatedSyncOrchestrator(account_identifier=account_identifier)
+        return orchestrator.sync_full_history(self._app_service, username)
 
     # ───────────────────────────────────────────────────────────────────────
     # Internals

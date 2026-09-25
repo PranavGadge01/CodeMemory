@@ -141,16 +141,32 @@ class ImportService:
 
             # Existing hashes for idempotency check across entire problem
             existing_hashes: set[str] = set()
+            # Map of external id -> (stored_hash, stored_code) for cross-account
+            # dedup: a sync record tagged with source_account produces a different
+            # hash than the import record, so we also match on external id.
+            existing_by_id: dict[str, tuple[str, str]] = {}
             for attempt in prob.attempts:
                 for sub in attempt.submissions:
                     if sub.submission_hash:
                         existing_hashes.add(sub.submission_hash)
+                    if sub.id:
+                        existing_by_id[sub.id] = (sub.submission_hash, sub.code or "")
 
             for rec in recs_sorted:
-                # 1. Idempotency Check
+                # 1. Idempotency Check — exact hash match
                 if rec.submission_hash in existing_hashes or self.storage.get_by_hash(rec.submission_hash):
                     summary.duplicate_count += 1
                     continue
+                # 2. External id match — the record was synced with source_account
+                #    provenance, producing a different hash. If the stored record
+                #    has the same code, it's truly a duplicate. If the stored
+                #    record has different (e.g. empty) code, allow the import to
+                #    refresh it in place via the storage upsert.
+                if rec.submission_id and rec.submission_id in existing_by_id:
+                    _, stored_code = existing_by_id[rec.submission_id]
+                    if stored_code == (rec.code or ""):
+                        summary.duplicate_count += 1
+                        continue
 
                 # Create submission entity
                 sub_kwargs = {
@@ -162,6 +178,8 @@ class ImportService:
                     "memory_mb": rec.memory_mb,
                     "submitted_at": rec.timestamp,
                     "submission_hash": rec.submission_hash,
+                    "source_provider": rec.source_provider,
+                    "source_account": rec.source_account,
                 }
                 if rec.submission_id:
                     sub_kwargs["id"] = rec.submission_id

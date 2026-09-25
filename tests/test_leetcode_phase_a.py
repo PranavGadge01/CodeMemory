@@ -74,12 +74,13 @@ def _fixture_raw(submission_id: str = "1003") -> LeetCodeSubmissionRaw:
     )
 
 
-def _make_service(tmp_path: Path) -> CodeMemoryService:
+def _make_service(tmp_path: Path, account_service=None) -> CodeMemoryService:
     """Build a fully isolated CodeMemoryService rooted at tmp_path."""
     return CodeMemoryService(
         base_dir=tmp_path / "data",
         knowledge_dir=tmp_path / "knowledge",
         db_path=tmp_path / "phase_a.duckdb",
+        account_service=account_service,
     )
 
 
@@ -544,12 +545,12 @@ def test_legacy_empty_hash_is_repaired_without_data_loss(tmp_path):
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _connected_engine(tmp_path: Path, client) -> tuple[LeetCodeSyncEngine, CodeMemoryService]:
-    service = _make_service(tmp_path)
+def _connected_engine(tmp_path: Path, client) -> tuple[LeetCodeSyncEngine, CodeMemoryService, AccountService]:
     acct = AccountService(data_dir=tmp_path / "accounts")
     acct.save_connection(AccountConnection(provider="LeetCode", username="syncuser", status=AccountStatus.CONNECTED))
     engine = LeetCodeSyncEngine(account_service=acct, client=client)
-    return engine, service
+    service = _make_service(tmp_path, account_service=acct)
+    return engine, service, acct
 
 
 def _profile_client(submissions) -> MagicMock:
@@ -565,7 +566,7 @@ def _profile_client(submissions) -> MagicMock:
 
 
 def test_initial_sync_persists_identity_and_timestamp(tmp_path):
-    engine, service = _connected_engine(tmp_path, _profile_client([_raw()]))
+    engine, service, acct = _connected_engine(tmp_path, _profile_client([_raw()]))
     result = engine.sync(service)
 
     assert result.records_added == 1
@@ -581,7 +582,7 @@ def test_initial_sync_persists_identity_and_timestamp(tmp_path):
 
 def test_repeated_sync_of_identical_submission(tmp_path):
     """The core Phase A idempotency guarantee for the sync path."""
-    engine, service = _connected_engine(tmp_path, _profile_client([_raw()]))
+    engine, service, acct = _connected_engine(tmp_path, _profile_client([_raw()]))
 
     first = engine.sync(service)
     second = engine.sync(service)
@@ -598,10 +599,10 @@ def test_repeated_sync_of_identical_submission(tmp_path):
 def test_sync_then_import_same_submission_is_idempotent(tmp_path):
     """A submission synced live with its real code must not be re-imported."""
     synced = _fixture_raw("1003")
-    engine, service = _connected_engine(tmp_path, _profile_client([synced]))
+    engine, service, acct = _connected_engine(tmp_path, _profile_client([synced]))
     engine.sync(service)
 
-    importer = LeetCodeImporter(storage=service.storage)
+    importer = LeetCodeImporter(storage=service.storage, account_service=acct)
     summary = importer.import_file(FIXTURES_DIR / "sample_leetcode.json")
 
     # The synced record occupies the canonical hash of fixture record 1003, so
@@ -623,10 +624,10 @@ def test_sync_without_code_then_import_refreshes_in_place(tmp_path):
     existing row instead of creating a second one.
     """
     synced = _raw(id="1003", submission_id="1003", code="")
-    engine, service = _connected_engine(tmp_path, _profile_client([synced]))
+    engine, service, acct = _connected_engine(tmp_path, _profile_client([synced]))
     engine.sync(service)
 
-    importer = LeetCodeImporter(storage=service.storage)
+    importer = LeetCodeImporter(storage=service.storage, account_service=acct)
     importer.import_file(FIXTURES_DIR / "sample_leetcode.json")
 
     two_sum = service.get_problem("two-sum")
@@ -642,7 +643,7 @@ def test_sync_with_new_submission_after_partial_failure(tmp_path):
     """A submission that fails once must still import on the next sync."""
     submissions = [_raw(), _raw(id="112", submission_id="112", title="3Sum", title_slug="3sum")]
 
-    engine, service = _connected_engine(tmp_path, _profile_client(submissions))
+    engine, service, acct = _connected_engine(tmp_path, _profile_client(submissions))
     first = engine.sync(service)
     assert first.records_added == 2
 
@@ -654,7 +655,7 @@ def test_sync_with_new_submission_after_partial_failure(tmp_path):
 
 
 def test_sync_handles_empty_submission_list(tmp_path):
-    engine, service = _connected_engine(tmp_path, _profile_client([]))
+    engine, service, _ = _connected_engine(tmp_path, _profile_client([]))
     result = engine.sync(service)
     assert result.records_discovered == 0
     assert result.records_added == 0
@@ -676,7 +677,7 @@ def test_sync_skips_submission_already_present_by_external_id(tmp_path):
         submission_id="leetcode_111",
     )
 
-    engine, _ = _connected_engine(tmp_path, _profile_client([_raw()]))
+    engine, _svc, _acct = _connected_engine(tmp_path, _profile_client([_raw()]))
     engine.account_service.save_connection(
         AccountConnection(provider="LeetCode", username="syncuser", status=AccountStatus.CONNECTED)
     )

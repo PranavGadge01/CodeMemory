@@ -14,14 +14,12 @@ def get_revision_queue(
     service: CodeMemoryService = Depends(get_service)
 ):
     """Get the prioritized revision queue."""
-    # service.revision.get_revision_queue might not support `topic` directly if we inspect it closely,
-    # but based on reconnaissance it was assumed. If it doesn't, we filter python-side.
-    try:
-        queue = service.revision.get_revision_queue(limit=limit)
-    except Exception as e:
-        # Fallback if the signature differs or it throws
-        raise HTTPException(status_code=500, detail=str(e))
-        
+    # The public service surface is ``revision_service``; ``service.revision``
+    # never existed and raised AttributeError (HTTP 500) on every call.
+    # Topic filtering is applied python-side.
+    queue = service.revision_service.get_revision_queue(
+        limit=limit, account=service.active_account
+    )
     if topic:
         topic_lower = topic.lower()
         queue = [q for q in queue if any(topic_lower in t.lower() for t in q.topics)]
@@ -32,7 +30,7 @@ def get_revision_queue(
 def mark_reviewed(slug: str, service: CodeMemoryService = Depends(get_service)):
     """Mark a problem as reviewed."""
     try:
-        service.revision.mark_reviewed(slug)
+        service.revision_service.mark_reviewed(slug)
         return {"status": "ok"}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

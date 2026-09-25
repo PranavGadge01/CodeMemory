@@ -43,7 +43,7 @@ def render_search_page() -> None:
         filters["status"] = sel_status
 
     with st.spinner("Executing hybrid vector & keyword retrieval..."):
-        results = service.memory_engine.search(query=search_input, filters=filters, top_k=15)
+        results = service.memory_search(query=search_input, filters=filters, top_k=15)
 
     st.subheader(f"Hybrid Search Results ({len(results)})")
 

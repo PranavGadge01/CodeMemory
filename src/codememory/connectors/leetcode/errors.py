@@ -20,6 +20,10 @@ class LeetCodeError(Exception):
     """Base class for every LeetCode transport failure."""
 
 
+class CredentialVaultError(LeetCodeError):
+    """Errors related to credential vault operations."""
+
+
 class LeetCodeTransientError(LeetCodeError):
     """A failure that may succeed on retry (network, timeout, 5xx, rate limit)."""
 

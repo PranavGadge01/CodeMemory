@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Search, Plus, Menu } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Kbd } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,19 @@ interface TopbarProps {
 }
 
 export function Topbar({ onOpenSidebar, title }: TopbarProps) {
+  const router = useRouter();
+
+  React.useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        router.push("/search");
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [router]);
+
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-canvas/85 px-4 backdrop-blur-md md:px-6">
       <Button
@@ -33,10 +47,10 @@ export function Topbar({ onOpenSidebar, title }: TopbarProps) {
         <div className="flex-1" />
       )}
 
-      {/* Command palette trigger — visually complete, no backend required. */}
+      {/* Command palette trigger — opens the global search page. */}
       <button
         type="button"
-        onClick={() => undefined}
+        onClick={() => router.push("/search")}
         className={cn(
           "group hidden h-8 items-center gap-2 rounded-md border border-border bg-surface px-2.5 text-body-sm text-text-faint",
           "transition-colors duration-micro ease-standard hover:border-border-strong hover:text-text-muted",
