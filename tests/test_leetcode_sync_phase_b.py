@@ -131,10 +131,10 @@ def test_fabricated_code_marker_is_absent_from_storage(tmp_path):
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_sync_limit_defaults_to_twenty():
-    """20 is the practical bound the public API actually serves."""
-    assert DEFAULT_SYNC_LIMIT == 20
-    assert LeetCodeSyncEngine().sync_limit == 20
+def test_sync_limit_defaults_to_hundred():
+    """Default sync limit is 100 for public submission window."""
+    assert DEFAULT_SYNC_LIMIT == 100
+    assert LeetCodeSyncEngine().sync_limit == 100
 
 
 def test_sync_limit_is_configurable(tmp_path):
@@ -151,7 +151,7 @@ def test_sync_limit_used_by_default(tmp_path):
     engine, service, _ = _connected_engine(tmp_path, client)
     engine.sync(service)
 
-    client.fetch_user_submissions.assert_called_once_with("syncuser", limit=20)
+    client.fetch_user_submissions.assert_called_once_with("syncuser", limit=100)
 
 
 def test_sync_limit_overridable_per_call(tmp_path):
@@ -328,7 +328,7 @@ def test_details_coverage_contract(tmp_path):
 
     details = result.details
     assert details["coverage"] == "recent-window", "sync must never claim full history"
-    assert details["window_limit"] == 20
+    assert details["window_limit"] == 100
     assert details["records_in_window"] == 1
     assert details["window_truncated"] is False
     assert details["gap_detected"] is False
@@ -342,12 +342,12 @@ def test_unavailable_fields_are_the_api_blind_spots():
 def test_window_truncated_when_window_is_full(tmp_path):
     """A full window means the server may have more we cannot reach."""
     full_window = [
-        _raw(id=str(i), submission_id=str(i), timestamp=1700000000 + i) for i in range(1, 21)
+        _raw(id=str(i), submission_id=str(i), timestamp=1700000000 + i) for i in range(1, 101)
     ]
     engine, service, _ = _connected_engine(tmp_path, _profile_client(full_window))
     result = engine.sync(service)
 
-    assert result.details["records_in_window"] == 20
+    assert result.details["records_in_window"] == 100
     assert result.details["window_truncated"] is True
 
 

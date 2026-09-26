@@ -49,8 +49,8 @@ export function connectLeetCode(username: string): Promise<LeetCodeStatusDTO> {
  * A first sync pulls a recent window of submissions and can take a while; the
  * caller is expected to show a syncing state rather than blocking silently.
  */
-export function syncLeetCode(): Promise<LeetCodeSyncResultDTO> {
-  return apiPost<LeetCodeSyncResultDTO>("/leetcode/sync");
+export function syncLeetCode(limit?: number): Promise<LeetCodeSyncResultDTO> {
+  return apiPost<LeetCodeSyncResultDTO>("/leetcode/sync", undefined, limit ? { limit } : undefined);
 }
 
 /** Drop the connection. Imported submissions stay in the local index. */

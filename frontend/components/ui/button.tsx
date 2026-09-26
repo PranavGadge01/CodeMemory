@@ -63,7 +63,11 @@ export interface ButtonProps
 export const Button = ({ className, variant, size, asChild, ...props }: ButtonProps) => {
   const Component = asChild ? Slot : "button";
   return (
-    <Component className={cn(buttonVariants({ variant, size }), className)} {...props} />
+    <Component
+      suppressHydrationWarning
+      className={cn(buttonVariants({ variant, size }), className)}
+      {...props}
+    />
   );
 };
 

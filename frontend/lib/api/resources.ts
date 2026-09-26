@@ -150,6 +150,8 @@ export interface SolutionEvolutionData {
   steps: SolutionEvolutionStep[];
   evolutionNarrative: string;
   keyBreakthrough: string | null;
+  betterApproach?: string | null;
+  similarProblems?: string[];
 }
 
 export interface SolutionEvolutionStep {

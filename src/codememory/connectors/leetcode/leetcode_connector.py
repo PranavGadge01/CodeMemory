@@ -20,7 +20,7 @@ class LeetCodeConnector(BaseConnector):
         self.storage = storage
         self.importer = LeetCodeImporter(storage=storage) if storage else None
 
-    def fetch_user_submissions(self, username: str, limit: int = 50) -> List[RawExternalSubmission]:
+    def fetch_user_submissions(self, username: str, limit: int = 100) -> List[RawExternalSubmission]:
         """Fetch recent submissions from LeetCode GraphQL endpoint.
 
         Returns raw transport records only. Conversion to the CodeMemory domain

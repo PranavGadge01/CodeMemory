@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArrowRight, Check, Clock, Cpu } from "lucide-react";
+import { ArrowRight, Check, Clock, Cpu, Sparkles, Target } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatRuntime } from "@/lib/format";
 import type { EvolutionStory } from "@/lib/mock/snippets";
@@ -128,9 +128,37 @@ export function SolutionEvolution({
 
           <CodeBlock code={step.code} />
 
-          <div className="border-t border-border-soft px-5 py-3.5">
-            <div className="eyebrow mb-1.5">Why this attempt is here</div>
-            <p className="text-body-sm text-text-muted">{step.note}</p>
+          <div className="border-t border-border-soft px-5 py-3.5 flex flex-col gap-3">
+            <div>
+              <div className="eyebrow mb-1.5">Why this attempt is here</div>
+              <p className="text-body-sm text-text-muted">{step.note}</p>
+            </div>
+
+            {story.betterApproach ? (
+              <div className="rounded-md bg-accent-soft/20 p-3 border border-accent-border/40">
+                <div className="flex items-center gap-1.5 text-accent font-technical-sm font-semibold mb-1">
+                  <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                  Recommended Better Approach
+                </div>
+                <p className="text-body-sm text-text-secondary">{story.betterApproach}</p>
+              </div>
+            ) : null}
+
+            {story.similarProblems && story.similarProblems.length > 0 ? (
+              <div>
+                <div className="flex items-center gap-1.5 text-text-muted font-technical-sm mb-1.5 font-medium">
+                  <Target className="h-3.5 w-3.5 text-accent" aria-hidden="true" />
+                  Similar Problems to Solve
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {story.similarProblems.map((prob) => (
+                    <Badge key={prob} variant="neutral" className="text-xs">
+                      {prob}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>

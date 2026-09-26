@@ -27,7 +27,7 @@ class Settings:
         if self.cors_origins is None:
             origins = os.getenv(
                 "CODEMEMORY_CORS_ORIGINS",
-                "http://localhost:3000,http://127.0.0.1:3000,tauri://localhost,http://localhost:1420",
+                "http://localhost:3000,http://127.0.0.1:3000,http://192.168.56.1:3000,tauri://localhost,http://localhost:1420",
             )
             self.cors_origins = [o.strip() for o in origins.split(",") if o.strip()]
 

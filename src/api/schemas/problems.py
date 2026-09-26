@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import List, Optional
+from pydantic import Field
 from api.schemas.common import BaseCamelModel
 
 class SolutionAnalysisOut(BaseCamelModel):
@@ -87,6 +88,8 @@ class SolutionEvolutionOut(BaseCamelModel):
     steps: List[EvolutionStepOut]
     evolution_narrative: str
     key_breakthrough: Optional[str] = None
+    better_approach: Optional[str] = None
+    similar_problems: List[str] = Field(default_factory=list)
 
 
 class SearchResultProblem(BaseCamelModel):

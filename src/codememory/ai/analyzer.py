@@ -133,3 +133,42 @@ class AICodeAnalyzer:
         self._evolution_cache[cache_key] = evolution
         self._persist_cache()
         return evolution
+
+    def get_cached_analyses(
+        self,
+        submission_ids: list[str] | None = None,
+    ) -> Dict[str, SubmissionAnalysis]:
+        """Return cached SubmissionAnalysis records, optionally filtered by submission IDs.
+
+        Returns a dict mapping ``submission_id → SubmissionAnalysis`` for all
+        cached analyses (or the requested subset).
+
+        **Version selection semantics**: entries whose ``analysis_version``
+        matches ``self.analysis_version`` are preferred because that is the
+        version this analyzer instance produces.  When multiple code hashes
+        exist for the same ``(submission_id, analysis_version)`` pair, the
+        entry is still returned (the most recent code-state cannot be
+        distinguished without timestamps, so any matching entry is valid).
+
+        If no entry matches ``self.analysis_version`` for a given submission,
+        entries from other versions are ignored — stale-version results are
+        not returned.
+
+        This method never triggers new analysis calls and never mutates the
+        cache.
+        """
+        result: Dict[str, SubmissionAnalysis] = {}
+        for (sub_id, _code_hash, version), analysis in self._analysis_cache.items():
+            if submission_ids is not None and sub_id not in submission_ids:
+                continue
+            if version != self.analysis_version:
+                continue
+            # For the same (sub_id, analysis_version) with different code
+            # hashes we accept whichever we encounter — they represent
+            # different code states at the same prompt version.  If the
+            # caller needs a specific code state they should provide the
+            # exact submission_id from the current data.
+            if sub_id not in result:
+                result[sub_id] = analysis
+        return result
+

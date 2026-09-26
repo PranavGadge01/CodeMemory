@@ -1,0 +1,135 @@
+{
+  "version": "1.0.0",
+  "description": "CodeMemory Grounded Insight Evaluation Corpus for Qwen3 and local LLM benchmarking.",
+  "cases": [
+    {
+      "id": "full_profile_dp_weakness",
+      "scope": "full_profile",
+      "evidence": {
+        "scope": "full_profile",
+        "evidence_id": "ev_full_profile_dp_weakness_001",
+        "generated_at": "2026-09-25T20:00:00Z",
+        "items": [
+          {
+            "evidence_id": "analytics.overview.total_problems",
+            "source": "analytics.overview",
+            "label": "Total Problems Solved",
+            "value": 45
+          },
+          {
+            "evidence_id": "analytics.overview.overall_acceptance_rate_pct",
+            "source": "analytics.overview",
+            "label": "Overall Acceptance Rate",
+            "value": 62.5,
+            "unit": "%"
+          },
+          {
+            "evidence_id": "analytics.topic_stats.dynamic_programming.acceptance_rate_pct",
+            "source": "analytics.topic_stats.dynamic_programming",
+            "label": "Dynamic Programming Acceptance Rate",
+            "value": 35.0,
+            "unit": "%",
+            "sample_size": 10
+          },
+          {
+            "evidence_id": "analytics.topic_stats.hash_table.acceptance_rate_pct",
+            "source": "analytics.topic_stats.hash_table",
+            "label": "Hash Table Acceptance Rate",
+            "value": 85.0,
+            "unit": "%",
+            "sample_size": 15
+          },
+          {
+            "evidence_id": "pattern_analyzer.weak_topics.dynamic_programming",
+            "source": "pattern_analyzer.weak_topics",
+            "label": "Identified Weak Topic",
+            "value": "Dynamic Programming"
+          }
+        ],
+        "comparisons": [
+          {
+            "evidence_id": "comparison.dp_vs_overall",
+            "topic_evidence_id": "analytics.topic_stats.dynamic_programming.acceptance_rate_pct",
+            "overall_evidence_id": "analytics.overview.overall_acceptance_rate_pct",
+            "topic_rate": 35.0,
+            "overall_rate": 62.5,
+            "delta": -27.5,
+            "label": "Dynamic Programming vs Overall"
+          }
+        ],
+        "supporting_problems": [],
+        "limitations": []
+      }
+    },
+    {
+      "id": "topic_two_pointers_low_sample",
+      "scope": "topic:Two Pointers",
+      "evidence": {
+        "scope": "topic:Two Pointers",
+        "evidence_id": "ev_topic_two_pointers_002",
+        "generated_at": "2026-09-25T20:00:00Z",
+        "items": [
+          {
+            "evidence_id": "analytics.topic_stats.two_pointers.acceptance_rate_pct",
+            "source": "analytics.topic_stats.two_pointers",
+            "label": "Two Pointers Acceptance Rate",
+            "value": 50.0,
+            "unit": "%",
+            "sample_size": 2
+          }
+        ],
+        "comparisons": [],
+        "supporting_problems": [
+          {
+            "problem_id": "3sum",
+            "title": "3Sum",
+            "slug": "3sum",
+            "difficulty": "Medium",
+            "status": "Accepted",
+            "total_attempts": 3,
+            "topics": ["Array", "Two Pointers"]
+          }
+        ],
+        "limitations": [
+          "Low sample size (2 problems) in topic Two Pointers"
+        ]
+      }
+    },
+    {
+      "id": "problem_evolution_3sum",
+      "scope": "problem:3sum",
+      "evidence": {
+        "scope": "problem:3sum",
+        "evidence_id": "ev_problem_3sum_003",
+        "generated_at": "2026-09-25T20:00:00Z",
+        "items": [
+          {
+            "evidence_id": "problem.3sum.total_attempts",
+            "source": "problem.3sum",
+            "label": "Total Attempts",
+            "value": 3
+          },
+          {
+            "evidence_id": "problem.3sum.final_status",
+            "source": "problem.3sum",
+            "label": "Final Status",
+            "value": "Accepted"
+          }
+        ],
+        "comparisons": [],
+        "supporting_problems": [
+          {
+            "problem_id": "3sum",
+            "title": "3Sum",
+            "slug": "3sum",
+            "difficulty": "Medium",
+            "status": "Accepted",
+            "total_attempts": 3,
+            "topics": ["Array", "Two Pointers"]
+          }
+        ],
+        "limitations": []
+      }
+    }
+  ]
+}

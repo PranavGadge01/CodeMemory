@@ -25,6 +25,8 @@ export interface EvolutionStory {
   difficulty: "Easy" | "Medium" | "Hard";
   steps: EvolutionStep[];
   takeaway: string;
+  betterApproach?: string;
+  similarProblems?: string[];
 }
 
 export const EVOLUTION_STORIES: EvolutionStory[] = [

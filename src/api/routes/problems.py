@@ -13,7 +13,7 @@ router = APIRouter(tags=["problems"])
 @router.get("/problems", response_model=PaginatedResponse[ProblemListItemOut])
 def list_problems(
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
+    page_size: int = Query(20, ge=1, le=1000),
     search: Optional[str] = None,
     difficulty: Optional[str] = None,
     status: Optional[str] = None,
@@ -91,6 +91,8 @@ def get_problem_evolution(slug: str, service: CodeMemoryService = Depends(get_se
             steps=[s.model_dump(mode="json") for s in evolution.steps],
             evolution_narrative=evolution.evolution_narrative,
             key_breakthrough=evolution.key_breakthrough,
+            better_approach=getattr(evolution, "better_approach", None),
+            similar_problems=getattr(evolution, "similar_problems", []),
         )
     except ProblemNotFoundError:
         raise HTTPException(status_code=404, detail="Problem not found")

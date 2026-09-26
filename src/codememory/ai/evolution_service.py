@@ -1,7 +1,7 @@
 """Service for generating solution evolution summaries across multiple attempts."""
 
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from codememory.ai.base import BaseAIProvider
 from codememory.ai.fallback_provider import HeuristicAIProvider
 from codememory.domain.models import Problem, Submission
@@ -29,6 +29,82 @@ class EvolutionSummary(BaseModel):
     steps: List[EvolutionStep]
     evolution_narrative: str
     key_breakthrough: Optional[str] = None
+    better_approach: Optional[str] = None
+    similar_problems: List[str] = Field(default_factory=list)
+
+
+SIMILAR_PROBLEMS_CATALOG: dict[str, list[str]] = {
+    "two-sum": ["3Sum", "Two Sum II - Input Array Is Sorted", "Subarray Sum Equals K"],
+    "3sum": ["4Sum", "3Sum Closest", "Two Sum"],
+    "climbing-stairs": ["Min Cost Climbing Stairs", "House Robber", "Fibonacci Number"],
+    "min-cost-climbing-stairs": ["Climbing Stairs", "House Robber", "Coin Change"],
+    "reverse-linked-list": ["Reverse Linked List II", "Palindrome Linked List", "Swap Nodes in Pairs"],
+    "lru-cache": ["LFU Cache", "Design InMemory File System", "Insert Delete GetRandom O(1)"],
+    "binary-tree-level-order-traversal": ["Binary Tree Zigzag Level Order Traversal", "Binary Tree Right Side View", "Populating Next Right Pointers in Each Node"],
+    "longest-substring-without-repeating-characters": ["Minimum Window Substring", "Longest Repeating Character Replacement", "Substrings with Concatenation of All Words"],
+    "container-with-most-water": ["Trapping Rain Water", "3Sum", "Two Sum II - Input Array Is Sorted"],
+    "valid-parentheses": ["Generate Parentheses", "Longest Valid Parentheses", "Simplify Path"],
+    "merge-two-sorted-lists": ["Merge k Sorted Lists", "Sort List", "Merge Sorted Array"],
+    "maximum-subarray": ["Maximum Product Subarray", "Degree of an Array", "Best Time to Buy and Sell Stock"],
+    "search-in-rotated-sorted-array": ["Find Minimum in Rotated Sorted Array", "Search in Rotated Sorted Array II", "Search Insert Position"],
+    "coin-change": ["Coin Change II", "Combination Sum IV", "House Robber"],
+    "number-of-islands": ["Max Area of Island", "Surrounded Regions", "Number of Closed Islands"],
+    "course-schedule": ["Course Schedule II", "Alien Dictionary", "Minimum Height Trees"],
+    "word-break": ["Word Break II", "Concatenated Words", "Extra Characters in a String"],
+    "kth-largest-element-in-an-array": ["Top K Frequent Elements", "Kth Largest Element in a Stream", "Find K Pairs with Smallest Sums"],
+    "subsets": ["Subsets II", "Permutations", "Combination Sum"],
+    "trapping-rain-water": ["Container With Most Water", "Trapping Rain Water II", "Product of Array Except Self"],
+}
+
+TOPIC_SIMILAR_FALLBACKS: dict[str, list[str]] = {
+    "dynamic programming": ["Coin Change", "House Robber", "Longest Common Subsequence"],
+    "hash table": ["Two Sum", "Group Anagrams", "Subarray Sum Equals K"],
+    "array": ["Two Sum", "Maximum Subarray", "3Sum"],
+    "string": ["Valid Anagram", "Longest Substring Without Repeating Characters", "Group Anagrams"],
+    "tree": ["Binary Tree Inorder Traversal", "Maximum Depth of Binary Tree", "Invert Binary Tree"],
+    "graph": ["Number of Islands", "Course Schedule", "Clone Graph"],
+    "linked list": ["Reverse Linked List", "Merge Two Sorted Lists", "Linked List Cycle"],
+    "two pointers": ["Two Sum II", "3Sum", "Container With Most Water"],
+    "sliding window": ["Longest Substring Without Repeating Characters", "Minimum Window Substring", "Sliding Window Maximum"],
+    "binary search": ["Binary Search", "Search in Rotated Sorted Array", "Find First and Last Position"],
+}
+
+
+def _derive_better_approach(problem: Problem, steps: List[EvolutionStep]) -> str:
+    """Generate optimal approach advice based on latest attempt and problem metadata."""
+    if not steps:
+        return "Implement an initial working solution, starting with brute force or direct simulation to verify correctness."
+    
+    last_step = steps[-1]
+    topics_lower = [t.lower() for t in (problem.topics or [])]
+    
+    if "o(n^2)" in last_step.time_complexity.lower() or "o(2^n)" in last_step.time_complexity.lower():
+        if any(t in topics_lower for t in ["hash table", "array"]):
+            return "Use a Hash Map or Frequency Table to trade O(N) auxiliary space for O(N) linear time, eliminating quadratic nested loops."
+        if any(t in topics_lower for t in ["dynamic programming", "recursion"]):
+            return "Apply Dynamic Programming with memoization or tabulation to eliminate redundant overlapping subproblems and achieve linear runtime."
+        return "Optimize runtime complexity to O(N) or O(N log N) using sorting, two pointers, or balanced data structures."
+
+    if any(t in topics_lower for t in ["dynamic programming", "memoization"]):
+        return "Transition top-down memoization to bottom-up DP with state compression to reduce space complexity to O(1) auxiliary space."
+
+    if any(t in topics_lower for t in ["tree", "graph", "depth-first search"]):
+        return "Use an iterative stack or queue approach to avoid potential call-stack overflow on deep tree/graph structures."
+
+    return f"Optimize {last_step.approach} by using in-place operations and early-exit conditions to reduce constant factor overhead."
+
+
+def _derive_similar_problems(problem: Problem) -> List[str]:
+    slug = (problem.slug or "").lower()
+    if slug in SIMILAR_PROBLEMS_CATALOG:
+        return SIMILAR_PROBLEMS_CATALOG[slug]
+    
+    for t in (problem.topics or []):
+        t_lower = t.lower()
+        if t_lower in TOPIC_SIMILAR_FALLBACKS:
+            return [p for p in TOPIC_SIMILAR_FALLBACKS[t_lower] if p.lower() != problem.title.lower()][:3]
+            
+    return ["Two Sum", "Climbing Stairs", "Reverse Linked List"]
 
 
 class EvolutionService:
@@ -46,6 +122,8 @@ class EvolutionService:
                 total_attempts=0,
                 steps=[],
                 evolution_narrative="No submission attempts recorded yet.",
+                better_approach=_derive_better_approach(problem, []),
+                similar_problems=_derive_similar_problems(problem),
             )
 
         # Sort chronologically
@@ -94,6 +172,9 @@ class EvolutionService:
                 )
                 breakthrough = f"Iteratively debugged edge cases and constraints to reach {target_step.status}."
 
+        better_app = _derive_better_approach(problem, steps)
+        similar_probs = _derive_similar_problems(problem)
+
         return EvolutionSummary(
             problem_id=problem.id,
             problem_title=problem.title,
@@ -101,4 +182,6 @@ class EvolutionService:
             steps=steps,
             evolution_narrative=narrative,
             key_breakthrough=breakthrough,
+            better_approach=better_app,
+            similar_problems=similar_probs,
         )

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { ExternalLink, X } from "lucide-react";
+import { ExternalLink, Sparkles, Target, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -260,10 +260,36 @@ export function ProblemDrawer({
                 eyebrow="Solution evolution"
                 meta={`${evolution.totalAttempts} attempt${evolution.totalAttempts === 1 ? "" : "s"}`}
               />
-              <div className="px-5 py-4">
+              <div className="px-5 py-4 flex flex-col gap-3">
                 <p className="text-body-sm text-text-secondary">{evolution.evolutionNarrative}</p>
                 {evolution.keyBreakthrough ? (
-                  <p className="mt-2 text-caption text-accent">{evolution.keyBreakthrough}</p>
+                  <p className="text-caption text-accent">{evolution.keyBreakthrough}</p>
+                ) : null}
+
+                {evolution.betterApproach ? (
+                  <div className="rounded-md bg-accent-soft/20 p-3 border border-accent-border/40 mt-1">
+                    <div className="flex items-center gap-1.5 text-accent font-technical-sm font-semibold mb-1">
+                      <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                      Better Approach Recommendation
+                    </div>
+                    <p className="text-body-sm text-text-secondary">{evolution.betterApproach}</p>
+                  </div>
+                ) : null}
+
+                {evolution.similarProblems && evolution.similarProblems.length > 0 ? (
+                  <div className="mt-1">
+                    <div className="flex items-center gap-1.5 text-text-muted font-technical-sm mb-1.5 font-medium">
+                      <Target className="h-3.5 w-3.5 text-accent" aria-hidden="true" />
+                      Similar Problems to Solve
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {evolution.similarProblems.map((prob) => (
+                        <Badge key={prob} variant="neutral" className="text-xs">
+                          {prob}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
                 ) : null}
               </div>
             </>

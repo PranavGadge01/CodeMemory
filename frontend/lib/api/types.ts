@@ -307,6 +307,8 @@ export interface SolutionEvolutionDTO {
   steps: EvolutionStepDTO[];
   evolutionNarrative: string;
   keyBreakthrough: string | null;
+  betterApproach?: string | null;
+  similarProblems?: string[];
 }
 
 export interface KnowledgeClusterDTO {

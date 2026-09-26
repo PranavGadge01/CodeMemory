@@ -315,6 +315,7 @@ export function AccountSection() {
                   onChange={(event) => setSession(event.target.value)}
                   className="input input-sm mt-1 w-full"
                   required
+                  suppressHydrationWarning
                 />
               </label>
               <label className="block text-caption font-medium text-text-secondary" htmlFor="leetcode-csrftoken">
@@ -327,6 +328,7 @@ export function AccountSection() {
                   onChange={(event) => setCsrfToken(event.target.value)}
                   className="input input-sm mt-1 w-full"
                   required
+                  suppressHydrationWarning
                 />
               </label>
               <label className="flex items-start gap-2 text-caption text-text-secondary">
@@ -335,6 +337,7 @@ export function AccountSection() {
                   checked={consentGiven}
                   onChange={(event) => setConsentGiven(event.target.checked)}
                   className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-accent)]"
+                  suppressHydrationWarning
                 />
                 <span>I understand these credentials let CodeMemory access my full LeetCode submission history.</span>
               </label>

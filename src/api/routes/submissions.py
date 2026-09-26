@@ -28,7 +28,7 @@ def _get_all_submissions(service: CodeMemoryService) -> List[Submission]:
 @router.get("/submissions", response_model=SubmissionListOut)
 def list_submissions(
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
+    page_size: int = Query(20, ge=1, le=1000),
     language: Optional[str] = None,
     status: Optional[str] = None,
     problem: Optional[str] = None,

@@ -1,3 +1,5 @@
+"use client";
+
 import * as React from "react";
 import Link from "next/link";
 import { Search, X, FileText, Code, BookOpen } from "lucide-react";
@@ -17,6 +19,10 @@ export default function SearchPage({
 }) {
   const raw = React.use(searchParams);
   const initialQuery = typeof raw.q === "string" ? raw.q : "";
+  return <SearchPageContent key={initialQuery} initialQuery={initialQuery} />;
+}
+
+function SearchPageContent({ initialQuery }: { initialQuery: string }) {
   const [query, setQuery] = React.useState(initialQuery);
   const [results, setResults] = React.useState<SearchResult[]>([]);
   const [loading, setLoading] = React.useState(initialQuery.length > 0);
@@ -32,9 +38,6 @@ export default function SearchPage({
     let cancelled = false;
 
     const timer = setTimeout(() => {
-      setLoading(true);
-      setError(null);
-
       search(trimmed, 50)
         .then((data) => {
           if (!cancelled) {
@@ -71,7 +74,12 @@ export default function SearchPage({
         <div className="max-w-2xl">
           <SearchInput
             value={query}
-            onChange={(val) => setQuery(val.slice(0, MAX_QUERY_LENGTH))}
+            onChange={(val) => {
+              setQuery(val.slice(0, MAX_QUERY_LENGTH));
+              setResults([]);
+              setError(null);
+              setLoading(val.trim().length > 0);
+            }}
             placeholder="Search problems, submissions… (⌘K)"
             autoFocus
           />

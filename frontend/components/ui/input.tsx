@@ -9,6 +9,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
       <input
         ref={ref}
         type={type}
+        suppressHydrationWarning
         className={cn(
           "h-9 w-full rounded-md border border-border bg-surface px-3 text-body-md text-text-primary",
           "placeholder:text-text-faint",
@@ -32,6 +33,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     return (
       <textarea
         ref={ref}
+        suppressHydrationWarning
         className={cn(
           "w-full rounded-md border border-border bg-surface px-3 py-2 text-body-md text-text-primary",
           "placeholder:text-text-faint",
