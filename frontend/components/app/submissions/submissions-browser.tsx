@@ -274,7 +274,7 @@ export function SubmissionsBrowser({
                 <Td mono className="max-w-[170px]">
                   {problem.slug ? (
                     <Link
-                      href={`/submissions/${submission.id}`}
+                      href={`/submissions?id=${encodeURIComponent(submission.id)}`}
                       title={`Open submission ${submission.id}`}
                       className="press block truncate text-body-sm font-medium text-text-primary hover:text-accent"
                     >
