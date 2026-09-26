@@ -14,7 +14,6 @@ from codememory.connectors.leetcode.errors import LeetCodeError
 from codememory.connectors.leetcode.mapper import LeetCodeMapper
 from codememory.connectors.leetcode.vault import CredentialVault
 from codememory.domain.enums import SubmissionStatus
-from codememory.domain.exceptions import ProblemNotFoundError
 from codememory.domain.models import generate_slug
 
 logger = logging.getLogger(__name__)
@@ -63,6 +62,21 @@ class AuthenticatedSyncOrchestrator:
             "records_failed": 0,
             "code_fetched": 0,
             "code_failed": 0,
+            "pages_fetched": 0,
+            "raw_records_discovered": 0,
+            "records_parsed": 0,
+            "records_mapped": 0,
+            "records_failed_to_parse": 0,
+            "records_failed_to_map": 0,
+            "records_failed_storage": 0,
+            "records_skipped_duplicate": 0,
+            "records_updated": 0,
+            "code_fetch_attempted": 0,
+            "offsets_per_page": [],
+            "raw_records_per_page": [],
+            "parsed_records_per_page": [],
+            "has_next_per_page": [],
+            "final_offset": 0,
             "started_at": None,
             "finished_at": None,
             "status": SyncState.IDLE,
@@ -113,9 +127,9 @@ class AuthenticatedSyncOrchestrator:
                 if not conn or conn.status != AccountStatus.CONNECTED:
                     raise ValueError("No connected LeetCode account found")
                 username = conn.username
-                logger.info(f"Using username from connected account: {username}")
+                logger.info("Using the connected LeetCode account")
             else:
-                logger.info(f"Using provided username: {username}")
+                logger.info("Using the requested LeetCode account")
 
             # Step 4.5: Load checkpoint for resume capability
             checkpoint_offset = 0
@@ -124,12 +138,12 @@ class AuthenticatedSyncOrchestrator:
             if conn:
                 checkpoint_offset, checkpoint_username = self.load_checkpoint(conn)
                 if checkpoint_offset > 0:
-                    logger.info(f"Resuming sync from checkpoint offset: {checkpoint_offset} for user {checkpoint_username}")
+                    logger.info("Resuming sync from checkpoint offset: %s", checkpoint_offset)
                 else:
                     logger.info("No checkpoint found, starting from beginning")
 
             # Step 5: Fetch submissions page by page with checkpointing
-            logger.info(f"Fetching all submissions for user: {username} starting from offset: {checkpoint_offset}")
+            logger.info("Fetching submissions starting from offset: %s", checkpoint_offset)
 
             # Initialize pagination variables
             offset = checkpoint_offset
@@ -149,25 +163,56 @@ class AuthenticatedSyncOrchestrator:
                     offset=offset,
                 )
 
+                page_diagnostics = getattr(client, "last_page_diagnostics", {})
+                if not isinstance(page_diagnostics, dict):
+                    page_diagnostics = {}
+                raw_count = int(page_diagnostics.get("raw_count", len(page_submissions)))
+                parsed_count = int(page_diagnostics.get("parsed_count", len(page_submissions)))
+                parse_failures = int(page_diagnostics.get("parse_failures", max(0, raw_count - parsed_count)))
+                self.stats["pages_fetched"] += 1
+                self.stats["raw_records_discovered"] += raw_count
+                self.stats["records_discovered"] += raw_count
+                self.stats["records_parsed"] += parsed_count
+                self.stats["records_failed_to_parse"] += parse_failures
+                self.stats["records_failed"] += parse_failures
+                self.stats["raw_records_per_page"].append(raw_count)
+                self.stats["parsed_records_per_page"].append(parsed_count)
+                self.stats["has_next_per_page"].append(bool(has_next))
+                self.stats["offsets_per_page"].append(offset)
+
                 logger.info(f"Fetched {len(page_submissions)} submissions from page (offset={offset})")
+                failures_before_page = self.stats["records_failed"] - parse_failures
 
                 # Process all submissions from this page
                 for index, raw_submission in enumerate(page_submissions):
                     logger.debug(f"Processing submission {index+1}/{len(page_submissions)}: {raw_submission.id}")
-                    self.stats["records_discovered"] += 1
 
                     try:
                         # Normalize through existing mapper
-                        normalized_record = self._mapper.to_normalized_record(
-                            raw_submission,
-                            source_account=username
-                        )
+                        try:
+                            normalized_record = self._mapper.to_normalized_record(
+                                raw_submission,
+                                source_account=username
+                            )
+                            self.stats["records_mapped"] += 1
+                        except Exception as mapping_error:
+                            self.stats["records_failed_to_map"] += 1
+                            self.stats["records_failed"] += 1
+                            logger.warning("Failed to map a LeetCode submission: %s", mapping_error)
+                            continue
 
                         # Check for existing submission by external LeetCode ID BEFORE
                         # code fetching. This prevents duplicate creation when
                         # submissionDetails returns null on re-sync (causing code hash
                         # to differ), and enables code-preservation logic.
                         external_id = normalized_record.submission_id
+                        if external_id and hasattr(service, "resolve_submission_id"):
+                            external_id = service.resolve_submission_id(
+                                external_id,
+                                source_provider="leetcode",
+                                source_account=username,
+                            )
+                            normalized_record.submission_id = external_id
                         existing_submission = None
                         if external_id:
                             existing_submission = service.get_submission(external_id)
@@ -177,6 +222,7 @@ class AuthenticatedSyncOrchestrator:
                         # Check if this is an accepted submission to fetch code
                         code_data = None
                         if normalized_record.status == SubmissionStatus.ACCEPTED:
+                            self.stats["code_fetch_attempted"] += 1
                             code_data = client.fetch_submission_code(raw_submission.id)
                             if code_data and code_data.get("code"):
                                 normalized_record.code = code_data["code"]
@@ -221,9 +267,8 @@ class AuthenticatedSyncOrchestrator:
                             problem_slug = normalized_record.problem_id or generate_slug(normalized_record.title)
 
                             # Ensure problem exists
-                            try:
-                                problem = service.get_problem(problem_slug)
-                            except ProblemNotFoundError:
+                            problem = service.storage.get_by_slug(problem_slug)
+                            if problem is None:
                                 # Fetch problem details from LeetCode (using public API since we don't have
                                 # question details in authenticated client yet - could extend later)
                                 from codememory.connectors.leetcode.client import LeetCodeClient
@@ -256,7 +301,13 @@ class AuthenticatedSyncOrchestrator:
 
                             # Also check hash-based duplicate as a fallback
                             if not is_duplicate and normalized_record.submission_hash:
-                                existing_by_hash = service.storage.get_by_hash(normalized_record.submission_hash)
+                                # A distinct upstream submission ID is authoritative;
+                                # identical code/timestamp does not make two records
+                                # the same LeetCode submission.
+                                if external_id:
+                                    existing_by_hash = None
+                                else:
+                                    existing_by_hash = service.storage.get_by_hash(normalized_record.submission_hash)
                                 if existing_by_hash and (existing_by_hash.source_account == username or existing_by_hash.source_account is None):
                                     if (existing_by_hash.code or "") == (normalized_record.code or ""):
                                         is_duplicate = True
@@ -290,6 +341,7 @@ class AuthenticatedSyncOrchestrator:
                                                             source_account=username,
                                                         )
                                                         service.storage.save(problem)
+                                                        self.stats["records_updated"] += 1
                                                         logger.debug(f"Updated existing submission {external_id} with newly fetched code")
                                                         break
                                                 else:
@@ -297,6 +349,7 @@ class AuthenticatedSyncOrchestrator:
                                                 break
 
                                 self.stats["records_skipped"] += 1
+                                self.stats["records_skipped_duplicate"] += 1
                                 logger.debug(f"Skipped duplicate submission {raw_submission.id}")
                                 continue
 
@@ -320,11 +373,21 @@ class AuthenticatedSyncOrchestrator:
 
                         except Exception as storage_error:
                             logger.warning(f"Failed to store submission {raw_submission.id}: {storage_error}")
+                            self.stats["records_failed_storage"] += 1
                             self.stats["records_failed"] += 1
 
                     except Exception as processing_error:
                         logger.warning(f"Error processing submission {raw_submission.id}: {processing_error}")
                         self.stats["records_failed"] += 1
+
+                # Never move a checkpoint past a page with unresolved records.
+                # Replaying this page is safe because submission IDs are
+                # idempotent, while advancing would permanently skip failures.
+                if self.stats["records_failed"] > failures_before_page:
+                    self.save_checkpoint(conn, str(offset), username)
+                    self.stats["final_offset"] = offset
+                    self.stats["status"] = SyncState.PARTIAL
+                    break
 
                 # After successfully processing the page, save checkpoint
                 # using next offset as the resume point for offset-based pagination
@@ -332,6 +395,7 @@ class AuthenticatedSyncOrchestrator:
 
                 # Prepare for next page
                 offset += LEETCODE_PAGE_SIZE
+                self.stats["final_offset"] = offset
 
                 # Rate limiting - delay between requests
                 if has_next:  # Only delay if we're going to make another request
@@ -382,6 +446,21 @@ class AuthenticatedSyncOrchestrator:
             "records_failed": 0,
             "code_fetched": 0,
             "code_failed": 0,
+            "pages_fetched": 0,
+            "raw_records_discovered": 0,
+            "records_parsed": 0,
+            "records_mapped": 0,
+            "records_failed_to_parse": 0,
+            "records_failed_to_map": 0,
+            "records_failed_storage": 0,
+            "records_skipped_duplicate": 0,
+            "records_updated": 0,
+            "code_fetch_attempted": 0,
+            "offsets_per_page": [],
+            "raw_records_per_page": [],
+            "parsed_records_per_page": [],
+            "has_next_per_page": [],
+            "final_offset": 0,
             "started_at": None,
             "finished_at": None,
             "status": SyncState.IDLE,
@@ -403,6 +482,21 @@ class AuthenticatedSyncOrchestrator:
                 "code_fetched": self.stats["code_fetched"],
                 "code_failed": self.stats["code_failed"],
                 "sync_type": "authenticated_full_history",
+                "pages_fetched": self.stats["pages_fetched"],
+                "raw_records_discovered": self.stats["raw_records_discovered"],
+                "records_parsed": self.stats["records_parsed"],
+                "records_mapped": self.stats["records_mapped"],
+                "records_failed_to_parse": self.stats["records_failed_to_parse"],
+                "records_failed_to_map": self.stats["records_failed_to_map"],
+                "records_failed_storage": self.stats["records_failed_storage"],
+                "records_skipped_duplicate": self.stats["records_skipped_duplicate"],
+                "records_updated": self.stats["records_updated"],
+                "code_fetch_attempted": self.stats["code_fetch_attempted"],
+                "offsets_per_page": list(self.stats["offsets_per_page"]),
+                "raw_records_per_page": list(self.stats["raw_records_per_page"]),
+                "parsed_records_per_page": list(self.stats["parsed_records_per_page"]),
+                "has_next_per_page": list(self.stats["has_next_per_page"]),
+                "final_offset": self.stats["final_offset"],
             }
         )
 
@@ -427,7 +521,7 @@ class AuthenticatedSyncOrchestrator:
         if last_key is not None:
             conn.metadata[self._get_checkpoint_key()] = last_key
             conn.metadata[self._get_checkpoint_username_key()] = username
-            logger.debug(f"Saved checkpoint for user {username}: {last_key}")
+            logger.debug("Saved authenticated-sync checkpoint")
         else:
             # Clear checkpoint if None
             conn.metadata.pop(self._get_checkpoint_key(), None)
@@ -451,14 +545,14 @@ class AuthenticatedSyncOrchestrator:
         # Validate that username matches current connected account (if any)
         current_conn = self._account_service.get_connection("LeetCode")
         if username and current_conn and current_conn.username != username:
-            logger.warning(f"Checkpoint username {username} doesn't match current account {current_conn.username if current_conn else 'None'}")
+            logger.warning("Checkpoint account does not match the connected account; restarting from the beginning")
             return 0, None
 
         if checkpoint_str is not None:
             try:
                 return int(checkpoint_str), username
             except (TypeError, ValueError):
-                logger.warning(f"Invalid checkpoint offset '{checkpoint_str}', starting from beginning")
+                logger.warning("Invalid checkpoint offset; starting from the beginning")
                 return 0, None
         return 0, None
 

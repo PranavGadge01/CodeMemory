@@ -20,6 +20,19 @@ export interface PaginatedResponse<T> {
   total: number;
 }
 
+export interface SubmissionSummaryDTO {
+  total: number;
+  accepted: number;
+  failed: number;
+  acceptanceRate: number;
+  problemCount: number;
+  languageCount: number;
+}
+
+export interface SubmissionListDTO extends PaginatedResponse<SubmissionDTO> {
+  summary: SubmissionSummaryDTO;
+}
+
 /* --- Analytics --------------------------------------------------------- */
 
 export interface AnalyticsOverviewDTO {

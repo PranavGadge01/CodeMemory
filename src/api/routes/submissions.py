@@ -5,8 +5,8 @@ from codememory.core.service import CodeMemoryService
 from codememory.domain.models import Submission
 
 from api.dependencies import get_service
-from api.schemas.common import PaginatedResponse
 from api.schemas.problems import SubmissionOut
+from api.schemas.submissions import SubmissionListOut
 
 router = APIRouter(tags=["submissions"])
 
@@ -25,7 +25,7 @@ def _get_all_submissions(service: CodeMemoryService) -> List[Submission]:
                     submissions.append(s)
     return submissions
 
-@router.get("/submissions", response_model=PaginatedResponse[SubmissionOut])
+@router.get("/submissions", response_model=SubmissionListOut)
 def list_submissions(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
@@ -56,15 +56,27 @@ def list_submissions(
     filtered.sort(key=lambda x: x.submitted_at, reverse=True)
     
     total = len(filtered)
+    accepted = sum(1 for submission in filtered if submission.status.value.lower() == "accepted")
+    problem_count = len({submission.problem_id for submission in filtered})
+    language_count = len({submission.language.casefold() for submission in filtered})
+    summary = {
+        "total": total,
+        "accepted": accepted,
+        "failed": total - accepted,
+        "acceptance_rate": (accepted / total * 100) if total else 0.0,
+        "problem_count": problem_count,
+        "language_count": language_count,
+    }
     start_idx = (page - 1) * page_size
     end_idx = start_idx + page_size
     items = filtered[start_idx:end_idx]
     
-    return PaginatedResponse(
+    return SubmissionListOut(
         items=[SubmissionOut(**s.model_dump()) for s in items],
         page=page,
         page_size=page_size,
-        total=total
+        total=total,
+        summary=summary,
     )
 
 @router.get("/submissions/{id}", response_model=SubmissionOut)

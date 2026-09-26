@@ -146,6 +146,10 @@ class CompositeStorage(ProblemRepository, SubmissionRepository, AttemptRepositor
         """Check idempotency hash across DuckDB repository."""
         return self.duckdb_repo.get_by_hash(submission_hash)
 
+    def get_submission_by_external_id(self, submission_id: str) -> Submission | None:
+        """Find a submission by its globally unique storage ID."""
+        return self.duckdb_repo.get_submission_by_external_id(submission_id)
+
     def list_by_problem(self, problem_id: str) -> Sequence[Submission]:
         return self.duckdb_repo.list_by_problem(problem_id)
 

@@ -20,6 +20,7 @@ import type {
   ProblemDTO,
   ProblemListItemDTO,
   SubmissionDTO,
+  SubmissionListDTO,
   RevisionQueueItemDTO,
   SolutionEvolutionDTO,
   SearchResponseDTO,
@@ -173,6 +174,7 @@ export interface SubmissionListResult {
   page: number;
   pageSize: number;
   total: number;
+  summary: SubmissionListDTO["summary"];
 }
 
 export interface SubmissionListParams {
@@ -186,7 +188,7 @@ export interface SubmissionListParams {
 export async function listSubmissions(
   params: SubmissionListParams = {},
 ): Promise<SubmissionListResult> {
-  const dto = await apiGet<PaginatedResponse<SubmissionDTO>>("/submissions", {
+  const dto = await apiGet<SubmissionListDTO>("/submissions", {
     page: params.page,
     page_size: params.pageSize,
     language: params.language,
@@ -199,6 +201,7 @@ export async function listSubmissions(
     page: dto.page,
     pageSize: dto.pageSize,
     total: dto.total,
+    summary: dto.summary,
   };
 }
 
