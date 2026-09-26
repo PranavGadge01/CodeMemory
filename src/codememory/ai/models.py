@@ -74,6 +74,8 @@ class SolutionEvolution(BaseModel):
     learning_points: List[str] = Field(default_factory=list)
     overall_summary: str
     steps: List[EvolutionStepDetail] = Field(default_factory=list)
+    better_approach: Optional[str] = Field(default=None, description="Recommended better/optimal approach or refinement")
+    similar_problems: List[str] = Field(default_factory=list, description="Recommended similar problems to practice")
     analysis_version: str = Field(default="v1", description="Version of evolution analysis prompt/schema")
 
 

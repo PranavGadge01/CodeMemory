@@ -18,6 +18,12 @@ def test_list_problems_filter_search(client):
     data = response.json()
     assert data["total"] == 0
 
+def test_list_problems_large_page_size(client):
+    response = client.get("/api/v1/problems?page=1&page_size=1000")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["pageSize"] == 1000
+
 def test_get_problem(client):
     response = client.get("/api/v1/problems/two-sum")
     assert response.status_code == 200
@@ -128,6 +134,9 @@ def test_problem_evolution_endpoint(multi_account_service):
         assert resp.status_code == 200
         data = resp.json()
         assert data["problemTitle"] == "Add Two Numbers"
+        assert "betterApproach" in data
+        assert "similarProblems" in data
+        assert isinstance(data["similarProblems"], list)
 
 
 def test_problem_evolution_account_isolation(multi_account_service):

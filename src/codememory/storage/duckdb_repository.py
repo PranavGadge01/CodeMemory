@@ -220,7 +220,8 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
                 pass
 
     def __del__(self) -> None:
-        self.close()
+        if getattr(self, "_owns_private_connection", False):
+            self.close()
 
 
     def health(self) -> bool:

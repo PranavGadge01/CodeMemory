@@ -26,3 +26,6 @@ def test_solution_evolution_summary():
     assert len(evo.steps) == 2
     assert "evolved" in evo.evolution_narrative.lower()
     assert evo.key_breakthrough is not None
+    assert evo.better_approach is not None
+    assert len(evo.similar_problems) > 0
+    assert "3Sum" in evo.similar_problems
