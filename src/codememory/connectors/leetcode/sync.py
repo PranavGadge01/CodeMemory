@@ -32,9 +32,8 @@ from codememory.domain.models import generate_slug
 
 logger = logging.getLogger(__name__)
 
-# The supported public endpoint returns a server-bounded recent window. 20 is the
-# practical bound the public API serves; asking for more does not yield more.
-DEFAULT_SYNC_LIMIT = 20
+# The public endpoint returns a recent window of submissions. Increase default bound to 100.
+DEFAULT_SYNC_LIMIT = 100
 
 # Metadata keys used to persist the local watermark inside AccountConnection.
 WATERMARK_KEY_ID = "latest_external_id"

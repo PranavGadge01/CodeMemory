@@ -554,7 +554,7 @@ class LeetCodeClient:
             "solved_hard": difficulty_counts.get("Hard", 0),
         }
 
-    def fetch_user_submissions(self, username: str, limit: int = 20) -> List[LeetCodeSubmissionRaw]:
+    def fetch_user_submissions(self, username: str, limit: int = 100) -> List[LeetCodeSubmissionRaw]:
         """Fetch recent accepted submissions via the public GraphQL query.
 
         Returns an empty list when the account has no submissions or the request

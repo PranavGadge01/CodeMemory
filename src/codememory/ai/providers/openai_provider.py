@@ -1,5 +1,3 @@
-"""OpenAI API provider implementation with structured Pydantic output validation and offline fallback."""
-
 import json
 import os
 from typing import List, Optional
@@ -279,4 +277,3 @@ class OpenAIProvider(BaseAIProvider):
                 lines.append(f"  - {lim}")
 
         return "\n".join(lines)
-

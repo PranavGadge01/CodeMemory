@@ -11,7 +11,7 @@ from codememory.ai.fallback_provider import HeuristicAIProvider
 from codememory.ai.insight_service import GroundedInsight, InsightService
 from codememory.ai.memory_service import MemoryService
 from codememory.ai.models import AIAnalysisRecord, SolutionEvolution, SubmissionAnalysis
-from codememory.ai.providers import OpenAIProvider
+from codememory.ai.providers import OpenAIProvider, Qwen3Provider, get_ai_provider
 from codememory.ai.providers.base_provider import InterpretationResult
 
 __all__ = [
@@ -36,6 +36,8 @@ __all__ = [
     "SolutionEvolution",
     "SubmissionAnalysis",
     "OpenAIProvider",
+    "Qwen3Provider",
+    "get_ai_provider",
     "compute_code_hash",
 ]
 

@@ -12,19 +12,20 @@ The AI layer is built around a pluggable provider interface (`BaseAIProvider`):
 
 ```
                      BaseAIProvider (Abstract Interface)
-                               │
-            ┌──────────────────┴──────────────────┐
-            ▼                                     ▼
-     OpenAIProvider                    HeuristicAIProvider
-  (API-backed, Structured         (Deterministic Rule/Regex AST,
-    Pydantic JSON Output)            Offline Fallback Default)
+                                │
+       ┌────────────────────────┼────────────────────────┐
+       ▼                        ▼                        ▼
+ Qwen3Provider            OpenAIProvider           HeuristicAIProvider
+(Local Qwen3 Model,      (Cloud OpenAI API,       (Deterministic Rule/Regex AST,
+ OpenAI-Compatible)       Structured Pydantic)      Offline Fallback Default)
 ```
 
-- **`BaseAIProvider`**: Defines methods for single submission analysis (`analyze_submission`), solution evolution analysis (`analyze_evolution`), and grounded QA (`answer_question`).
-- **`HeuristicAIProvider`**: Deterministic rule-based provider for offline use without requiring external API keys.
-- **`OpenAIProvider`**: API-backed provider utilizing structured JSON output mode with strict Pydantic validation.
+- **`BaseAIProvider`**: Defines methods for single submission analysis (`analyze_submission`), solution evolution analysis (`analyze_evolution`), grounded QA (`answer_question`), and structured evidence interpretation (`interpret_evidence`).
+- **`Qwen3Provider`**: Local-first provider communicating with an OpenAI-compatible local model server (e.g. Ollama, llama.cpp server, LM Studio) hosting a quantized Qwen3 model.
+- **`HeuristicAIProvider`**: Deterministic rule-based provider for offline use without requiring external API keys or local AI model servers.
+- **`OpenAIProvider`**: API-backed cloud provider utilizing structured JSON output mode with strict Pydantic validation.
 
-If no API key is set (`OPENAI_API_KEY`) or if `AI_ENABLED=false`, CodeMemory operates seamlessly in offline mode using `HeuristicAIProvider`.
+Select the provider by setting `AI_PROVIDER=qwen`, `AI_PROVIDER=openai`, or `AI_PROVIDER=heuristic`. If no key or local server is set, CodeMemory operates seamlessly in offline mode using `HeuristicAIProvider`.
 
 ---
 

@@ -71,3 +71,83 @@ class BaseAIProvider(ABC):
         """
         pass
 
+
+def serialize_evidence(evidence: "InsightEvidence") -> str:
+    """Serialize InsightEvidence into a compact, human-readable text with evidence IDs."""
+    lines: list[str] = []
+    lines.append(f"EVIDENCE BUNDLE (scope: {evidence.scope})")
+    lines.append("")
+
+    # Metrics overview
+    if evidence.metrics.overview:
+        lines.append("OVERVIEW METRICS:")
+        for item in evidence.items:
+            if item.source == "analytics.overview":
+                unit_str = f" {item.unit}" if item.unit else ""
+                lines.append(f"  [{item.evidence_id}] {item.label}: {item.value}{unit_str}")
+        lines.append("")
+
+    # Topic statistics
+    topic_items = [i for i in evidence.items if i.source.startswith("analytics.topic_stats")]
+    if topic_items:
+        lines.append("TOPIC STATISTICS:")
+        for item in topic_items:
+            unit_str = f" {item.unit}" if item.unit else ""
+            sample = f" (sample: {item.sample_size})" if item.sample_size is not None else ""
+            lines.append(f"  [{item.evidence_id}] {item.label}: {item.value}{unit_str}{sample}")
+        lines.append("")
+
+    # Difficulty statistics
+    diff_items = [i for i in evidence.items if i.source.startswith("analytics.difficulty_stats")]
+    if diff_items:
+        lines.append("DIFFICULTY STATISTICS:")
+        for item in diff_items:
+            unit_str = f" {item.unit}" if item.unit else ""
+            lines.append(f"  [{item.evidence_id}] {item.label}: {item.value}{unit_str}")
+        lines.append("")
+
+    # Comparisons
+    if evidence.comparisons:
+        lines.append("COMPARISONS:")
+        for comp in evidence.comparisons:
+            lines.append(
+                f"  [{comp.evidence_id}] {comp.label}: "
+                f"{comp.topic_rate:.1f}% vs {comp.overall_rate:.1f}% (delta: {comp.delta:+.1f}%)"
+            )
+        lines.append("")
+
+    # Patterns
+    pattern_items = [i for i in evidence.items if i.source.startswith("pattern_analyzer")]
+    if pattern_items:
+        lines.append("PATTERNS:")
+        for item in pattern_items:
+            lines.append(f"  [{item.evidence_id}] {item.label}: {item.value}")
+        lines.append("")
+
+    # AI analysis snapshots
+    ai_items = [i for i in evidence.items if i.source_type == "ai_analysis"]
+    if ai_items:
+        lines.append("AI ANALYSIS SNAPSHOTS:")
+        for item in ai_items:
+            lines.append(f"  [{item.evidence_id}] {item.label}: {item.value}")
+        lines.append("")
+
+    # Supporting problems
+    if evidence.supporting_problems:
+        lines.append("SUPPORTING PROBLEMS:")
+        for ps in evidence.supporting_problems:
+            lines.append(
+                f"  {ps.title} ({ps.difficulty}) — {ps.status}, "
+                f"{ps.total_attempts} attempts, topics: {', '.join(ps.topics)}"
+            )
+        lines.append("")
+
+    # Limitations
+    if evidence.limitations:
+        lines.append("LIMITATIONS:")
+        for lim in evidence.limitations:
+            lines.append(f"  - {lim}")
+
+    return "\n".join(lines)
+
+

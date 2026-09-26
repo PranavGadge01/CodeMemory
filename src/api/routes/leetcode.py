@@ -1,6 +1,7 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, Query
 from codememory.connectors.account.models import SyncState
 from codememory.core.service import CodeMemoryService
 from codememory.connectors.leetcode.service import LeetCodeAccountError, safe_error_message
@@ -46,12 +47,15 @@ def connect(
         raise HTTPException(status_code=503, detail="Unable to connect to LeetCode right now.")
 
 @router.post("/leetcode/sync", response_model=LeetCodeSyncResultOut)
-def sync(service: CodeMemoryService = Depends(get_service)):
+def sync(
+    limit: Optional[int] = Query(None, ge=1, le=1000),
+    service: CodeMemoryService = Depends(get_service),
+):
     """Trigger a synchronous sync with LeetCode (public sync)."""
     if not service.leetcode.is_connected():
         raise HTTPException(status_code=400, detail="LeetCode account not connected.")
     try:
-        result = service.leetcode.sync()
+        result = service.leetcode.sync(limit=limit)
         # The engine reports the records it persisted as ``records_added``; the
         # API field is named ``records_imported`` for the UI.
         return LeetCodeSyncResultOut(

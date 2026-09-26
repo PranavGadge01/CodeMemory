@@ -129,8 +129,8 @@ export function apiGet<T>(path: string, params?: Record<string, unknown>): Promi
 }
 
 /** POST a JSON body and return the parsed response. */
-export function apiPost<T>(path: string, body?: unknown): Promise<T> {
-  return request<T>(buildUrl(path), {
+export function apiPost<T>(path: string, body?: unknown, params?: Record<string, unknown>): Promise<T> {
+  return request<T>(buildUrl(path, params), {
     method: "POST",
     body: body === undefined ? undefined : JSON.stringify(body),
   });

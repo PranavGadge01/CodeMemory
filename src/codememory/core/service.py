@@ -1,5 +1,7 @@
 """Core application service API for CodeMemory."""
 
+from codememory.connectors.leetcode.scheduler import LeetCodeSyncScheduler
+from codememory.connectors.account.service import AccountService
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
@@ -29,6 +31,7 @@ from codememory.search.search_service import SearchService
 from codememory.storage.composite_repository import CompositeStorage
 from codememory.core.settings import SettingsStore, UserSettings
 from codememory.ai.fallback_provider import HeuristicAIProvider
+from codememory.ai.providers import BaseAIProvider, get_ai_provider
 from codememory.ai.evolution_service import EvolutionService, EvolutionSummary
 from codememory.ai.analyzer import AICodeAnalyzer
 from codememory.ai.memory_service import MemoryService as AIMemoryService
@@ -57,6 +60,7 @@ class CodeMemoryService:
         *,
         shared_duckdb_connection: bool = True,
         account_service: Optional["AccountService"] = None,
+        ai_provider: Optional[BaseAIProvider] = None,
     ):
         # Ensure base directories exist before storage layer initializes
         Path(base_dir).mkdir(parents=True, exist_ok=True)
@@ -93,7 +97,7 @@ class CodeMemoryService:
         self.insights_generator = InsightsGenerator(analytics_service=self.analytics_service, pattern_analyzer=self.pattern_analyzer)
 
         # Phase 5, 6, & 7 services
-        self.ai_provider = HeuristicAIProvider()
+        self.ai_provider = ai_provider or get_ai_provider()
         self.evolution_service = EvolutionService(ai_provider=self.ai_provider)
         self.ai_analyzer = AICodeAnalyzer(provider=self.ai_provider, cache_dir=base_dir)
         self.memory_service = AIMemoryService(storage=self.storage, search_service=self.search_service, ai_provider=self.ai_provider)

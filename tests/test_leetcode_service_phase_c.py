@@ -307,7 +307,7 @@ def test_gap_and_coverage_propagate_to_status(tmp_path):
     status = surface.status()
     assert status.coverage == "recent-window"
     assert status.gap_detected is True
-    assert status.window_limit == 20
+    assert status.window_limit == 100
     assert status.records_in_window == 2
     assert status.window_truncated is False
     assert status.unavailable_fields == UNAVAILABLE_FIELDS
