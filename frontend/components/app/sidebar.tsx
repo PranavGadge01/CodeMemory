@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getHealth } from "@/lib/api";
+import type { HealthDTO } from "@/lib/api/types";
 import { PRIMARY_NAV, SECONDARY_NAV, type NavItem } from "@/components/app/nav";
 import { Wordmark, WordmarkCollapsed } from "@/components/system/logo";
 
@@ -184,19 +186,46 @@ function NavRow({
 }
 
 function MemoryStatus() {
+  const [health, setHealth] = React.useState<HealthDTO | null>(null);
+  const [checked, setChecked] = React.useState(false);
+
+  React.useEffect(() => {
+    let active = true;
+    void getHealth()
+      .then((result) => {
+        if (active) setHealth(result);
+      })
+      .catch(() => {
+        if (active) setHealth(null);
+      })
+      .finally(() => {
+        if (active) setChecked(true);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const healthy = health?.storage.status === "ok";
+
   return (
     <div className="rounded-md border border-border-soft bg-surface-elevated px-3 py-3">
       <div className="flex items-center justify-between">
         <span className="eyebrow">Index</span>
-        <span className="inline-flex items-center gap-1.5 font-technical-sm text-success">
-          <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true" />
-          Ready
+        <span className={cn("inline-flex items-center gap-1.5 font-technical-sm", healthy ? "text-success" : "text-text-muted")} role="status">
+          <span className={cn("h-1.5 w-1.5 rounded-full", healthy ? "bg-success" : "bg-text-disabled")} aria-hidden="true" />
+          {!checked ? "Checking" : health ? health.storage.status : "Unavailable"}
         </span>
       </div>
-      <div className="mt-2 font-technical-sm text-text-muted">63 documents</div>
+      <div className="mt-2 font-technical-sm text-text-muted">
+        {health ? `${health.storage.problems} problems` : checked ? "Index details unavailable" : "Loading index details…"}
+      </div>
       <div className="mt-2 flex items-center justify-between text-[11px] text-text-faint">
-        <span>Last sync</span>
-        <span className="font-technical-sm">3d ago</span>
+        <span>Health check</span>
+        <span className="font-technical-sm">
+          {health ? new Date(health.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"}
+        </span>
       </div>
     </div>
   );

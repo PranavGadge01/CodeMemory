@@ -109,9 +109,25 @@ class RevisionService:
         limit: int = 10,
         topic: str | None = None,
         weights: RevisionWeights | None = None,
+        account: str | None = None,
     ) -> list[RevisionQueueItem]:
-        """Generate prioritized revision queue ordered by score descending."""
+        """Generate prioritized revision queue ordered by score descending.
+
+        When ``account`` is provided, only problems with submissions from that
+        account are included.
+        """
         problems = self.storage.list_all()
+        if account:
+            filtered: list[Problem] = []
+            for p in problems:
+                has_account_sub = any(
+                    s.source_account == account
+                    for a in p.attempts
+                    for s in a.submissions
+                )
+                if has_account_sub:
+                    filtered.append(p)
+            problems = filtered
         queue: list[RevisionQueueItem] = []
 
         if topic and topic.strip():

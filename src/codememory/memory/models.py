@@ -47,6 +47,8 @@ class MemoryDocument(BaseModel):
     source: str = "System"
     source_reference: Dict[str, Any] = Field(default_factory=dict)
     content_hash: str = ""
+    source_provider: str | None = None
+    source_account: str | None = None
 
     def model_post_init(self, __context: Any) -> None:
         if not self.content_hash and self.content:
@@ -70,6 +72,8 @@ class MemoryResult(BaseModel):
     source: str = "System"
     source_reference: Dict[str, Any] = Field(default_factory=dict)
     explanation: Optional[str] = None
+    source_provider: str | None = None
+    source_account: str | None = None
 
 
 class SimilarProblemResult(BaseModel):

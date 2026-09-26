@@ -1,0 +1,565 @@
+"""Authenticated LeetCode sync orchestrator for full-history synchronization."""
+
+from __future__ import annotations
+
+import logging
+import time
+from datetime import datetime, timezone
+from typing import Any, Optional
+
+from codememory.connectors.account.models import AccountConnection, AccountStatus, SyncState, SyncStatus
+from codememory.connectors.account.service import AccountService
+from codememory.connectors.leetcode.authenticated_client import AuthenticatedLeetCodeClient
+from codememory.connectors.leetcode.errors import LeetCodeError
+from codememory.connectors.leetcode.mapper import LeetCodeMapper
+from codememory.connectors.leetcode.vault import CredentialVault
+from codememory.domain.enums import SubmissionStatus
+from codememory.domain.models import generate_slug
+
+logger = logging.getLogger(__name__)
+
+# LeetCode's submissionList API caps the server-side page size. Requesting
+# a larger limit still returns only this many items per page, so we use it
+# for both the request and offset advancement to ensure correct length-based
+# pagination termination.
+LEETCODE_PAGE_SIZE = 20
+
+
+class AuthenticatedSyncOrchestrator:
+    """
+    Orchestrates authenticated full-history LeetCode synchronization.
+
+    Coordinates credential retrieval, authenticated API calls, submission processing,
+    deduplication, and storage using existing CodeMemory services and repositories.
+    """
+
+    def __init__(
+        self,
+        account_service: Optional[AccountService] = None,
+        credential_vault: Optional[CredentialVault] = None,
+        rate_limit_delay: float = 1.5,
+        account_identifier: str = "default",
+    ):
+        """
+        Initialize the authenticated sync orchestrator.
+
+        Args:
+            account service: Service for managing account connections
+            credential_vault: Vault for storing/retrieving encrypted credentials
+            rate_limit_delay: Delay between paginated requests in seconds
+            account_identifier: Identifier for the account (used to isolate credentials)
+        """
+        self._account_service = account_service or AccountService()
+        self._credential_vault = credential_vault or CredentialVault(account_identifier=account_identifier)
+        self._rate_limit_delay = rate_limit_delay
+        self._mapper = LeetCodeMapper()
+
+        # Statistics tracking
+        self.stats = {
+            "records_discovered": 0,
+            "records_added": 0,
+            "records_skipped": 0,
+            "records_failed": 0,
+            "code_fetched": 0,
+            "code_failed": 0,
+            "pages_fetched": 0,
+            "raw_records_discovered": 0,
+            "records_parsed": 0,
+            "records_mapped": 0,
+            "records_failed_to_parse": 0,
+            "records_failed_to_map": 0,
+            "records_failed_storage": 0,
+            "records_skipped_duplicate": 0,
+            "records_updated": 0,
+            "code_fetch_attempted": 0,
+            "offsets_per_page": [],
+            "raw_records_per_page": [],
+            "parsed_records_per_page": [],
+            "has_next_per_page": [],
+            "final_offset": 0,
+            "started_at": None,
+            "finished_at": None,
+            "status": SyncState.IDLE,
+            "error_message": None,
+        }
+
+    def sync_full_history(self, service: Any, username: Optional[str] = None) -> SyncStatus:
+        """
+        Perform authenticated full-history sync for LeetCode submissions.
+
+        Args:
+            service: CodeMemory service instance for problem/submission storage
+            username: Optional username (if not provided, will use connected account)
+
+        Returns:
+            SyncStatus object with sync results
+        """
+        # Reset statistics
+        self._reset_stats()
+        self.stats["started_at"] = datetime.now(timezone.utc)
+        self.stats["status"] = SyncState.RUNNING
+
+        logger.info("Starting authenticated LeetCode full-history sync")
+
+        try:
+            # Step 1: Retrieve credentials from vault
+            session, csrf_token = self._credential_vault.retrieve()
+            if not session or not csrf_token:
+                raise ValueError("No authenticated credentials found. Please store credentials first.")
+
+            logger.info("Retrieved credentials from vault")
+
+            # Step 2: Validate credentials format
+            if not self._credential_vault.validate(session, csrf_token):
+                raise ValueError("Stored credentials appear to be invalid")
+
+            # Step 3: Initialize authenticated client
+            client = AuthenticatedLeetCodeClient(
+                session_cookie=session,
+                csrf_token=csrf_token,
+                sleep_fn=time.sleep
+            )
+
+            # Step 4: Determine username to sync
+            if not username:
+                # Get username from connected account
+                conn = self._account_service.get_connection("LeetCode")
+                if not conn or conn.status != AccountStatus.CONNECTED:
+                    raise ValueError("No connected LeetCode account found")
+                username = conn.username
+                logger.info("Using the connected LeetCode account")
+            else:
+                logger.info("Using the requested LeetCode account")
+
+            # Step 4.5: Load checkpoint for resume capability
+            checkpoint_offset = 0
+            checkpoint_username = None
+            conn = self._account_service.get_connection("LeetCode")
+            if conn:
+                checkpoint_offset, checkpoint_username = self.load_checkpoint(conn)
+                if checkpoint_offset > 0:
+                    logger.info("Resuming sync from checkpoint offset: %s", checkpoint_offset)
+                else:
+                    logger.info("No checkpoint found, starting from beginning")
+
+            # Step 5: Fetch submissions page by page with checkpointing
+            logger.info("Fetching submissions starting from offset: %s", checkpoint_offset)
+
+            # Initialize pagination variables
+            offset = checkpoint_offset
+            has_next = True
+
+            # Process pages one at a time with checkpointing
+            while has_next:
+                # Fetch one page of submissions.
+                # LeetCode's submissionList API caps the server-side page size at
+                # LEETCODE_PAGE_SIZE submissions regardless of the requested limit.
+                # We request exactly that size so length-based pagination detection
+                # works correctly: when a page returns fewer than LEETCODE_PAGE_SIZE
+                # items, we've exhausted the result set.
+                page_submissions, has_next, _ = client.fetch_submissions_page(
+                    username=username,
+                    limit=LEETCODE_PAGE_SIZE,
+                    offset=offset,
+                )
+
+                page_diagnostics = getattr(client, "last_page_diagnostics", {})
+                if not isinstance(page_diagnostics, dict):
+                    page_diagnostics = {}
+                raw_count = int(page_diagnostics.get("raw_count", len(page_submissions)))
+                parsed_count = int(page_diagnostics.get("parsed_count", len(page_submissions)))
+                parse_failures = int(page_diagnostics.get("parse_failures", max(0, raw_count - parsed_count)))
+                self.stats["pages_fetched"] += 1
+                self.stats["raw_records_discovered"] += raw_count
+                self.stats["records_discovered"] += raw_count
+                self.stats["records_parsed"] += parsed_count
+                self.stats["records_failed_to_parse"] += parse_failures
+                self.stats["records_failed"] += parse_failures
+                self.stats["raw_records_per_page"].append(raw_count)
+                self.stats["parsed_records_per_page"].append(parsed_count)
+                self.stats["has_next_per_page"].append(bool(has_next))
+                self.stats["offsets_per_page"].append(offset)
+
+                logger.info(f"Fetched {len(page_submissions)} submissions from page (offset={offset})")
+                failures_before_page = self.stats["records_failed"] - parse_failures
+
+                # Process all submissions from this page
+                for index, raw_submission in enumerate(page_submissions):
+                    logger.debug(f"Processing submission {index+1}/{len(page_submissions)}: {raw_submission.id}")
+
+                    try:
+                        # Normalize through existing mapper
+                        try:
+                            normalized_record = self._mapper.to_normalized_record(
+                                raw_submission,
+                                source_account=username
+                            )
+                            self.stats["records_mapped"] += 1
+                        except Exception as mapping_error:
+                            self.stats["records_failed_to_map"] += 1
+                            self.stats["records_failed"] += 1
+                            logger.warning("Failed to map a LeetCode submission: %s", mapping_error)
+                            continue
+
+                        # Check for existing submission by external LeetCode ID BEFORE
+                        # code fetching. This prevents duplicate creation when
+                        # submissionDetails returns null on re-sync (causing code hash
+                        # to differ), and enables code-preservation logic.
+                        external_id = normalized_record.submission_id
+                        if external_id and hasattr(service, "resolve_submission_id"):
+                            external_id = service.resolve_submission_id(
+                                external_id,
+                                source_provider="leetcode",
+                                source_account=username,
+                            )
+                            normalized_record.submission_id = external_id
+                        existing_submission = None
+                        if external_id:
+                            existing_submission = service.get_submission(external_id)
+                            if existing_submission and existing_submission.source_account != username:
+                                existing_submission = None
+
+                        # Check if this is an accepted submission to fetch code
+                        code_data = None
+                        if normalized_record.status == SubmissionStatus.ACCEPTED:
+                            self.stats["code_fetch_attempted"] += 1
+                            code_data = client.fetch_submission_code(raw_submission.id)
+                            if code_data and code_data.get("code"):
+                                normalized_record.code = code_data["code"]
+                                # Update other fields if available
+                                if code_data.get("language"):
+                                    normalized_record.language = code_data["language"]
+                                if code_data.get("runtime"):
+                                    normalized_record.runtime_ms = code_data["runtime"]
+                                if code_data.get("memory"):
+                                    normalized_record.memory_mb = code_data["memory"]
+                                self.stats["code_fetched"] += 1
+                                logger.debug(f"Fetched code for submission {raw_submission.id}")
+                            else:
+                                self.stats["code_failed"] += 1
+                                logger.warning(f"Failed to fetch code for accepted submission {raw_submission.id}")
+
+                                # Preserve existing code if we have a stored submission
+                                # and the new fetch returned None/empty.
+                                # This prevents the hash from changing and causing a
+                                # duplicate insert on re-sync.
+                                if existing_submission and not normalized_record.code:
+                                    normalized_record.code = existing_submission.code or ""
+                                    normalized_record.language = existing_submission.language or normalized_record.language
+                                    normalized_record.runtime_ms = existing_submission.runtime_ms or normalized_record.runtime_ms
+                                    normalized_record.memory_mb = existing_submission.memory_mb or normalized_record.memory_mb
+
+                        # Recompute hash with the final code value
+                        if normalized_record.submission_hash is None or normalized_record.code:
+                            from codememory.domain.models import compute_submission_hash
+                            normalized_record.submission_hash = compute_submission_hash(
+                                problem_title=normalized_record.problem_id or normalized_record.title,
+                                language=normalized_record.language,
+                                code=normalized_record.code,
+                                submitted_at=normalized_record.timestamp,
+                                status=normalized_record.status.value,
+                                source_account=username,
+                            )
+
+                        # Store submission using existing service logic
+                        # This will handle deduplication via submission hash and external ID
+                        try:
+                            problem_slug = normalized_record.problem_id or generate_slug(normalized_record.title)
+
+                            # Ensure problem exists
+                            problem = service.storage.get_by_slug(problem_slug)
+                            if problem is None:
+                                # Fetch problem details from LeetCode (using public API since we don't have
+                                # question details in authenticated client yet - could extend later)
+                                from codememory.connectors.leetcode.client import LeetCodeClient
+                                public_client = LeetCodeClient()
+                                raw_problem = public_client.fetch_problem_details(problem_slug)
+                                if raw_problem:
+                                    problem_data = self._mapper.to_normalized_problem(raw_problem)
+                                    problem = service.add_problem(
+                                        title=problem_data["title"],
+                                        slug=problem_data["slug"],
+                                        difficulty=problem_data["difficulty"],
+                                        topics=problem_data["topics"],
+                                        url=problem_data["url"],
+                                        statement=problem_data.get("statement"),
+                                    )
+                                else:
+                                    problem = service.add_problem(
+                                        title=normalized_record.title,
+                                        slug=problem_slug,
+                                        difficulty=normalized_record.difficulty,
+                                        topics=normalized_record.topics,
+                                        url=normalized_record.url,
+                                    )
+
+                            # Dedup by external LeetCode submission ID first (primary identity).
+                            # This is stable across code-fetch failures because the ID never changes.
+                            is_duplicate = False
+                            if existing_submission:
+                                is_duplicate = True
+
+                            # Also check hash-based duplicate as a fallback
+                            if not is_duplicate and normalized_record.submission_hash:
+                                # A distinct upstream submission ID is authoritative;
+                                # identical code/timestamp does not make two records
+                                # the same LeetCode submission.
+                                if external_id:
+                                    existing_by_hash = None
+                                else:
+                                    existing_by_hash = service.storage.get_by_hash(normalized_record.submission_hash)
+                                if existing_by_hash and (existing_by_hash.source_account == username or existing_by_hash.source_account is None):
+                                    if (existing_by_hash.code or "") == (normalized_record.code or ""):
+                                        is_duplicate = True
+
+                            if is_duplicate:
+                                # If we successfully fetched new code for an existing submission,
+                                # update the stored record with the new code.
+                                if existing_submission and code_data and code_data.get("code"):
+                                    new_code = code_data["code"]
+                                    if not existing_submission.code or existing_submission.code != new_code:
+                                        # Re-fetch the problem from storage to get a mutable tree
+                                        problem = service.storage.get_by_id(problem.id) or service.storage.get_by_slug(problem.slug)
+                                        if problem:
+                                            for att in problem.attempts:
+                                                for sub_in_tree in att.submissions:
+                                                    if sub_in_tree.id == external_id:
+                                                        sub_in_tree.code = new_code
+                                                        sub_in_tree.language = code_data.get("language") or sub_in_tree.language
+                                                        if code_data.get("runtime"):
+                                                            sub_in_tree.runtime_ms = code_data["runtime"]
+                                                        if code_data.get("memory"):
+                                                            sub_in_tree.memory_mb = code_data["memory"]
+                                                        # Recompute hash with new code
+                                                        from codememory.domain.models import compute_submission_hash as _compute_hash
+                                                        sub_in_tree.submission_hash = _compute_hash(
+                                                            problem_title=problem.slug,
+                                                            language=sub_in_tree.language,
+                                                            code=sub_in_tree.code,
+                                                            submitted_at=sub_in_tree.submitted_at,
+                                                            status=sub_in_tree.status.value if sub_in_tree.status else normalized_record.status.value,
+                                                            source_account=username,
+                                                        )
+                                                        service.storage.save(problem)
+                                                        self.stats["records_updated"] += 1
+                                                        logger.debug(f"Updated existing submission {external_id} with newly fetched code")
+                                                        break
+                                                else:
+                                                    continue
+                                                break
+
+                                self.stats["records_skipped"] += 1
+                                self.stats["records_skipped_duplicate"] += 1
+                                logger.debug(f"Skipped duplicate submission {raw_submission.id}")
+                                continue
+
+                            # Add submission - this handles deduplication internally
+                            _, stored_submission = service.add_submission(
+                                problem_identifier=problem.slug,
+                                code=normalized_record.code,
+                                language=normalized_record.language,
+                                status=normalized_record.status,
+                                runtime_ms=normalized_record.runtime_ms,
+                                memory_mb=normalized_record.memory_mb,
+                                submitted_at=normalized_record.timestamp,
+                                submission_id=normalized_record.submission_id,
+                                submission_hash=normalized_record.submission_hash,
+                                source_provider="leetcode",
+                                source_account=normalized_record.source_account,
+                            )
+
+                            self.stats["records_added"] += 1
+                            logger.debug(f"Added submission {raw_submission.id}")
+
+                        except Exception as storage_error:
+                            logger.warning(f"Failed to store submission {raw_submission.id}: {storage_error}")
+                            self.stats["records_failed_storage"] += 1
+                            self.stats["records_failed"] += 1
+
+                    except Exception as processing_error:
+                        logger.warning(f"Error processing submission {raw_submission.id}: {processing_error}")
+                        self.stats["records_failed"] += 1
+
+                # Never move a checkpoint past a page with unresolved records.
+                # Replaying this page is safe because submission IDs are
+                # idempotent, while advancing would permanently skip failures.
+                if self.stats["records_failed"] > failures_before_page:
+                    self.save_checkpoint(conn, str(offset), username)
+                    self.stats["final_offset"] = offset
+                    self.stats["status"] = SyncState.PARTIAL
+                    break
+
+                # After successfully processing the page, save checkpoint
+                # using next offset as the resume point for offset-based pagination
+                self.save_checkpoint(conn, str(offset + LEETCODE_PAGE_SIZE), username)
+
+                # Prepare for next page
+                offset += LEETCODE_PAGE_SIZE
+                self.stats["final_offset"] = offset
+
+                # Rate limiting - delay between requests
+                if has_next:  # Only delay if we're going to make another request
+                    time.sleep(self._rate_limit_delay)
+
+            logger.info(f"Completed paginated fetch: {self.stats['records_discovered']} total submissions")
+
+            # Step 7: Finalize statistics
+            self.stats["finished_at"] = datetime.now(timezone.utc)
+
+            # Clear checkpoint on successful completion (no failures)
+            if conn and self.stats["records_failed"] == 0:
+                self.clear_checkpoint(conn)
+                logger.info("Cleared checkpoint after successful sync completion")
+
+            # Determine final status
+            if self.stats["records_failed"] > 0:
+                if self.stats["records_added"] == 0 and self.stats["records_discovered"] > 0:
+                    self.stats["status"] = SyncState.FAILED
+                else:
+                    self.stats["status"] = SyncState.PARTIAL
+            else:
+                self.stats["status"] = SyncState.SUCCESS
+
+            if self.stats["records_failed"] > 0:
+                self.stats["error_message"] = f"{self.stats['records_failed']} submissions failed to process"
+
+            logger.info(
+                f"Authenticated sync completed: {self.stats['records_added']} added, "
+                f"{self.stats['records_skipped']} skipped, {self.stats['records_failed']} failed"
+            )
+
+            return self._to_sync_status()
+
+        except Exception as e:
+            logger.error(f"Authenticated sync failed: {e}")
+            self.stats["finished_at"] = datetime.now(timezone.utc)
+            self.stats["status"] = SyncState.FAILED
+            self.stats["error_message"] = str(e)
+            return self._to_sync_status()
+
+    def _reset_stats(self) -> None:
+        """Reset all statistics to initial values."""
+        self.stats = {
+            "records_discovered": 0,
+            "records_added": 0,
+            "records_skipped": 0,
+            "records_failed": 0,
+            "code_fetched": 0,
+            "code_failed": 0,
+            "pages_fetched": 0,
+            "raw_records_discovered": 0,
+            "records_parsed": 0,
+            "records_mapped": 0,
+            "records_failed_to_parse": 0,
+            "records_failed_to_map": 0,
+            "records_failed_storage": 0,
+            "records_skipped_duplicate": 0,
+            "records_updated": 0,
+            "code_fetch_attempted": 0,
+            "offsets_per_page": [],
+            "raw_records_per_page": [],
+            "parsed_records_per_page": [],
+            "has_next_per_page": [],
+            "final_offset": 0,
+            "started_at": None,
+            "finished_at": None,
+            "status": SyncState.IDLE,
+            "error_message": None,
+        }
+
+    def _to_sync_status(self) -> SyncStatus:
+        """Convert internal stats to SyncStatus object."""
+        return SyncStatus(
+            started_at=self.stats["started_at"] or datetime.now(timezone.utc),
+            finished_at=self.stats["finished_at"],
+            status=self.stats["status"],
+            records_discovered=self.stats["records_discovered"],
+            records_added=self.stats["records_added"],
+            records_skipped=self.stats["records_skipped"],
+            records_failed=self.stats["records_failed"],
+            error_message=self.stats["error_message"],
+            details={
+                "code_fetched": self.stats["code_fetched"],
+                "code_failed": self.stats["code_failed"],
+                "sync_type": "authenticated_full_history",
+                "pages_fetched": self.stats["pages_fetched"],
+                "raw_records_discovered": self.stats["raw_records_discovered"],
+                "records_parsed": self.stats["records_parsed"],
+                "records_mapped": self.stats["records_mapped"],
+                "records_failed_to_parse": self.stats["records_failed_to_parse"],
+                "records_failed_to_map": self.stats["records_failed_to_map"],
+                "records_failed_storage": self.stats["records_failed_storage"],
+                "records_skipped_duplicate": self.stats["records_skipped_duplicate"],
+                "records_updated": self.stats["records_updated"],
+                "code_fetch_attempted": self.stats["code_fetch_attempted"],
+                "offsets_per_page": list(self.stats["offsets_per_page"]),
+                "raw_records_per_page": list(self.stats["raw_records_per_page"]),
+                "parsed_records_per_page": list(self.stats["parsed_records_per_page"]),
+                "has_next_per_page": list(self.stats["has_next_per_page"]),
+                "final_offset": self.stats["final_offset"],
+            }
+        )
+
+    # Checkpointing methods - using existing account metadata structure
+    def _get_checkpoint_key(self) -> str:
+        """Get the metadata key for storing checkpoint."""
+        return "auth_sync_last_key"
+
+    def _get_checkpoint_username_key(self) -> str:
+        """Get the metadata key for storing checkpoint username."""
+        return "auth_sync_last_username"
+
+    def save_checkpoint(self, conn: AccountConnection, last_key: Optional[str], username: str) -> None:
+        """
+        Save pagination checkpoint to account connection metadata.
+
+        Args:
+            conn: Account connection to store checkpoint in
+            last_key: Last pagination key from LeetCode response
+            username: Username associated with this checkpoint
+        """
+        if last_key is not None:
+            conn.metadata[self._get_checkpoint_key()] = last_key
+            conn.metadata[self._get_checkpoint_username_key()] = username
+            logger.debug("Saved authenticated-sync checkpoint")
+        else:
+            # Clear checkpoint if None
+            conn.metadata.pop(self._get_checkpoint_key(), None)
+            conn.metadata.pop(self._get_checkpoint_username_key(), None)
+        if self._account_service:
+            self._account_service.save_connection(conn)
+
+    def load_checkpoint(self, conn: AccountConnection) -> tuple[int, Optional[str]]:
+        """
+        Load pagination checkpoint from account connection metadata.
+
+        Args:
+            conn: Account connection to load checkpoint from
+
+        Returns:
+            Tuple of (offset, username) or (0, None) if no checkpoint
+        """
+        checkpoint_str = conn.metadata.get(self._get_checkpoint_key())
+        username = conn.metadata.get(self._get_checkpoint_username_key())
+
+        # Validate that username matches current connected account (if any)
+        current_conn = self._account_service.get_connection("LeetCode")
+        if username and current_conn and current_conn.username != username:
+            logger.warning("Checkpoint account does not match the connected account; restarting from the beginning")
+            return 0, None
+
+        if checkpoint_str is not None:
+            try:
+                return int(checkpoint_str), username
+            except (TypeError, ValueError):
+                logger.warning("Invalid checkpoint offset; starting from the beginning")
+                return 0, None
+        return 0, None
+
+    def clear_checkpoint(self, conn: AccountConnection) -> None:
+        """Clear pagination checkpoint from account connection metadata."""
+        conn.metadata.pop(self._get_checkpoint_key(), None)
+        conn.metadata.pop(self._get_checkpoint_username_key(), None)
+        if self._account_service:
+            self._account_service.save_connection(conn)
+        logger.debug("Cleared authentication sync checkpoint")

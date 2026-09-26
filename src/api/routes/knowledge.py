@@ -8,13 +8,18 @@ router = APIRouter(tags=["knowledge"])
 
 @router.get("/knowledge", response_model=KnowledgeOut)
 def get_knowledge(service: CodeMemoryService = Depends(get_service)):
-    """Get the knowledge graph. Clusters are deferred for V1."""
-    graph = service.get_knowledge_graph()
-    
+    """Get the knowledge graph and topic-based clusters.
+
+    When a LeetCode account is connected, only that account's data is used.
+    """
+    account = service.active_account
+    graph = service.get_knowledge_graph(account=account)
+    clusters = service.analytics_service.get_knowledge_clusters(account=account)
+
     return KnowledgeOut(
         graph={
-            "nodes": [n.model_dump() for n in graph.nodes],
-            "edges": [e.model_dump() for e in graph.edges]
+            "nodes": [n.model_dump(mode="json") for n in graph.nodes],
+            "edges": [e.model_dump(mode="json") for e in graph.edges]
         },
-        clusters=[] # Deferred: Requires business logic to compute mastery which is not in the service layer yet.
+        clusters=[c.model_dump(mode="json") for c in clusters]
     )

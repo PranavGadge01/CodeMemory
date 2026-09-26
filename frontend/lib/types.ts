@@ -37,7 +37,7 @@ export interface Submission {
   id: string;
   problemId: string;
   attemptId: string | null;
-  code: string;
+  code: string | null;
   language: Language;
   status: SubmissionStatus;
   runtimeMs: number | null;
@@ -46,6 +46,8 @@ export interface Submission {
   submittedAt: string;
   errorMessage: string | null;
   submissionHash: string;
+  sourceProvider: string | null;
+  sourceAccount: string | null;
 }
 
 export interface SolutionAnalysis {
@@ -230,7 +232,33 @@ export interface KnowledgeCluster {
   masteryPct: number;
 }
 
-/* --- Activity ----------------------------------------------------------- */
+/* --- Search ----------------------------------------------------------- */
+
+export type SearchResultType = "problem" | "submission" | "knowledge";
+
+export interface SearchResultProblem {
+  difficulty: string;
+  platform: string;
+  topics: string[];
+}
+
+export interface SearchResultSubmission {
+  language: string;
+  status: string;
+  runtimeMs: number | null;
+  memoryMb: number | null;
+  sourceProvider: string | null;
+  sourceAccount: string | null;
+  submittedAt: string | null;
+}
+
+export interface SearchResult {
+  type: SearchResultType;
+  id: string;
+  title: string;
+  slug: string;
+  metadata: Record<string, unknown>;
+}
 
 export interface ActivityDay {
   date: string;

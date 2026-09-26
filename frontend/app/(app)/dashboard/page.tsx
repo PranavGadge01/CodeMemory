@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowUpRight, Flame, Target, Clock, TrendingUp } from "lucide-react";
-import { getDashboardData } from "@/lib/data";
+import { getDashboard, toAsyncState, ApiError } from "@/lib/api";
 import { PageContainer, PageSection } from "@/components/app/page-container";
 import { PageHeader } from "@/components/app/page-header";
 import { StatStrip } from "@/components/app/stat-strip";
@@ -15,15 +15,27 @@ import { Button } from "@/components/ui/button";
 import { Reveal } from "@/components/system/reveal";
 import { getEvolutionStory } from "@/lib/mock/snippets";
 import { formatPercent, formatNumber, formatRelative } from "@/lib/format";
+import { ErrorState, PageSkeleton, EmptyDataState } from "@/components/app/data-states";
 
 export const metadata = { title: "Overview" };
 
-export default function DashboardPage() {
-  const data = getDashboardData();
-  const story = getEvolutionStory("3sum");
-  const { overview } = data;
+// The backend does not expose a dashboard-level evolution story. Keep the
+// curated sample clearly identified as an example rather than user data.
+const STORY_SLUG = "3sum";
 
+export default async function DashboardPage() {
+  const state = await toAsyncState(getDashboard());
+  const story = getEvolutionStory(STORY_SLUG);
+
+  if (state.status !== "success") {
+    return <DashboardPending state={state} />;
+  }
+
+  const data = state.data;
+  const { overview } = data;
   const recentWeeks = data.progress.slice(-8);
+  const hasActivity = data.activity.length > 0;
+  const hasTimeline = data.timeline.length > 0;
 
   return (
     <PageContainer>
@@ -31,7 +43,7 @@ export default function DashboardPage() {
         <PageHeader
           eyebrow="Overview"
           title={greeting()}
-          description="Your coding memory, as it stands today. Everything below is generated from your own submission history."
+          description="Your coding memory, as it stands today. Activity and metrics use your indexed history; the example evolution below is illustrative."
           actions={
             <>
               <Button variant="outline" size="sm" asChild>
@@ -71,8 +83,17 @@ export default function DashboardPage() {
               }
             />
             <div className="px-5 py-4">
-              <ActivityHeatmap days={data.activity} maxScale={2} />
-              <Legend total={overview.totalSubmissions} shown={totalActivity(data.activity)} />
+              {hasActivity ? (
+                <>
+                  <ActivityHeatmap days={data.activity} maxScale={2} />
+                  <Legend total={overview.totalSubmissions} shown={totalActivity(data.activity)} />
+                </>
+              ) : (
+                <EmptyDataState
+                  title="No solving activity yet"
+                  description="The heatmap fills in as submissions land. Import a history or solve a problem to see it take shape."
+                />
+              )}
             </div>
           </Surface>
         </Reveal>
@@ -90,7 +111,14 @@ export default function DashboardPage() {
                 }
               />
               <div className="px-5 py-5">
-                <Timeline events={data.timeline} limit={8} />
+                {hasTimeline ? (
+                  <Timeline events={data.timeline} limit={8} />
+                ) : (
+                  <EmptyDataState
+                    title="Nothing in the timeline yet"
+                    description="Recent attempts, notes and imports appear here once the index has submission history."
+                  />
+                )}
               </div>
             </Surface>
           </Reveal>
@@ -99,31 +127,41 @@ export default function DashboardPage() {
             <Surface className="h-full">
               <SurfaceHeader eyebrow="Queue" title="Revision signals" />
               <div className="flex flex-col">
-                {data.revisionQueue.map((item) => (
-                  <Link
-                    key={item.problemId}
-                    href={`/problems?slug=${item.slug}`}
-                    className="press group flex items-center gap-3 border-b border-border-soft px-5 py-3.5 last:border-0 hover:bg-surface-hover"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-body-sm font-medium text-text-primary">
-                        {item.title}
+                {data.revisionQueue.length > 0 ? (
+                  data.revisionQueue.map((item) => (
+                    <Link
+                      key={item.problemId}
+                      href={`/problems?slug=${item.slug}`}
+                      className="press group flex items-center gap-3 border-b border-border-soft px-5 py-3.5 last:border-0 hover:bg-surface-hover"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-body-sm font-medium text-text-primary">
+                          {item.title}
+                        </div>
+                        <div className="mt-1 flex items-center gap-2">
+                          <DifficultyBadge difficulty={item.difficulty} />
+                          <span className="font-technical-sm text-text-faint">
+                            {formatRelative(item.lastActivityAt)}
+                          </span>
+                        </div>
                       </div>
-                      <div className="mt-1 flex items-center gap-2">
-                        <DifficultyBadge difficulty={item.difficulty} />
-                        <span className="font-technical-sm text-text-faint">
-                          {formatRelative(item.lastActivityAt)}
-                        </span>
-                      </div>
-                    </div>
-                    <PriorityScore value={item.priorityScore} />
-                  </Link>
-                ))}
-                <div className="p-3">
-                  <Button variant="subtle" size="sm" className="w-full" asChild>
-                    <Link href="/revision">Review {formatNumber(data.revisionQueue.length)} more</Link>
-                  </Button>
-                </div>
+                      <PriorityScore value={item.priorityScore} />
+                    </Link>
+                  ))
+                ) : (
+                  <EmptyDataState
+                    className="py-10"
+                    title="Nothing due for revision"
+                    description="The queue fills as problems age and as failed attempts accumulate."
+                  />
+                )}
+                {data.revisionQueue.length > 0 ? (
+                  <div className="p-3">
+                    <Button variant="subtle" size="sm" className="w-full" asChild>
+                      <Link href="/revision">Review {formatNumber(data.revisionQueue.length)} more</Link>
+                    </Button>
+                  </div>
+                ) : null}
               </div>
             </Surface>
           </Reveal>
@@ -132,6 +170,11 @@ export default function DashboardPage() {
         <Reveal>
           {story ? (
             <Surface className="overflow-hidden">
+              <SurfaceHeader
+                eyebrow="Example"
+                title="How solution evolution works"
+                description="Illustrative sample story, not generated from your submission history."
+              />
               <SolutionEvolution story={story} />
             </Surface>
           ) : null}
@@ -146,14 +189,21 @@ export default function DashboardPage() {
                 action={<TrendingUp className="h-4 w-4 text-text-faint" aria-hidden="true" />}
               />
               <div className="px-5 py-5">
-                <BarChart
-                  data={recentWeeks.map((week) => ({
-                    label: week.label,
-                    value: week.totalSubmissions,
-                    hint: `${week.problemsSolved} solved · ${week.acceptedSubmissions} accepted`,
-                  }))}
-                  height={150}
-                />
+                {recentWeeks.length > 0 ? (
+                  <BarChart
+                    data={recentWeeks.map((week) => ({
+                      label: week.label,
+                      value: week.totalSubmissions,
+                      hint: `${week.problemsSolved} solved · ${week.acceptedSubmissions} accepted`,
+                    }))}
+                    height={150}
+                  />
+                ) : (
+                  <EmptyDataState
+                    title="No progress recorded"
+                    description="Weekly submission volume appears here once submissions have been indexed."
+                  />
+                )}
               </div>
             </Surface>
           </Reveal>
@@ -162,16 +212,23 @@ export default function DashboardPage() {
             <Surface className="h-full">
               <SurfaceHeader eyebrow="Languages" title="Language usage" />
               <div className="px-5 py-5">
-                <DistributionBars
-                  rows={data.languages.slice(0, 6).map((stat) => ({
-                    label: stat.language,
-                    value: stat.totalSubmissions,
-                    share: stat.usageSharePct,
-                    hint: `${formatPercent(stat.acceptanceRatePct)} accepted`,
-                  }))}
-                  max={100}
-                  formatValue={(value) => `${value.toFixed(0)}%`}
-                />
+                {data.languages.length > 0 ? (
+                  <DistributionBars
+                    rows={data.languages.slice(0, 6).map((stat) => ({
+                      label: stat.language,
+                      value: stat.totalSubmissions,
+                      share: stat.usageSharePct,
+                      hint: `${formatPercent(stat.acceptanceRatePct)} accepted`,
+                    }))}
+                    max={100}
+                    formatValue={(value) => `${value.toFixed(0)}%`}
+                  />
+                ) : (
+                  <EmptyDataState
+                    title="No language data"
+                    description="Share of submissions per language appears once a submission exists."
+                  />
+                )}
               </div>
             </Surface>
           </Reveal>
@@ -180,26 +237,35 @@ export default function DashboardPage() {
             <Surface className="h-full">
               <SurfaceHeader eyebrow="Difficulty" title="Solved by difficulty" />
               <div className="px-5 py-5">
-                <DistributionBars
-                  rows={data.difficulties.map((stat) => ({
-                    label: stat.difficulty,
-                    value: stat.solvedProblems,
-                    share: stat.totalProblems,
-                    color: difficultyColor(stat.difficulty),
-                    hint: `${stat.solvedProblems} of ${stat.totalProblems} solved`,
-                  }))}
-                  formatValue={(value) => String(value)}
-                />
-                <div className="mt-4 flex items-center gap-4 border-t border-border-soft pt-4">
-                  <span className="inline-flex items-center gap-1.5 text-caption text-text-muted">
-                    <Target className="h-3.5 w-3.5 text-accent" aria-hidden="true" />
-                    First-try acceptance {formatPercent(overview.firstAttemptAcceptanceRatePct)}
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 text-caption text-text-muted">
-                    <Clock className="h-3.5 w-3.5 text-text-faint" aria-hidden="true" />
-                    Avg {overview.avgAttemptsPerSolvedProblem.toFixed(1)} attempts / solved
-                  </span>
-                </div>
+                {data.difficulties.length > 0 ? (
+                  <>
+                    <DistributionBars
+                      rows={data.difficulties.map((stat) => ({
+                        label: stat.difficulty,
+                        value: stat.solvedProblems,
+                        share: stat.totalProblems,
+                        color: difficultyColor(stat.difficulty),
+                        hint: `${stat.solvedProblems} of ${stat.totalProblems} solved`,
+                      }))}
+                      formatValue={(value) => String(value)}
+                    />
+                    <div className="mt-4 flex items-center gap-4 border-t border-border-soft pt-4">
+                      <span className="inline-flex items-center gap-1.5 text-caption text-text-muted">
+                        <Target className="h-3.5 w-3.5 text-accent" aria-hidden="true" />
+                        First-try acceptance {formatPercent(overview.firstAttemptAcceptanceRatePct)}
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 text-caption text-text-muted">
+                        <Clock className="h-3.5 w-3.5 text-text-faint" aria-hidden="true" />
+                        Avg {overview.avgAttemptsPerSolvedProblem.toFixed(1)} attempts / solved
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <EmptyDataState
+                    title="No difficulty breakdown"
+                    description="Solved-versus-attempted per difficulty appears once problems are indexed."
+                  />
+                )}
               </div>
             </Surface>
           </Reveal>
@@ -217,35 +283,68 @@ export default function DashboardPage() {
                 </Button>
               }
             />
-            <div className="flex flex-col">
-              {data.struggles.map((struggle) => (
-                <Link
-                  key={struggle.problemId}
-                  href={`/problems?slug=${struggle.slug}`}
-                  className="press group flex items-center gap-4 border-b border-border-soft px-5 py-3.5 last:border-0 hover:bg-surface-hover"
-                >
-                  <DifficultyBadge difficulty={struggle.difficulty} />
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-body-sm font-medium text-text-primary">
-                      {struggle.title}
+            {data.struggles.length > 0 ? (
+              <div className="flex flex-col">
+                {data.struggles.map((struggle) => (
+                  <Link
+                    key={struggle.problemId}
+                    href={`/problems?slug=${struggle.slug}`}
+                    className="press group flex items-center gap-4 border-b border-border-soft px-5 py-3.5 last:border-0 hover:bg-surface-hover"
+                  >
+                    <DifficultyBadge difficulty={struggle.difficulty} />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-body-sm font-medium text-text-primary">
+                        {struggle.title}
+                      </div>
+                      <div className="mt-0.5 truncate font-technical-sm text-text-faint">
+                        {struggle.topics.join(" · ")}
+                      </div>
                     </div>
-                    <div className="mt-0.5 truncate font-technical-sm text-text-faint">
-                      {struggle.topics.join(" · ")}
+                    <div className="flex shrink-0 items-center gap-4">
+                      <span className="font-technical-sm text-text-muted">
+                        {struggle.totalAttempts} attempts
+                      </span>
+                      <span className="font-technical-sm text-error">
+                        {struggle.failedSubmissions} failed
+                      </span>
                     </div>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-4">
-                    <span className="font-technical-sm text-text-muted">
-                      {struggle.totalAttempts} attempts
-                    </span>
-                    <span className="font-technical-sm text-error">
-                      {struggle.failedSubmissions} failed
-                    </span>
-                  </div>
-                </Link>
-              ))}
-            </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <EmptyDataState
+                title="No struggles recorded"
+                description="Problems with failed submissions are listed here once they exist."
+              />
+            )}
           </Surface>
         </Reveal>
+      </PageSection>
+    </PageContainer>
+  );
+}
+
+/** Loading and error share the page's frame so the layout never reflows. */
+function DashboardPending({
+  state,
+}: {
+  state: { status: "loading" } | { status: "error"; error: ApiError };
+}) {
+  return (
+    <PageContainer>
+      <PageSection className="gap-6">
+        <PageHeader
+          eyebrow="Overview"
+          title={greeting()}
+          description="Your coding memory, as it stands today. Everything below is generated from your own submission history."
+        />
+        {state.status === "error" ? (
+          <Surface>
+            <ErrorState error={state.error} />
+          </Surface>
+        ) : (
+          <PageSkeleton />
+        )}
       </PageSection>
     </PageContainer>
   );

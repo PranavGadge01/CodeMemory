@@ -3,6 +3,8 @@
 import { Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/system/theme";
+import { useSettings } from "@/components/app/settings/settings-provider";
+import type { ThemePreference } from "@/lib/theme";
 
 /**
  * Icon-only theme switch, shared by the site navbar and the app topbar.
@@ -14,11 +16,22 @@ import { useTheme } from "@/components/system/theme";
  */
 export function ThemeToggle({ className }: { className?: string }) {
   const { toggle } = useTheme();
+  const { settings, setTheme } = useSettings();
+
+  const handleClick = async () => {
+    // Optimistically apply the theme toggle via the settings store so the
+    // backend is updated and localStorage stays in sync.
+     const next: typeof settings.theme =
+      settings.theme === "dark" ? "light" :
+      settings.theme === "light" ? "dark" : "dark";
+    await setTheme(next as ThemePreference);
+    toggle();
+  };
 
   return (
     <button
       type="button"
-      onClick={toggle}
+      onClick={handleClick}
       aria-label="Toggle theme"
       title="Toggle theme"
       className={cn(

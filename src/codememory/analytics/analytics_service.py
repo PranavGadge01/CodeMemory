@@ -1,22 +1,26 @@
 """Comprehensive AnalyticsService using DuckDB and Polars."""
 
+import copy
 from collections import defaultdict
-from datetime import datetime, timezone
-from typing import Sequence
+from datetime import datetime, timedelta, timezone
+from typing import Sequence, Optional
 
 import polars as pl
 
 from codememory.analytics.analytics_models import (
+    ActivityDay,
     AnalyticsOverview,
     AttemptStat,
     DifficultyStat,
     LanguageStat,
     ProgressOverTime,
+    StreakInfo,
     StruggleProblem,
+    TimelineEvent,
     TopicStat,
 )
 from codememory.domain.enums import SubmissionStatus
-from codememory.domain.models import Problem
+from codememory.domain.models import Problem, _ensure_utc
 from codememory.storage.composite_repository import CompositeStorage
 
 
@@ -30,10 +34,66 @@ class AnalyticsService:
         """Fetch all problems from storage."""
         return self.storage.list_all()
 
+    def _filter_problems_by_account(self, problems: Sequence[Problem], account: str | None) -> list[Problem]:
+        """Return problems with only the submissions matching ``account``.
+
+        Problems with zero matching submissions are excluded; problems with
+        some matching submissions are returned shallow-copied so the caller
+        cannot mutate the original domain objects.
+        """
+        filtered: list[Problem] = []
+        for p in problems:
+            keep = []
+            for a in p.attempts:
+                matching = [s for s in a.submissions if s.source_account == account]
+                if not matching:
+                    continue
+                a_copy = copy.copy(a)
+                a_copy.submissions = matching
+                keep.append(a_copy)
+            if not keep:
+                continue
+            p_copy = copy.copy(p)
+            p_copy.attempts = keep
+            filtered.append(p_copy)
+        return filtered
+
+    @staticmethod
+    def _has_leetcode_submissions(problems: Sequence[Problem]) -> bool:
+        """Check if any problem has LeetCode-sourced submissions."""
+        for p in problems:
+            for a in p.attempts:
+                for s in a.submissions:
+                    if s.source_provider is not None:
+                        return True
+        return False
+
+    def _scope_problems(self, problems: Sequence[Problem], account: str | None) -> list[Problem]:
+        """Apply account scoping to problems for analytics.
+
+        - When ``account`` is a string, filter to that account's submissions.
+        - When ``account`` is None and LeetCode data exists, return empty
+          (prevent cross-account aggregation).
+        - When ``account`` is None and no LeetCode data exists, return all
+          (legacy behavior for non-LeetCode data).
+        """
+        if account is not None:
+            return self._filter_problems_by_account(problems, account)
+        # No active account: if any LeetCode-sourced submissions exist,
+        # return empty to prevent cross-account data exposure.
+        if self._has_leetcode_submissions(problems):
+            return []
+        return list(problems)
+
     # 1. System Overview Statistics
-    def get_overview(self) -> AnalyticsOverview:
-        """Calculate complete system overview statistics."""
+    def get_overview(self, account: str | None = None) -> AnalyticsOverview:
+        """Calculate complete system overview statistics.
+
+        When ``account`` is provided, only submissions from that source account
+        are counted (e.g. a specific LeetCode username).
+        """
         problems = self._get_all_problems()
+        problems = self._scope_problems(problems, account)
         if not problems:
             return AnalyticsOverview()
 
@@ -103,9 +163,12 @@ class AnalyticsService:
         )
 
     # 2. Topic Statistics
-    def get_topic_statistics(self) -> list[TopicStat]:
+    def get_topic_statistics(self, account: str | None = None) -> list[TopicStat]:
         """Calculate problem solving metrics grouped by DSA topic."""
         problems = self._get_all_problems()
+        if not problems:
+            return []
+        problems = self._scope_problems(problems, account)
         if not problems:
             return []
 
@@ -164,9 +227,10 @@ class AnalyticsService:
         return stats
 
     # 3. Difficulty Statistics
-    def get_difficulty_statistics(self) -> list[DifficultyStat]:
+    def get_difficulty_statistics(self, account: str | None = None) -> list[DifficultyStat]:
         """Calculate problem solving metrics grouped by difficulty."""
         problems = self._get_all_problems()
+        problems = self._scope_problems(problems, account)
         diff_data: dict[str, dict] = defaultdict(
             lambda: {
                 "total_problems": 0,
@@ -213,15 +277,17 @@ class AnalyticsService:
         return stats
 
     # 4. Language Statistics
-    def get_language_statistics(self) -> list[LanguageStat]:
+    def get_language_statistics(self, account: str | None = None) -> list[LanguageStat]:
         """Calculate submission statistics grouped by programming language using DuckDB."""
         try:
-            query = """
+            account_filter = f" AND source_account = '{account}'" if account is not None else " AND source_provider IS NULL"
+            query = f"""
                 SELECT
                     language,
                     COUNT(id) as total_subs,
                     SUM(CASE WHEN status = 'Accepted' THEN 1 ELSE 0 END) as accepted_subs
                 FROM submissions
+                WHERE 1=1 {account_filter}
                 GROUP BY language
                 ORDER BY total_subs DESC;
             """
@@ -229,7 +295,7 @@ class AnalyticsService:
         except Exception:
             rows = []
 
-        total_all_subs = sum(r[1] for r in rows) if rows else 0
+        total_all_subs = sum(int(r[1]) for r in rows) if rows else 0
         stats: list[LanguageStat] = []
 
         for lang, total_subs, accepted_subs in rows:
@@ -248,9 +314,10 @@ class AnalyticsService:
         return stats
 
     # 5. Attempt Statistics & Progression
-    def get_attempt_statistics(self) -> AttemptStat:
+    def get_attempt_statistics(self, account: str | None = None) -> AttemptStat:
         """Calculate statistics on attempt counts and brute-force->optimized progressions."""
         problems = self._get_all_problems()
+        problems = self._scope_problems(problems, account)
         if not problems:
             return AttemptStat()
 
@@ -291,9 +358,10 @@ class AnalyticsService:
         )
 
     # 6. Progress Over Time
-    def get_progress_over_time(self, granularity: str = "day") -> list[ProgressOverTime]:
+    def get_progress_over_time(self, granularity: str = "day", account: str | None = None) -> list[ProgressOverTime]:
         """Aggragate solved problems and submission counts over time using Polars."""
         problems = self._get_all_problems()
+        problems = self._scope_problems(problems, account)
         rows: list[dict] = []
 
         for p in problems:
@@ -346,9 +414,10 @@ class AnalyticsService:
         return results
 
     # 7. Struggle Problems
-    def get_struggle_problems(self, limit: int = 10) -> list[StruggleProblem]:
+    def get_struggle_problems(self, limit: int = 10, account: str | None = None) -> list[StruggleProblem]:
         """Identify problems with high failure rates or multiple failed attempts."""
         problems = self._get_all_problems()
+        problems = self._scope_problems(problems, account)
         struggles: list[StruggleProblem] = []
 
         for p in problems:
@@ -381,3 +450,258 @@ class AnalyticsService:
         # Sort by Unsolved status first, then failed attempts, failed submissions, total attempts
         struggles.sort(key=lambda s: (s.status == "Unsolved", s.failed_attempts, s.failed_submissions, s.total_attempts), reverse=True)
         return struggles[:limit]
+
+    # 8. Activity Heatmap
+    def get_activity_heatmap(self, days: int = 90, account: str | None = None) -> list[ActivityDay]:
+        """Compute daily activity metrics from stored submissions.
+
+        Returns one entry per day that has actual activity — no fabricated zero days.
+        When ``account`` is provided, only submissions from that source account are
+        counted (e.g. a specific LeetCode username).
+        """
+        account_filter = f" AND source_account = '{account}'" if account is not None else " AND source_provider IS NULL"
+        query = f"""
+            SELECT
+                strftime(DATE(submitted_at), '%Y-%m-%d') as day,
+                COUNT(*) as total_subs,
+                SUM(CASE WHEN status = 'Accepted' THEN 1 ELSE 0 END) as accepted_subs,
+                COUNT(DISTINCT problem_id) as problems_solved
+            FROM submissions
+            WHERE DATE(submitted_at) >= (CURRENT_DATE - INTERVAL '{days}' DAY)
+            AND 1=1 {account_filter}
+            GROUP BY day
+            ORDER BY day;
+        """
+        try:
+            rows = self.storage.duckdb_repo.conn.execute(query).fetchall()
+        except Exception:
+            return []
+
+        results: list[ActivityDay] = []
+        for day_str, total_subs, accepted_subs, problems_solved in rows:
+            results.append(
+                ActivityDay(
+                    date=day_str,
+                    submissions=int(total_subs),
+                    accepted=int(accepted_subs),
+                    solved=int(problems_solved),
+                    minutes_active=0,
+                )
+            )
+        return results
+
+    # 9. Streak Calculation
+    def get_streaks(self, account: str | None = None) -> StreakInfo:
+        """Calculate current and longest streak from actual submission dates.
+
+        A day is 'active' if at least one submission was made on that UTC date.
+        Streaks are computed backwards from 'today' for the current streak.
+        When ``account`` is provided, only submissions from that source account
+        are considered.
+        """
+        account_filter = f"WHERE source_account = '{account}'" if account is not None else "WHERE source_provider IS NULL"
+        query = f"""
+            SELECT DISTINCT CAST(strftime(submitted_at, '%Y-%m-%d') AS VARCHAR) as day
+            FROM submissions
+            {account_filter}
+            ORDER BY day DESC;
+        """
+        try:
+            rows = self.storage.duckdb_repo.conn.execute(query).fetchall()
+        except Exception:
+            return StreakInfo()
+
+        if not rows:
+            return StreakInfo()
+
+        active_dates: set[str] = set()
+        for (day_str,) in rows:
+            if isinstance(day_str, str):
+                active_dates.add(day_str)
+
+        today = datetime.now(timezone.utc).date()
+        sorted_dates = sorted(
+            (datetime.strptime(d, "%Y-%m-%d").date() for d in active_dates),
+            reverse=True,
+        )
+
+        if not sorted_dates:
+            return StreakInfo()
+
+        # Compute current streak (consecutive days ending at the most recent active date)
+        current = 0
+        for i in range(len(sorted_dates)):
+            expected_date = sorted_dates[0] - timedelta(days=i)
+            if expected_date.isoformat() in active_dates:
+                current = i + 1
+            else:
+                break
+
+        # Compute longest streak
+        longest = 1
+        current_run = 1
+        for i in range(1, len(sorted_dates)):
+            prev = sorted_dates[i - 1]
+            curr = sorted_dates[i]
+            if (prev - curr).days == 1:
+                current_run += 1
+                longest = max(longest, current_run)
+            else:
+                current_run = 1
+
+        # Active days in last 30 days
+        cutoff = today - timedelta(days=29)
+        active_last_30 = sum(
+            1 for d in active_dates
+            if datetime.strptime(d, "%Y-%m-%d").date() >= cutoff
+        )
+
+        return StreakInfo(
+            current_streak_days=current,
+            longest_streak_days=longest,
+            active_days_last_30=active_last_30,
+        )
+
+    # 10. Timeline Events
+    def get_timeline_events(self, limit: int = 14, account: str | None = None) -> list[TimelineEvent]:
+        """Derive chronological timeline events from actual stored data.
+
+        Event types:
+        - 'solved': first accepted submission for a problem
+        - 'attempted': first submission for a problem
+        - 'learned': first note created on a problem
+        - 'imported': problem creation event (when a problem was added)
+
+        When ``account`` is provided, only submissions from that source account
+        are considered for solved/attempted events.
+        """
+        events: list[TimelineEvent] = []
+
+        account_filter = f"WHERE source_account = '{account}'" if account is not None else "WHERE source_provider IS NULL"
+        query = f"""
+            SELECT id, submitted_at, status, problem_id, language
+            FROM submissions
+            {account_filter}
+            ORDER BY submitted_at ASC;
+        """
+        try:
+            rows = self.storage.duckdb_repo.conn.execute(query).fetchall()
+        except Exception:
+            return []
+
+        # Load problems to get slug/title mappings
+        problems = self._get_all_problems()
+        scoped = self._scope_problems(problems, account)
+        problem_map: dict[str, Problem] = {p.id: p for p in scoped}
+
+        # Track first events for each problem
+        first_submission: dict[str, str] = {}  # problem_id -> submission_id
+        accepted_seen: dict[str, str] = {}  # problem_id -> submission_id
+
+        for sub_id, submitted_at, status, problem_id, language in rows:
+            if problem_id not in problem_map:
+                continue
+
+            p = problem_map[problem_id]
+            submitted_dt = _ensure_utc(submitted_at)
+
+            # First submission = 'attempted' event
+            if problem_id not in first_submission:
+                first_submission[problem_id] = sub_id
+                status_str = str(status) if not hasattr(status, "value") else status.value
+                events.append(
+                    TimelineEvent(
+                        id=f"sub_{sub_id}",
+                        kind="attempted",
+                        title=f"Attempted {p.title}",
+                        detail=f"Started work on {p.title} ({status_str})",
+                        problem_id=problem_id,
+                        problem_slug=p.slug,
+                        language=language,
+                        occurred_at=submitted_dt,
+                    )
+                )
+
+            # First accepted = 'solved' event
+            status_str = str(status) if not hasattr(status, "value") else status.value
+            if status_str == SubmissionStatus.ACCEPTED.value and problem_id not in accepted_seen:
+                accepted_seen[problem_id] = sub_id
+                events.append(
+                    TimelineEvent(
+                        id=f"solved_{sub_id}",
+                        kind="solved",
+                        title=f"Solved {p.title}",
+                        detail=f"Accepted solution in {language}",
+                        problem_id=problem_id,
+                        problem_slug=p.slug,
+                        language=language,
+                        occurred_at=submitted_dt,
+                    )
+                )
+
+        # Add problem import events (scoped to active account)
+        for p in scoped:
+            events.append(
+                TimelineEvent(
+                    id=f"imported_{p.id}",
+                    kind="imported",
+                    title=f"Added {p.title}",
+                    detail="Problem imported into CodeMemory",
+                    problem_id=p.id,
+                    problem_slug=p.slug,
+                    occurred_at=p.created_at,
+                )
+            )
+
+        # Sort by date (most recent first) and limit
+        events.sort(key=lambda e: e.occurred_at, reverse=True)
+        return events[:limit]
+
+    # 11. Knowledge Clusters
+    def get_knowledge_clusters(self, account: str | None = None) -> list:
+        """Build knowledge clusters from topic-based problem groupings.
+
+        Clusters are formed by grouping problems that share the same primary topic.
+        Each cluster aggregates mastery based on solved problems within that topic.
+
+        When ``account`` is provided, only problems with submissions from that
+        account are included in the clusters.
+        """
+        from codememory.analytics.analytics_models import KnowledgeCluster
+        from codememory.domain.models import Problem
+
+        problems = self._get_all_problems()
+        if not problems:
+            return []
+        problems = self._scope_problems(problems, account)
+        if not problems:
+            return []
+
+        # Group problems by their topics
+        topic_problems: dict[str, list[Problem]] = defaultdict(list)
+        for p in problems:
+            topics = p.topics if p.topics else ["Uncategorized"]
+            for topic in topics:
+                clean_topic = topic.strip()
+                if clean_topic:
+                    topic_problems[clean_topic].append(p)
+
+        clusters: list[KnowledgeCluster] = []
+        for topic_name in sorted(topic_problems.keys()):
+            topic_problems_list = topic_problems[topic_name]
+            solved = sum(1 for p in topic_problems_list if p.latest_accepted_submission is not None)
+            total = len(topic_problems_list)
+            mastery = int((solved / total * 100)) if total > 0 else 0
+
+            clusters.append(
+                KnowledgeCluster(
+                    id=f"cluster_{topic_name.lower().replace(' ', '_').replace('+', 'and')}",
+                    title=topic_name,
+                    description=f"{solved}/{total} problems solved",
+                    topic_id=topic_name,
+                    problem_ids=[p.id for p in topic_problems_list],
+                    mastery_pct=mastery,
+                )
+            )
+
+        return clusters

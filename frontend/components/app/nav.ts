@@ -6,6 +6,7 @@ import {
   Network,
   RotateCw,
   Settings,
+  Search,
   type LucideIcon,
 } from "lucide-react";
 
@@ -24,6 +25,7 @@ export const PRIMARY_NAV: NavItem[] = [
   { label: "Analytics", href: "/analytics", icon: ChartColumnBig, shortLabel: "Analytics" },
   { label: "Knowledge", href: "/knowledge", icon: Network, shortLabel: "Knowledge" },
   { label: "Revision", href: "/revision", icon: RotateCw, shortLabel: "Revision" },
+  { label: "Search", href: "/search", icon: Search, shortLabel: "Search" },
 ];
 
 export const SECONDARY_NAV: NavItem[] = [

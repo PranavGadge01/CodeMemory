@@ -50,7 +50,7 @@ export default function HomePage() {
             <div className="flex flex-col">
               <span className="eyebrow flex items-center gap-2">
                 <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" />
-                Your coding memory
+                Product preview · example data
               </span>
 
               <h1
@@ -85,6 +85,10 @@ export default function HomePage() {
                   <Link href="#evolution">See how it works</Link>
                 </Button>
               </div>
+
+              <p className="mt-3 max-w-[52ch] text-caption text-text-faint">
+                The charts, graph, stories, and headline metrics on this page are illustrative samples. Open the workspace to view data from your local backend.
+              </p>
 
               <div className="mt-12 flex flex-wrap items-baseline gap-x-8 gap-y-3 border-t border-border-soft pt-6">
                 <Stat value={formatNumber(overview.acceptedProblems)} label="problems solved" />

@@ -567,6 +567,8 @@ function buildAttempts(
       submittedAt,
       errorMessage: null,
       submissionHash: hashId(`${problem.slug}:${language}:${status}:${submittedAt}`),
+      sourceProvider: "LeetCode",
+      sourceAccount: null,
     };
     submission.attemptId = `attempt_${hashId(problemId + attemptNumber)}`;
 
