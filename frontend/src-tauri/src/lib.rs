@@ -1,3 +1,7 @@
+mod sidecar;
+
+use tauri::Manager;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
@@ -9,7 +13,17 @@ pub fn run() {
             .build(),
         )?;
       }
+
+      sidecar::start(app.handle())?;
+
       Ok(())
+    })
+    .on_window_event(|window, event| {
+      if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+        sidecar::stop(window.app_handle());
+        api.prevent_close();
+        window.app_handle().exit(0);
+      }
     })
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

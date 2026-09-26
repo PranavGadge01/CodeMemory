@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Search, X, FileText, Code, BookOpen } from "lucide-react";
 import { search } from "@/lib/api";
@@ -8,21 +9,18 @@ import { PageContainer, PageSection } from "@/components/app/page-container";
 import { PageHeader } from "@/components/app/page-header";
 import { DifficultyBadge, StatusBadge } from "@/components/ui/badges";
 import { SearchInput } from "@/components/ui/search-input";
+import { PageSkeleton } from "@/components/app/data-states";
 import type { Difficulty, SubmissionStatus, SearchResult } from "@/lib/types";
 
 const MAX_QUERY_LENGTH = 200;
 
-export default function SearchPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ q?: string | string[]; [key: string]: string | string[] | undefined }>;
-}) {
-  const raw = React.use(searchParams);
-  const initialQuery = typeof raw.q === "string" ? raw.q : "";
-  return <SearchPageContent key={initialQuery} initialQuery={initialQuery} />;
+export default function SearchPage() {
+  return <React.Suspense fallback={<PageContainer><PageSection><PageSkeleton /></PageSection></PageContainer>}><SearchContent /></React.Suspense>;
 }
 
-function SearchPageContent({ initialQuery }: { initialQuery: string }) {
+function SearchContent() {
+  const searchParams = useSearchParams();
+  const initialQuery = searchParams.get("q") ?? "";
   const [query, setQuery] = React.useState(initialQuery);
   const [results, setResults] = React.useState<SearchResult[]>([]);
   const [loading, setLoading] = React.useState(initialQuery.length > 0);
@@ -38,6 +36,9 @@ function SearchPageContent({ initialQuery }: { initialQuery: string }) {
     let cancelled = false;
 
     const timer = setTimeout(() => {
+      setLoading(true);
+      setError(null);
+
       search(trimmed, 50)
         .then((data) => {
           if (!cancelled) {
@@ -74,12 +75,7 @@ function SearchPageContent({ initialQuery }: { initialQuery: string }) {
         <div className="max-w-2xl">
           <SearchInput
             value={query}
-            onChange={(val) => {
-              setQuery(val.slice(0, MAX_QUERY_LENGTH));
-              setResults([]);
-              setError(null);
-              setLoading(val.trim().length > 0);
-            }}
+            onChange={(val) => setQuery(val.slice(0, MAX_QUERY_LENGTH))}
             placeholder="Search problems, submissions… (⌘K)"
             autoFocus
           />
@@ -189,7 +185,7 @@ function SubmissionRow({ result, query }: { result: SearchResult; query: string 
   };
   return (
     <Link
-      href={`/submissions/${encodeURIComponent(result.id)}`}
+      href={`/submissions?id=${encodeURIComponent(result.id)}`}
       className="press flex items-center justify-between gap-4 border-b border-border-soft px-4 py-3 last:border-0 hover:bg-surface-hover"
     >
       <div className="min-w-0 flex-1">

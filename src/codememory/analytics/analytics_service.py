@@ -507,7 +507,12 @@ class AnalyticsService:
             ORDER BY day DESC;
         """
         try:
-            rows = self.storage.duckdb_repo.conn.execute(query).fetchall()
+            # Analytics queries share the pooled DuckDB connection with the
+            # repository and other concurrent API requests. Keep the execute
+            # and fetch together under its connection lock so another query
+            # cannot replace the result set between them.
+            with self.storage.duckdb_repo._lock:
+                rows = self.storage.duckdb_repo.conn.execute(query).fetchall()
         except Exception:
             return StreakInfo()
 
@@ -515,7 +520,11 @@ class AnalyticsService:
             return StreakInfo()
 
         active_dates: set[str] = set()
-        for (day_str,) in rows:
+        # DuckDB returns a tuple for each row. Read the selected day by index
+        # instead of destructuring the whole row so schema/query additions do
+        # not turn a harmless extra column into an unpacking failure.
+        for row in rows:
+            day_str = row[0]
             if isinstance(day_str, str):
                 active_dates.add(day_str)
 

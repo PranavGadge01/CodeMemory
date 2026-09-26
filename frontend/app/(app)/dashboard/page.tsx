@@ -1,6 +1,9 @@
+"use client";
+
+import * as React from "react";
 import Link from "next/link";
 import { ArrowUpRight, Flame, Target, Clock, TrendingUp } from "lucide-react";
-import { getDashboard, toAsyncState, ApiError } from "@/lib/api";
+import { getDashboard, ApiError } from "@/lib/api";
 import { PageContainer, PageSection } from "@/components/app/page-container";
 import { PageHeader } from "@/components/app/page-header";
 import { StatStrip } from "@/components/app/stat-strip";
@@ -17,14 +20,26 @@ import { getEvolutionStory } from "@/lib/mock/snippets";
 import { formatPercent, formatNumber, formatRelative } from "@/lib/format";
 import { ErrorState, PageSkeleton, EmptyDataState } from "@/components/app/data-states";
 
-export const metadata = { title: "Overview" };
-
 // The backend does not expose a dashboard-level evolution story. Keep the
 // curated sample clearly identified as an example rather than user data.
 const STORY_SLUG = "3sum";
 
-export default async function DashboardPage() {
-  const state = await toAsyncState(getDashboard());
+export default function DashboardPage() {
+  const [state, setState] = React.useState<
+    | { status: "loading" }
+    | { status: "success"; data: Awaited<ReturnType<typeof getDashboard>> }
+    | { status: "error"; error: ApiError }
+  >({ status: "loading" });
+
+  React.useEffect(() => {
+    let cancelled = false;
+    getDashboard().then((data) => {
+      if (!cancelled) setState({ status: "success", data });
+    }).catch((error: unknown) => {
+      if (!cancelled) setState({ status: "error", error: error instanceof ApiError ? error : new ApiError("Could not load dashboard data.", "ERROR", 0) });
+    });
+    return () => { cancelled = true; };
+  }, []);
   const story = getEvolutionStory(STORY_SLUG);
 
   if (state.status !== "success") {

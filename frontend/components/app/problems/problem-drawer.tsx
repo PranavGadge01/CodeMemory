@@ -401,7 +401,7 @@ function AttemptRow({ attempt }: { attempt: Attempt }) {
             .map((sub) => (
               <Link
                 key={sub.id}
-                href={`/submissions/${sub.id}`}
+                href={`/submissions?id=${encodeURIComponent(sub.id)}`}
                 className="press flex items-center justify-between gap-3 rounded-md px-3 py-1.5 font-technical-sm text-text-secondary hover:bg-surface-hover hover:text-text-primary"
               >
                 <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">

@@ -1,3 +1,4 @@
+import argparse
 import logging
 from contextlib import asynccontextmanager
 from typing import Optional
@@ -84,13 +85,39 @@ def create_app(service: Optional[CodeMemoryService] = None) -> FastAPI:
 
 
 def main() -> None:
-    """Entry point for ``codememory-api`` console script."""
+    """Entry point for ``codememory-api`` console script and Windows sidecar.
+
+    Supports optional ``--host`` and ``--port`` CLI arguments that override
+    ``CODEMEMORY_API_HOST`` / ``CODEMEMORY_API_PORT`` environment variables.
+    When no CLI args are given, settings fall back to env vars (set by
+    ``api.config.Settings`` at import time).
+    """
     import uvicorn
 
+    parser = argparse.ArgumentParser(
+        prog="codememory-api",
+        description="CodeMemory FastAPI sidecar",
+    )
+    parser.add_argument(
+        "--host",
+        default=None,
+        help="Bind address (default: 127.0.0.1 or CODEMEMORY_API_HOST)",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=None,
+        help="Bind port (default: 8000 or CODEMEMORY_API_PORT)",
+    )
+    args = parser.parse_args()
+
+    host = args.host if args.host is not None else settings.host
+    port = args.port if args.port is not None else settings.port
+
     uvicorn.run(
-        "api.app:create_app",
-        host=settings.host,
-        port=settings.port,
+        create_app,
+        host=host,
+        port=port,
         log_level=settings.log_level,
     )
 

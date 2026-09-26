@@ -1,6 +1,9 @@
+"use client";
+
+import * as React from "react";
 import Link from "next/link";
 import { ArrowUpRight, Network } from "lucide-react";
-import { getKnowledge, getProblem, listProblems, toAsyncState } from "@/lib/api";
+import { getKnowledge, getProblem, listProblems, ApiError } from "@/lib/api";
 import { PageContainer, PageSection } from "@/components/app/page-container";
 import { PageHeader } from "@/components/app/page-header";
 import { Surface, SurfaceHeader } from "@/components/ui/surface";
@@ -9,8 +12,6 @@ import { Reveal } from "@/components/system/reveal";
 import { Button } from "@/components/ui/button";
 import { EmptyDataState, ErrorState, PageSkeleton } from "@/components/app/data-states";
 import { isSolved, submissionCount } from "@/lib/mock/derive";
-
-export const metadata = { title: "Knowledge" };
 
 const TYPE_LEGEND = [
   { label: "Problem", color: "var(--color-accent)" },
@@ -21,10 +22,17 @@ const TYPE_LEGEND = [
   { label: "Mistake", color: "var(--color-error)" },
 ];
 
-export default async function KnowledgePage() {
+export default function KnowledgePage() {
   // The graph is keyed by node ids the backend assigns (`prob_<id>`), so the
   // centre is chosen from the graph itself rather than derived from a slug.
-  const state = await toAsyncState(
+  const [state, setState] = React.useState<
+    | { status: "loading" }
+    | { status: "success"; data: { knowledge: Awaited<ReturnType<typeof getKnowledge>>; problems: { problem: Awaited<ReturnType<typeof getProblem>>; degree: number }[] } }
+    | { status: "error"; error: ApiError }
+  >({ status: "loading" });
+
+  React.useEffect(() => {
+    let cancelled = false;
     (async () => {
       const knowledge = await getKnowledge();
       const list = await listProblems({ page: 1, pageSize: 100 });
@@ -44,8 +52,10 @@ export default async function KnowledgePage() {
         })),
       );
       return { knowledge, problems };
-    })(),
-  );
+    })().then((data) => { if (!cancelled) setState({ status: "success", data }); })
+      .catch((error: unknown) => { if (!cancelled) setState({ status: "error", error: error instanceof ApiError ? error : new ApiError("Could not load knowledge data.", "ERROR", 0) }); });
+    return () => { cancelled = true; };
+  }, []);
 
   if (state.status !== "success") {
     return <KnowledgePending state={state} />;

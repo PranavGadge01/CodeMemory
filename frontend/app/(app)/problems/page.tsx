@@ -1,6 +1,10 @@
+"use client";
+
+import * as React from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
-import { getProblem, listProblems, toAsyncState } from "@/lib/api";
+import { getProblem, listProblems, ApiError } from "@/lib/api";
 import { PageContainer, PageSection } from "@/components/app/page-container";
 import { PageHeader } from "@/components/app/page-header";
 import { Button } from "@/components/ui/button";
@@ -8,8 +12,6 @@ import { Reveal } from "@/components/system/reveal";
 import { ProblemsBrowser } from "@/components/app/problems/problems-browser";
 import { ErrorState, PageSkeleton } from "@/components/app/data-states";
 import type { Problem } from "@/lib/types";
-
-export const metadata = { title: "Problems" };
 
 /**
  * Filter values the browser owns. They live in the URL rather than component
@@ -25,23 +27,31 @@ export interface ProblemsSearch {
 
 const DEFAULTS: ProblemsSearch = { q: "", difficulty: "All", status: "All", sort: "activity" };
 
-export default async function ProblemsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ slug?: string | string[]; [key: string]: string | string[] | undefined }>;
-}) {
-  const raw = await searchParams;
+export default function ProblemsPage() {
+  return <React.Suspense fallback={<ProblemsSurface><PageSkeleton /></ProblemsSurface>}><ProblemsContent /></React.Suspense>;
+}
+
+function ProblemsContent() {
+  const searchParams = useSearchParams();
+  const raw = Object.fromEntries(searchParams.entries());
   const params: ProblemsSearch = {
     q: typeof raw.q === "string" ? raw.q : DEFAULTS.q,
     difficulty: typeof raw.difficulty === "string" ? raw.difficulty : DEFAULTS.difficulty,
     status: typeof raw.status === "string" ? raw.status : DEFAULTS.status,
     sort: typeof raw.sort === "string" ? raw.sort : DEFAULTS.sort,
   };
-  const slug = Array.isArray(raw.slug) ? raw.slug[0] ?? null : raw.slug ?? null;
+  const slug = raw.slug ?? null;
 
   // The list endpoint filters server-side; the backend has no sort parameter,
   // so sorting is applied client-side over the loaded page (see the browser).
-  const state = await toAsyncState(
+  const [state, setState] = React.useState<
+    | { status: "loading" }
+    | { status: "success"; data: { filtered: Awaited<ReturnType<typeof listProblems>>; all: Awaited<ReturnType<typeof getProblem>>[]; drawerProblem: Awaited<ReturnType<typeof getProblem>> | null } }
+    | { status: "error"; error: ApiError }
+  >({ status: "loading" });
+
+  React.useEffect(() => {
+    let cancelled = false;
     (async () => {
       const [filtered, unfiltered] = await Promise.all([
         listProblems({
@@ -63,12 +73,14 @@ export default async function ProblemsPage({
       // problem rather than one per filter state.
       const all = await Promise.all(unfiltered.items.map((item) => getProblem(item.slug)));
 
-      return { filtered, all };
-    })(),
-  );
+      const drawerProblem = slug ? await getProblem(slug) : null;
+      return { filtered, all, drawerProblem };
+    })().then((data) => { if (!cancelled) setState({ status: "success", data }); })
+      .catch((error: unknown) => { if (!cancelled) setState({ status: "error", error: error instanceof ApiError ? error : new ApiError("Could not load problems.", "ERROR", 0) }); });
+    return () => { cancelled = true; };
+  }, [raw.q, raw.difficulty, raw.status, raw.sort, slug]);
 
-  // A deep link needs the problem whether or not it survives the active filters.
-  const drawerProblem = slug ? await toAsyncState(getProblem(slug)) : null;
+  const drawerProblem = state.status === "success" ? state.data.drawerProblem : null;
 
   return (
     <PageContainer>
@@ -94,8 +106,8 @@ export default async function ProblemsPage({
               visibleSlugs={new Set(state.data.filtered.items.map((item) => item.slug))}
               filteredTotal={state.data.filtered.total}
               params={params}
-              initialSlug={drawerProblem?.status === "success" ? slug : null}
-              initialProblem={drawerProblem?.status === "success" ? drawerProblem.data : null}
+              initialSlug={drawerProblem ? slug : null}
+              initialProblem={drawerProblem}
             />
           ) : state.status === "error" ? (
             <ProblemsSurface>

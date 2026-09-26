@@ -1,4 +1,7 @@
-import { getAnalytics, toAsyncState } from "@/lib/api";
+"use client";
+
+import * as React from "react";
+import { getAnalytics, ApiError } from "@/lib/api";
 import type { ProgressOverTime } from "@/lib/types";
 import { PageContainer, PageSection } from "@/components/app/page-container";
 import { PageHeader } from "@/components/app/page-header";
@@ -15,15 +18,27 @@ import { StruggleList } from "@/components/app/analytics/struggle-list";
 import { formatNumber, formatPercent } from "@/lib/format";
 import { ErrorState, PageSkeleton, EmptyDataState } from "@/components/app/data-states";
 
-export const metadata = { title: "Coding analytics" };
-
 /** Weekly buckets shown across the time-series sections. ~18 weeks exist in a full history; 12 keeps the labels readable. */
 const WEEKS_SHOWN = 12;
 
-export default async function AnalyticsPage() {
+export default function AnalyticsPage() {
   // Weeks keep the progress charts readable at the granularity the UI was
   // designed for; the endpoint accepts `day` and `month` as well.
-  const state = await toAsyncState(getAnalytics("week"));
+  const [state, setState] = React.useState<
+    | { status: "loading" }
+    | { status: "success"; data: Awaited<ReturnType<typeof getAnalytics>> }
+    | { status: "error"; error: ApiError }
+  >({ status: "loading" });
+
+  React.useEffect(() => {
+    let cancelled = false;
+    getAnalytics("week").then((data) => {
+      if (!cancelled) setState({ status: "success", data });
+    }).catch((error: unknown) => {
+      if (!cancelled) setState({ status: "error", error: error instanceof ApiError ? error : new ApiError("Could not load analytics data.", "ERROR", 0) });
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   if (state.status !== "success") {
     return <AnalyticsPending state={state} />;
