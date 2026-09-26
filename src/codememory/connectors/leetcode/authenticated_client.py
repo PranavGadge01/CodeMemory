@@ -76,6 +76,7 @@ class AuthenticatedLeetCodeClient(LeetCodeClient):
         # Store credentials separately for header construction - AFTER parent init
         self.session_cookie = session_cookie
         self.csrf_token = csrf_token
+        self.last_page_diagnostics: Dict[str, Any] = {}
 
         # Validate that we have credentials
         if not self.session_cookie or not self.csrf_token:
@@ -190,9 +191,11 @@ class AuthenticatedLeetCodeClient(LeetCodeClient):
 
             # Process submissions from this page
             page_submissions = []
+            parse_failures = 0
             for index, item in enumerate(raw_submissions):
                 if not isinstance(item, dict):
                     logger.warning(f"Skipping malformed submission at index {index} (not an object)")
+                    parse_failures += 1
                     continue
                 try:
                     submission = LeetCodeSubmissionRaw(
@@ -208,16 +211,33 @@ class AuthenticatedLeetCodeClient(LeetCodeClient):
                     page_submissions.append(submission)
                 except (TypeError, ValueError) as exc:
                     logger.warning(f"Skipping malformed LeetCode submission at index {index}: {exc}")
+                    parse_failures += 1
                     continue
 
             # Determine if there are more pages using length-based detection.
             # The real LeetCode API does not return hasNext/lastKey fields;
             # when a page returns fewer items than requested, we've exhausted
             # the result set.
-            has_next = len(page_submissions) >= limit
+            has_next = len(raw_submissions) >= limit
             next_last_key = None
 
-            logger.info(f"Fetched {len(page_submissions)} submissions from page: offset={offset}, limit={limit}, lastKey={last_key}")
+            self.last_page_diagnostics = {
+                "offset": offset,
+                "limit": limit,
+                "raw_count": len(raw_submissions),
+                "parsed_count": len(page_submissions),
+                "parse_failures": parse_failures,
+                "has_next": has_next,
+            }
+
+            logger.info(
+                "Fetched submission page: offset=%s raw=%s parsed=%s parse_failures=%s has_next=%s",
+                offset,
+                len(raw_submissions),
+                len(page_submissions),
+                parse_failures,
+                has_next,
+            )
             return page_submissions, has_next, next_last_key
 
         except Exception as e:

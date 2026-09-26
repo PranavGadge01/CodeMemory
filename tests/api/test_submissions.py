@@ -1,6 +1,7 @@
 """Tests for the submission detail and list endpoints with account isolation."""
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+import pytest
 
 from codememory.domain.models import Problem, Submission, Attempt
 from codememory.domain.enums import DifficultyLevel, SubmissionStatus
@@ -35,6 +36,11 @@ def test_list_submissions_account_isolation(multi_account_service):
         data = resp.json()
         # B (maytrix) is active — only B's 1 submission should be visible
         assert data["total"] == 1
+        assert data["summary"]["total"] == 1
+        assert data["summary"]["accepted"] == sum(
+            item["status"] == "Accepted" for item in data["items"]
+        )
+        assert data["summary"]["failed"] == data["total"] - data["summary"]["accepted"]
         sub = data["items"][0]
         # B's submission id starts with "leetcode_2001"
         assert "2001" in sub["id"]
@@ -263,3 +269,134 @@ def test_submission_detail_includes_source_account(multi_account_service):
         data = items[0]
         assert data["sourceAccount"] == "maytrix"
         assert data["sourceProvider"] is not None
+
+
+def _seed_submission_summary_population(service):
+    """Create 123 rows so page sizes and aggregate values are distinguishable."""
+    base = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    for problem_index in range(3):
+        problem_id = f"summary-problem-{problem_index}"
+        submissions = []
+        for index in range(problem_index, 123, 3):
+            status = (
+                SubmissionStatus.ACCEPTED
+                if index < 73
+                else SubmissionStatus.WRONG_ANSWER
+            )
+            submissions.append(
+                Submission(
+                    id=f"summary-submission-{index}",
+                    problem_id=problem_id,
+                    attempt_id=f"summary-attempt-{problem_index}",
+                    code="solution",
+                    language="python" if index % 2 == 0 else "java",
+                    status=status,
+                    submitted_at=base + timedelta(seconds=index),
+                    source_provider=None,
+                    source_account=None,
+                )
+            )
+        attempt = Attempt(
+            id=f"summary-attempt-{problem_index}",
+            problem_id=problem_id,
+            attempt_number=1,
+            status=SubmissionStatus.ACCEPTED,
+            submissions=submissions,
+        )
+        service.storage.save(
+            Problem(
+                id=problem_id,
+                title=f"Summary Problem {problem_index}",
+                slug=f"summary-problem-{problem_index}",
+                difficulty=DifficultyLevel.EASY,
+                platform="LeetCode",
+                attempts=[attempt],
+            )
+        )
+
+
+@pytest.mark.parametrize("page_size", [20, 50, 100])
+def test_submission_summary_is_independent_of_page_size(
+    empty_service, page_size
+):
+    from api.app import create_app
+    from api.dependencies import get_service
+    from fastapi.testclient import TestClient
+
+    _seed_submission_summary_population(empty_service)
+    app = create_app(service=empty_service)
+    app.dependency_overrides[get_service] = lambda: empty_service
+
+    with TestClient(app) as test_client:
+        response = test_client.get(f"/api/v1/submissions?page_size={page_size}")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["items"]) == page_size
+    assert data["total"] == 123
+    assert data["summary"] == {
+        "total": 123,
+        "accepted": 73,
+        "failed": 50,
+        "acceptanceRate": pytest.approx(73 / 123 * 100),
+        "problemCount": 3,
+        "languageCount": 2,
+    }
+    assert data["summary"]["accepted"] + data["summary"]["failed"] == data["total"]
+
+
+def test_submission_summary_is_independent_of_page_number(empty_service):
+    from api.app import create_app
+    from api.dependencies import get_service
+    from fastapi.testclient import TestClient
+
+    _seed_submission_summary_population(empty_service)
+    app = create_app(service=empty_service)
+    app.dependency_overrides[get_service] = lambda: empty_service
+
+    with TestClient(app) as test_client:
+        first = test_client.get("/api/v1/submissions?page=1&page_size=50").json()
+        second = test_client.get("/api/v1/submissions?page=2&page_size=50").json()
+
+    assert len(first["items"]) == len(second["items"]) == 50
+    assert first["items"] != second["items"]
+    assert first["summary"] == second["summary"]
+
+
+@pytest.mark.parametrize(
+    ("filters", "expected_total", "expected_accepted", "expected_failed"),
+    [
+        ({"status": "Accepted"}, 73, 73, 0),
+        ({"language": "python"}, 62, 37, 25),
+        ({"problem": "summary-problem-0"}, 41, 25, 16),
+        (
+            {"status": "Accepted", "language": "python", "problem": "summary-problem-0"},
+            13,
+            13,
+            0,
+        ),
+    ],
+)
+def test_submission_filters_update_aggregate_summary(
+    empty_service, filters, expected_total, expected_accepted, expected_failed
+):
+    from api.app import create_app
+    from api.dependencies import get_service
+    from fastapi.testclient import TestClient
+
+    _seed_submission_summary_population(empty_service)
+    app = create_app(service=empty_service)
+    app.dependency_overrides[get_service] = lambda: empty_service
+
+    with TestClient(app) as test_client:
+        response = test_client.get("/api/v1/submissions", params=filters)
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == expected_total
+    assert data["summary"]["total"] == expected_total
+    assert data["summary"]["accepted"] == expected_accepted
+    assert data["summary"]["failed"] == expected_failed
+    assert data["summary"]["acceptanceRate"] == pytest.approx(
+        expected_accepted / expected_total * 100 if expected_total else 0
+    )

@@ -42,9 +42,15 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
+        <script
+          dangerouslySetInnerHTML={{ __html: THEME_INIT }}
+          suppressHydrationWarning
+        />
       </head>
-      <body className="min-h-screen bg-canvas text-text-secondary antialiased">
+      <body
+        className="min-h-screen bg-canvas text-text-secondary antialiased"
+        suppressHydrationWarning
+      >
         <SettingsProvider>
           <ThemeProvider>{children}</ThemeProvider>
         </SettingsProvider>

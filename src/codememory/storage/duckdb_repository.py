@@ -220,6 +220,12 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
                 pass
 
     def __del__(self) -> None:
+        # A pooled handle is process-owned, not owned by the most recently
+        # collected repository wrapper. Closing it here invalidates every
+        # other CompositeStorage instance using the same path (for example,
+        # consecutive CLI commands). Explicit close() remains available for
+        # deliberate service retirement; private worker connections are owned
+        # by this object and must be closed on collection.
         if getattr(self, "_owns_private_connection", False):
             self.close()
 
@@ -569,22 +575,34 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
             res = self.conn.execute("SELECT * FROM submissions WHERE submission_hash = ?", [submission_hash]).fetchone()
             if not res:
                 return None
-            sid, pid, aid, code, lang, status, rt, mem, s_time, err, s_hash, s_provider, s_account = res
-            return Submission(
-                id=sid,
-                problem_id=pid,
-                attempt_id=aid,
-                code=code,
-                language=lang,
-                status=SubmissionStatus.parse(status),
-                runtime_ms=rt,
-                memory_mb=mem,
-                submitted_at=s_time,
-                error_message=err,
-                submission_hash=s_hash,
-                source_provider=s_provider,
-                source_account=s_account,
-            )
+            return self._build_submission_from_row(res)
+
+    def get_submission_by_external_id(self, submission_id: str) -> Submission | None:
+        """Find a submission by its globally unique storage ID."""
+        with self._lock:
+            row = self.conn.execute(
+                "SELECT * FROM submissions WHERE id = ?", [submission_id]
+            ).fetchone()
+            return self._build_submission_from_row(row) if row else None
+
+    @staticmethod
+    def _build_submission_from_row(row) -> Submission:
+        sid, pid, aid, code, lang, status, rt, mem, s_time, err, s_hash, s_provider, s_account = row
+        return Submission(
+            id=sid,
+            problem_id=pid,
+            attempt_id=aid,
+            code=code,
+            language=lang,
+            status=SubmissionStatus.parse(status),
+            runtime_ms=rt,
+            memory_mb=mem,
+            submitted_at=s_time,
+            error_message=err,
+            submission_hash=s_hash,
+            source_provider=s_provider,
+            source_account=s_account,
+        )
 
     def list_by_problem(self, problem_id: str) -> Sequence[Submission]:
         with self._lock:

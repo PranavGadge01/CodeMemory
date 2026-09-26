@@ -348,7 +348,10 @@ class LeetCodeAccountService:
         conn = self._account_service.get_connection("LeetCode")
         username = conn.username if conn and conn.status == AccountStatus.CONNECTED else None
         account_identifier = username if username else "default"
-        orchestrator = AuthenticatedSyncOrchestrator(account_identifier=account_identifier)
+        orchestrator = AuthenticatedSyncOrchestrator(
+            account_service=self._account_service,
+            account_identifier=account_identifier,
+        )
         return orchestrator.sync_full_history(self._app_service, username)
 
     # ───────────────────────────────────────────────────────────────────────

@@ -304,14 +304,32 @@ class CodeMemoryService:
 
         Identity-aware and idempotent: callers may supply the external
         ``submission_id`` (used as the stored record's primary key), the original
-        ``submitted_at`` timestamp, and/or a precomputed ``submission_hash``. When
-        a submission with the same hash already exists, the existing record is
-        returned instead of creating a duplicate.
+        ``submitted_at`` timestamp, and/or a precomputed ``submission_hash``.
+        A supplied upstream ID is authoritative; hashes are only a fallback
+        identity when no external ID is available.
         """
-        prob = self.get_problem(problem_identifier)
+        # Mutations must start from the canonical, unfiltered aggregate. The
+        # public get_problem() view is account-scoped and would otherwise
+        # replace submissions owned by a different account when saving.
+        prob = self.storage.get_by_slug(problem_identifier) or self.storage.get_by_id(problem_identifier)
+        if prob is None:
+            raise ProblemNotFoundError(problem_identifier)
         sub_status = SubmissionStatus.parse(status) if isinstance(status, str) else status
 
         submitted_dt = ensure_utc(submitted_at) if submitted_at is not None else datetime.now(timezone.utc)
+
+        # An upstream ID is the strongest identity available. Preserve it for
+        # ordinary records, and namespace it only when another account already
+        # owns the same global storage key.
+        if submission_id:
+            submission_id = self.resolve_submission_id(
+                submission_id,
+                source_provider=source_provider,
+                source_account=source_account,
+            )
+            existing_by_id = self._find_submission_by_id(submission_id)
+            if existing_by_id is not None:
+                return prob, existing_by_id
 
         # Canonical hash: prefer the caller's, otherwise derive it from the
         # problem slug so that the sync and import paths agree. When
@@ -327,8 +345,8 @@ class CodeMemoryService:
             source_account=source_account,
         )
 
-         # Idempotency: the same submission already persisted — return it as-is.
-        if sub_hash:
+        # Without an upstream ID, use the canonical hash as the fallback key.
+        if sub_hash and not submission_id:
             existing = self.storage.get_by_hash(sub_hash)
             # Only treat as a duplicate if the existing record belongs to the
             # same account. A hash collision across accounts is not a duplicate.
@@ -396,16 +414,70 @@ class CodeMemoryService:
         guarantees of ``list_problems`` and ``get_problem``.
         """
         active = account if account is not None else self.active_account
-        for prob in self.list_problems():
-            for attempt in prob.attempts:
-                for sub in attempt.submissions:
-                    if sub.id == submission_id:
-                        if active is None and sub.source_provider is not None:
-                            continue
-                        if active is not None and sub.source_account != active:
-                            continue
-                        return sub
+        if active is not None:
+            # Account-collision IDs are deterministically namespaced on write.
+            # Resolve the same way for re-sync lookups.
+            submission_id = self.resolve_submission_id(
+                submission_id,
+                source_provider="leetcode",
+                source_account=active,
+            )
+        submission = self._find_submission_by_id(submission_id)
+        if submission is None:
+            return None
+        if active is None and submission.source_provider is not None:
+            return None
+        if active is not None and submission.source_account != active:
+            return None
+        return submission
+
+    def _find_submission_by_id(self, submission_id: str) -> Submission | None:
+        """Find an ID across all accounts without applying the active filter."""
+        get_by_external_id = getattr(self.storage, "get_submission_by_external_id", None)
+        if get_by_external_id is not None:
+            return get_by_external_id(submission_id)
+        for problem in self.storage.list_all():
+            for attempt in problem.attempts:
+                for submission in attempt.submissions:
+                    if submission.id == submission_id:
+                        return submission
         return None
+
+    def resolve_submission_id(
+        self,
+        submission_id: str,
+        *,
+        source_provider: str | None,
+        source_account: str | None,
+    ) -> str:
+        """Return a stable storage key for an external submission identity.
+
+        DuckDB uses a global primary key for submission IDs while upstream IDs
+        are only unique within their account. In a collision, retain the
+        original ID for its existing owner and assign the other owner a stable
+        account-scoped key.
+        """
+        existing = self._find_submission_by_id(submission_id)
+        owner = (existing.source_provider, existing.source_account) if existing else None
+        requested_owner = (source_provider, source_account)
+        if owner is None or owner == requested_owner:
+            return submission_id
+
+        import hashlib
+
+        scope = f"{source_provider or ''}\0{source_account or ''}"
+        suffix = hashlib.sha256(scope.encode("utf-8")).hexdigest()[:12]
+        candidate = f"{submission_id}__{suffix}"
+        collision = self._find_submission_by_id(candidate)
+        if collision is None or (
+            collision.source_provider,
+            collision.source_account,
+        ) == requested_owner:
+            return candidate
+        # Avoid overwriting even in the extraordinarily unlikely event of a
+        # truncated digest collision.
+        suffix = hashlib.sha256(f"{scope}\0{submission_id}".encode("utf-8")).hexdigest()
+        return f"{submission_id}__{suffix}"
 
     def list_attempts(self, problem_identifier: str) -> Sequence[Attempt]:
         """List all attempts for a problem."""

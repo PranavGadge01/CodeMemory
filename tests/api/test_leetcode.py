@@ -235,7 +235,17 @@ def test_auth_sync_api_flow(client: TestClient, connected_service: CodeMemorySer
         records_added=5,
         records_skipped=5,
         records_failed=0,
-        details={"code_fetched": 5, "code_failed": 0},
+        details={
+            "code_fetched": 5,
+            "code_failed": 0,
+            "pages_fetched": 2,
+            "raw_records_discovered": 10,
+            "records_parsed": 10,
+            "raw_records_per_page": [5, 5],
+            "parsed_records_per_page": [5, 5],
+            "has_next_per_page": [True, False],
+            "final_offset": 40,
+        },
     )
 
     connected_service.leetcode.sync_authenticated_full_history = MagicMock(return_value=mock_result)
@@ -251,6 +261,10 @@ def test_auth_sync_api_flow(client: TestClient, connected_service: CodeMemorySer
     assert data["recordsFailed"] == 0
     assert data["codeFetched"] == 5
     assert data["codeFailed"] == 0
+    assert data["diagnostics"]["pages_fetched"] == 2
+    assert data["diagnostics"]["raw_records_per_page"] == [5, 5]
+    assert data["diagnostics"]["has_next_per_page"] == [True, False]
+    assert "last_key" not in data["diagnostics"]
     assert data["errorMessage"] is None
 
 

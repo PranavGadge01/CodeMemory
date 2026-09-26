@@ -1,6 +1,6 @@
-from typing import List, Dict, Optional
+from typing import Any, List, Dict, Optional
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from api.schemas.common import BaseCamelModel
 
 class LeetCodeConnectRequest(BaseModel):
@@ -89,4 +89,5 @@ class LeetCodeAuthSyncResultOut(BaseCamelModel):
     records_failed: int
     code_fetched: int = 0
     code_failed: int = 0
+    diagnostics: Dict[str, Any] = Field(default_factory=dict)
     error_message: Optional[str] = None

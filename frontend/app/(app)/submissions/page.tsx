@@ -58,21 +58,14 @@ export default async function SubmissionsPage({
         ),
       ]);
 
-      // The stats strip describes the filtered view, so it is computed from the
-      // same server-filtered page the table renders.
+      // The table rows are paginated, but the API summary covers the complete
+      // filtered dataset and stays stable as the requested page changes.
       const rows = pairSubmissions(submissions.items, problems);
-      const accepted = rows.filter((row) => row.submission.status === "Accepted").length;
-      const total = rows.length;
-      const languagesUsed = new Set(rows.map((row) => row.submission.language)).size;
 
       return {
         rows,
         problems,
-        total,
-        accepted,
-        failed: total - accepted,
-        acceptanceRate: total === 0 ? 0 : (accepted / total) * 100,
-        languagesUsed,
+        summary: submissions.summary,
         filteredTotal: submissions.total,
       };
     })(),
@@ -101,17 +94,17 @@ export default async function SubmissionsPage({
               stats={[
                 {
                   label: "Total submissions",
-                  value: state.data.total,
-                  hint: `${formatNumber(state.data.problems.length)} problems`,
+                  value: state.data.summary.total,
+                  hint: `${formatNumber(state.data.summary.problemCount)} problems`,
                 },
-                { label: "Accepted", value: state.data.accepted },
-                { label: "Failed", value: state.data.failed },
+                { label: "Accepted", value: state.data.summary.accepted },
+                { label: "Failed", value: state.data.summary.failed },
                 {
                   label: "Acceptance rate",
-                  value: formatPercent(state.data.acceptanceRate),
+                  value: formatPercent(state.data.summary.acceptanceRate),
                   accent: true,
                 },
-                { label: "Languages used", value: state.data.languagesUsed },
+                { label: "Languages used", value: state.data.summary.languageCount },
               ]}
             />
 

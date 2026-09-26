@@ -156,6 +156,27 @@ def sync_authenticated_full_history(
             records_failed=result.records_failed,
             code_fetched=result.details.get("code_fetched", 0) if result.details else 0,
             code_failed=result.details.get("code_failed", 0) if result.details else 0,
+            diagnostics={
+                key: value
+                for key, value in (result.details or {}).items()
+                if key in {
+                    "pages_fetched",
+                    "raw_records_discovered",
+                    "records_parsed",
+                    "records_mapped",
+                    "records_failed_to_parse",
+                    "records_failed_to_map",
+                    "records_failed_storage",
+                    "records_skipped_duplicate",
+                    "records_updated",
+                    "code_fetch_attempted",
+                    "raw_records_per_page",
+                    "parsed_records_per_page",
+                    "offsets_per_page",
+                    "has_next_per_page",
+                    "final_offset",
+                }
+            },
             error_message=result.error_message
         )
     except HTTPException:

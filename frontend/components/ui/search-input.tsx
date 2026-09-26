@@ -30,6 +30,7 @@ export function SearchInput({
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         aria-label={placeholder}
+        suppressHydrationWarning
         className={cn(
           "h-9 w-full rounded-md border border-border bg-surface pl-9 pr-8 text-body-md text-text-primary",
           "placeholder:text-text-faint",
@@ -42,6 +43,7 @@ export function SearchInput({
         <button
           type="button"
           onClick={() => onChange("")}
+          suppressHydrationWarning
           className="press absolute right-1.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded text-text-faint hover:bg-surface-hover hover:text-text-primary"
           aria-label="Clear search"
         >
