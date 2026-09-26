@@ -23,8 +23,8 @@ offline using the built-in heuristic AI provider.
 block_cipher = None
 
 a = Analysis(
-    ['../../src/api/app.py'],
-    pathex=['../../src'],
+    ['../src/api/app.py'],
+    pathex=['../src'],
     binaries=[],
     datas=[],
     hiddenimports=[
