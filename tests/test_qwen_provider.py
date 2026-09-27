@@ -17,6 +17,7 @@ from codememory.ai.models import SolutionEvolution, SubmissionAnalysis
 from codememory.ai.providers import (
     BaseAIProvider,
     HeuristicAIProvider,
+    OpenAIProvider,
     Qwen3Provider,
     get_ai_provider,
 )
@@ -213,3 +214,105 @@ class TestE2EGroundedInsightWithQwen3:
         assert isinstance(insight, GroundedInsight)
         assert insight.headline == "DP requires focused practice."
         assert "analytics.topic_stats.dynamic_programming.acceptance_rate_pct" in insight.evidence_refs
+
+    def test_ai_enabled_disabled_triggers_heuristic_fallback(self, sample_evidence, monkeypatch):
+        monkeypatch.setenv("AI_ENABLED", "false")
+        client_called = False
+
+        def fake_client(system_prompt, user_prompt):
+            nonlocal client_called
+            client_called = True
+            return "{}"
+
+        provider = Qwen3Provider(custom_client=fake_client)
+        result = provider.interpret_evidence(sample_evidence)
+
+        assert client_called is False
+        assert isinstance(result, InterpretationResult)
+        assert len(result.headline) > 0
+
+    def test_timeout_handling_triggers_observable_fallback(self, sample_evidence):
+        def fake_client(system_prompt, user_prompt):
+            raise TimeoutError("Qwen3 inference server timed out after 30s")
+
+        provider = Qwen3Provider(custom_client=fake_client)
+        result = provider.interpret_evidence(sample_evidence)
+
+        assert isinstance(result, InterpretationResult)
+        assert len(result.headline) > 0
+
+    def test_adversarial_valid_and_invalid_refs_sanitized(self, sample_evidence):
+        def fake_client(system_prompt, user_prompt):
+            return json.dumps({
+                "headline": "Adversarial test with bogus refs",
+                "narrative": "Claiming 99% accuracy on non-existent topic",
+                "key_observations": ["Bogus claim"],
+                "recommended_actions": [],
+                "evidence_refs": [
+                    "analytics.overview.overall_acceptance_rate_pct",  # valid
+                    "fake_ref_unsupported_1",                          # invalid
+                    "fake_ref_unsupported_2"                           # invalid
+                ]
+            })
+
+        provider = Qwen3Provider(custom_client=fake_client)
+        builder = MagicMock()
+        builder.build_full_profile_evidence.return_value = sample_evidence
+
+        service = InsightService(ai_provider=provider, evidence_builder=builder)
+        insight = service.generate_full_profile_insight()
+
+        assert isinstance(insight, GroundedInsight)
+        # Invalid refs must be filtered out before InsightService validation
+        assert "analytics.overview.overall_acceptance_rate_pct" in insight.evidence_refs
+        assert "fake_ref_unsupported_1" not in insight.evidence_refs
+
+    def test_configuration_custom_settings(self, monkeypatch):
+        monkeypatch.setenv("QWEN_ENDPOINT_URL", "http://localhost:8080/v1")
+        monkeypatch.setenv("QWEN_MODEL_NAME", "qwen3-coder-14b-instruct")
+        monkeypatch.setenv("QWEN_TIMEOUT_SECONDS", "45")
+        monkeypatch.setenv("QWEN_TEMPERATURE", "0.1")
+        monkeypatch.setenv("QWEN_MAX_TOKENS", "1024")
+
+        provider = Qwen3Provider()
+        assert provider.endpoint_url == "http://localhost:8080/v1"
+        assert provider.model_name == "qwen3-coder-14b-instruct"
+        assert provider.timeout_seconds == 45.0
+        assert provider.temperature == 0.1
+        assert provider.max_tokens == 1024
+
+    def test_secrets_scrubbed_in_logs(self, sample_evidence):
+        secret_key = "sk-secret-qwen-key-999"
+        provider = Qwen3Provider(api_key=secret_key)
+        e = Exception(f"Failed connecting with key {secret_key}")
+
+        sanitized = provider._sanitize_error(e)
+        assert secret_key not in sanitized
+        assert "[REDACTED_API_KEY]" in sanitized
+
+    def test_no_network_requests_on_construction(self, monkeypatch):
+        network_called = False
+
+        def mock_urlopen(*args, **kwargs):
+            nonlocal network_called
+            network_called = True
+            raise RuntimeError("Network should not be called on construction")
+
+        monkeypatch.setattr("urllib.request.urlopen", mock_urlopen)
+        provider = Qwen3Provider()
+
+        assert provider is not None
+        assert network_called is False
+
+    def test_existing_providers_contracts_unaffected(self, sample_evidence):
+        heuristic = HeuristicAIProvider()
+        result_h = heuristic.interpret_evidence(sample_evidence)
+        assert isinstance(result_h, InterpretationResult)
+        assert len(result_h.headline) > 0
+
+        openai_p = OpenAIProvider(api_key="")  # Disabled / no key
+        result_o = openai_p.interpret_evidence(sample_evidence)
+        assert isinstance(result_o, InterpretationResult)
+        assert len(result_o.headline) > 0
+
+

@@ -60,37 +60,37 @@ class EvidenceBuilder:
     # Public API
     # ------------------------------------------------------------------
 
-    def build_full_profile_evidence(self) -> InsightEvidence:
+    def build_full_profile_evidence(self, account: str | None = None) -> InsightEvidence:
         """Build evidence covering the user's full practice profile."""
         evidence = InsightEvidence(scope="full_profile", generated_at=datetime.now(timezone.utc))
 
         # 1. Overview metrics
-        overview = self.analytics.get_overview()
+        overview = self.analytics.get_overview(account=account)
         overview_dict = overview.model_dump()
         evidence.metrics.overview = overview_dict
         self._add_overview_items(evidence, overview_dict)
 
         # 2. Topic statistics
-        topic_stats = self.analytics.get_topic_statistics()
+        topic_stats = self.analytics.get_topic_statistics(account=account)
         evidence.metrics.topic_stats = [ts.model_dump() for ts in topic_stats]
         overall_acc_rate = overview.overall_acceptance_rate_pct
         self._add_topic_items(evidence, topic_stats, overall_acc_rate)
 
         # 3. Difficulty statistics
-        diff_stats = self.analytics.get_difficulty_statistics()
+        diff_stats = self.analytics.get_difficulty_statistics(account=account)
         evidence.metrics.difficulty_stats = [ds.model_dump() for ds in diff_stats]
         self._add_difficulty_items(evidence, diff_stats)
 
         # 4. Attempt statistics
-        att_stats = self.analytics.get_attempt_statistics()
+        att_stats = self.analytics.get_attempt_statistics(account=account)
         evidence.metrics.attempt_stats = att_stats.model_dump()
 
         # 5. Pattern analysis
-        patterns = self.pattern_analyzer.analyze()
+        patterns = self.pattern_analyzer.analyze(account=account)
         self._populate_patterns(evidence, patterns)
 
         # 6. Struggle problems
-        struggles = self.analytics.get_struggle_problems(limit=10)
+        struggles = self.analytics.get_struggle_problems(limit=10, account=account)
         for sp in struggles:
             diff_str = sp.difficulty
             evidence.supporting_problems.append(
@@ -113,7 +113,7 @@ class EvidenceBuilder:
 
         return evidence
 
-    def build_topic_evidence(self, topic: str) -> InsightEvidence:
+    def build_topic_evidence(self, topic: str, account: str | None = None) -> InsightEvidence:
         """Build evidence focused on a single DSA topic."""
         evidence = InsightEvidence(
             scope=f"topic:{topic}",
@@ -121,13 +121,13 @@ class EvidenceBuilder:
         )
 
         # Overview for baseline comparison
-        overview = self.analytics.get_overview()
+        overview = self.analytics.get_overview(account=account)
         overview_dict = overview.model_dump()
         evidence.metrics.overview = overview_dict
         self._add_overview_items(evidence, overview_dict)
 
         # Filter topic stats to the requested topic
-        all_topic_stats = self.analytics.get_topic_statistics()
+        all_topic_stats = self.analytics.get_topic_statistics(account=account)
         matching = [ts for ts in all_topic_stats if ts.topic.lower() == topic.lower()]
         evidence.metrics.topic_stats = [ts.model_dump() for ts in matching]
 
@@ -135,11 +135,11 @@ class EvidenceBuilder:
         self._add_topic_items(evidence, matching, overall_acc_rate)
 
         # Patterns (full, but consumer can focus on the relevant topic)
-        patterns = self.pattern_analyzer.analyze()
+        patterns = self.pattern_analyzer.analyze(account=account)
         self._populate_patterns(evidence, patterns)
 
         # Struggle problems filtered by topic
-        struggles = self.analytics.get_struggle_problems(limit=20)
+        struggles = self.analytics.get_struggle_problems(limit=20, account=account)
         topic_lower = topic.lower()
         for sp in struggles:
             if any(t.lower() == topic_lower for t in sp.topics):
@@ -160,7 +160,7 @@ class EvidenceBuilder:
 
         return evidence
 
-    def build_problem_evidence(self, problem_identifier: str) -> InsightEvidence:
+    def build_problem_evidence(self, problem_identifier: str, account: str | None = None) -> InsightEvidence:
         """Build evidence focused on a single problem.
 
         Uses the repository's canonical problem identifier (slug or ID).

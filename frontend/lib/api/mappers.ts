@@ -28,6 +28,7 @@ import type {
   Attempt,
   ActivityDay,
   TimelineEvent,
+  GroundedInsight,
 } from "@/lib/types";
 import type {
   AnalyticsOverviewDTO,
@@ -49,6 +50,7 @@ import type {
   GraphEdgeDTO,
   KnowledgeClusterDTO,
   SearchResultItemDTO,
+  GroundedInsightDTO,
 } from "@/lib/api/types";
 
 const DIFFICULTIES: Difficulty[] = ["Easy", "Medium", "Hard", "Unknown"];
@@ -524,3 +526,21 @@ export function mapSearchResult(dto: SearchResultItemDTO): SearchResult {
     metadata: dto.metadata,
   };
 }
+
+/* --- Grounded Insights ------------------------------------------------ */
+
+export function mapGroundedInsight(dto: GroundedInsightDTO): GroundedInsight {
+  return {
+    scope: dto.scope,
+    generatedAt: dto.generated_at,
+    headline: dto.headline,
+    narrative: dto.narrative,
+    keyObservations: dto.key_observations ?? [],
+    recommendedActions: dto.recommended_actions ?? [],
+    evidenceSummary: dto.evidence_summary ?? "",
+    evidenceRefs: dto.evidence_refs ?? [],
+    confidenceNotes: dto.confidence_notes ?? [],
+    evidenceId: dto.evidence_id,
+  };
+}
+

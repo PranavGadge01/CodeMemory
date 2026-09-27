@@ -161,6 +161,13 @@ class Qwen3Provider(BaseAIProvider):
             body = json.loads(resp.read().decode("utf-8"))
             return body["choices"][0]["message"]["content"] or ""
 
+    def _sanitize_error(self, e: Exception) -> str:
+        """Sanitize error messages to prevent leaking API keys or secrets in logs."""
+        err_msg = str(e)
+        if self.api_key and len(self.api_key) > 3 and self.api_key != "qwen":
+            err_msg = err_msg.replace(self.api_key, "[REDACTED_API_KEY]")
+        return err_msg
+
     def analyze_submission(
         self,
         submission: Submission,
@@ -196,7 +203,7 @@ class Qwen3Provider(BaseAIProvider):
             return SubmissionAnalysis.model_validate(raw_data)
 
         except Exception as e:
-            logger.warning("Qwen3Provider analyze_submission failed (%s). Falling back to heuristic provider.", e)
+            logger.warning("Qwen3Provider analyze_submission failed (%s). Falling back to heuristic provider.", self._sanitize_error(e))
             return self.fallback.analyze_submission(submission, problem, previous_submission)
 
     def analyze_evolution(
@@ -233,7 +240,7 @@ class Qwen3Provider(BaseAIProvider):
             return evolution
 
         except Exception as e:
-            logger.warning("Qwen3Provider analyze_evolution failed (%s). Falling back to heuristic provider.", e)
+            logger.warning("Qwen3Provider analyze_evolution failed (%s). Falling back to heuristic provider.", self._sanitize_error(e))
             return self.fallback.analyze_evolution(problem, submissions)
 
     def answer_question(self, question: str, context: str) -> str:
@@ -246,7 +253,7 @@ class Qwen3Provider(BaseAIProvider):
             raw_text = self._call_model(SYSTEM_ASK_CODEMEMORY_PROMPT, prompt, response_format_json=False)
             return raw_text.strip() or "No response generated."
         except Exception as e:
-            logger.warning("Qwen3Provider answer_question failed (%s). Falling back to heuristic provider.", e)
+            logger.warning("Qwen3Provider answer_question failed (%s). Falling back to heuristic provider.", self._sanitize_error(e))
             return self.fallback.answer_question(question, context)
 
     def interpret_evidence(self, evidence: InsightEvidence) -> InterpretationResult:
@@ -278,5 +285,6 @@ class Qwen3Provider(BaseAIProvider):
             return result
 
         except Exception as e:
-            logger.warning("Qwen3Provider interpret_evidence failed (%s). Falling back to heuristic provider.", e)
+            logger.warning("Qwen3Provider interpret_evidence failed (%s). Falling back to heuristic provider.", self._sanitize_error(e))
             return self.fallback.interpret_evidence(evidence)
+

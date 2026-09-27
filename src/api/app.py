@@ -52,6 +52,8 @@ def create_app(service: Optional[CodeMemoryService] = None) -> FastAPI:
     )
 
     app.add_exception_handler(ValueError, value_error_handler)
+    from codememory.domain.exceptions import ProblemNotFoundError
+    app.add_exception_handler(ProblemNotFoundError, errors.problem_not_found_handler)
     from fastapi.exceptions import HTTPException
     app.add_exception_handler(HTTPException, errors.http_exception_handler)
     app.add_exception_handler(Exception, exception_handler)
@@ -67,6 +69,7 @@ def create_app(service: Optional[CodeMemoryService] = None) -> FastAPI:
         revision,
         leetcode,
         search,
+        insights,
         settings as settings_router
     )
     
@@ -79,6 +82,7 @@ def create_app(service: Optional[CodeMemoryService] = None) -> FastAPI:
     app.include_router(revision.router, prefix="/api/v1")
     app.include_router(leetcode.router, prefix="/api/v1")
     app.include_router(search.router, prefix="/api/v1")
+    app.include_router(insights.router, prefix="/api/v1")
     app.include_router(settings_router.router, prefix="/api/v1")
 
     return app

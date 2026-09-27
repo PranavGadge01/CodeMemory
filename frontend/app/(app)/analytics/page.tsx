@@ -15,6 +15,7 @@ import { Reveal } from "@/components/system/reveal";
 import { DifficultyDistribution } from "@/components/app/analytics/difficulty-distribution";
 import { TopicTable } from "@/components/app/analytics/topic-table";
 import { StruggleList } from "@/components/app/analytics/struggle-list";
+import { GroundedInsightCard } from "@/components/app/grounded-insight-card";
 import { formatNumber, formatPercent } from "@/lib/format";
 import { ErrorState, PageSkeleton, EmptyDataState } from "@/components/app/data-states";
 
@@ -79,6 +80,10 @@ export default function AnalyticsPage() {
             },
           ]}
         />
+
+        <Reveal>
+          <GroundedInsightCard type="full" />
+        </Reveal>
 
         <Reveal>
           <Surface>

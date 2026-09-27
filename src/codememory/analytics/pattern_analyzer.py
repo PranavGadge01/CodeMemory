@@ -37,17 +37,11 @@ class PatternAnalyzer:
         min_topic_submissions_threshold: int = 3,
         weak_topic_success_threshold: float = 50.0,
         high_failure_acceptance_threshold: float = 40.0,
+        account: str | None = None,
     ) -> PatternAnalysisResult:
-        """Run complete pattern analysis across stored problems and attempts.
-
-        Args:
-            unpracticed_days_threshold: Minimum inactive days to flag as unpracticed.
-            min_topic_problems_threshold: Minimum total problems required in a topic before flagging as weak.
-            min_topic_submissions_threshold: Minimum total submissions required in a topic before flagging as high-failure.
-            weak_topic_success_threshold: Success rate percentage below which a topic is considered weak.
-            high_failure_acceptance_threshold: Acceptance rate percentage below which a topic is considered high-failure.
-        """
-        problems = self.analytics._get_all_problems()
+        """Run complete pattern analysis across stored problems and attempts."""
+        all_problems = self.analytics._get_all_problems()
+        problems = self.analytics._scope_problems(all_problems, account)
         result = PatternAnalysisResult()
 
         if not problems:
@@ -56,7 +50,7 @@ class PatternAnalyzer:
         now = datetime.now(timezone.utc)
 
         # 1. Topic performance patterns (Weak topics & High failure topics with sample size checks)
-        topic_stats = self.analytics.get_topic_statistics()
+        topic_stats = self.analytics.get_topic_statistics(account=account)
         for ts in topic_stats:
             # Weak topics: requires sufficient problem sample size
             if ts.total_problems >= min_topic_problems_threshold and ts.success_rate_pct < weak_topic_success_threshold:
@@ -156,7 +150,7 @@ class PatternAnalyzer:
         result.unpracticed_topics.sort(key=lambda item: (-int(item["days_unpracticed"]), str(item["topic"])))
 
         # 4. Frequent languages
-        lang_stats = self.analytics.get_language_statistics()
+        lang_stats = self.analytics.get_language_statistics(account=account)
         result.most_used_languages = [ls.language for ls in lang_stats[:3]]
 
         # 5. Improvement patterns (Deterministic comparison of earlier vs recent activity)

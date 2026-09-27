@@ -475,15 +475,23 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
         pid, title, slug, diff, platform, url, topics_str, stmt, created_at, updated_at = row
         topics = [t.strip() for t in topics_str.split(",") if t.strip()] if topics_str else []
 
-        # Load attempts
-        att_rows = self.conn.execute("SELECT * FROM attempts WHERE problem_id = ? ORDER BY attempt_number ASC", [pid]).fetchall()
+        # Load attempts using explicit column list matching the unpacking tuple
+        att_rows = self.conn.execute(
+            "SELECT id, problem_id, attempt_number, approach_summary, reasoning, status, time_complexity, space_complexity, created_at, updated_at "
+            "FROM attempts WHERE problem_id = ? ORDER BY attempt_number ASC",
+            [pid],
+        ).fetchall()
         attempts: list[Attempt] = []
 
         for a_row in att_rows:
             aid, _, att_num, app_sum, reasoning, att_status, tc, sc, a_created, a_updated = a_row
 
-            # Load submissions for this attempt
-            sub_rows = self.conn.execute("SELECT * FROM submissions WHERE attempt_id = ? ORDER BY submitted_at ASC", [aid]).fetchall()
+            # Load submissions for this attempt using explicit column list
+            sub_rows = self.conn.execute(
+                "SELECT id, problem_id, attempt_id, code, language, status, runtime_ms, memory_mb, submitted_at, error_message, submission_hash, source_provider, source_account "
+                "FROM submissions WHERE attempt_id = ? ORDER BY submitted_at ASC",
+                [aid],
+            ).fetchall()
             submissions: list[Submission] = []
             for s_row in sub_rows:
                 sid, _, _, code, lang, s_status, rt, mem, s_time, err, s_hash, s_provider, s_account = s_row
@@ -506,11 +514,16 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
 
             analysis = SolutionAnalysis(time_complexity=tc or "O(N)", space_complexity=sc or "O(1)") if (tc or sc) else None
 
+            try:
+                clean_att_num = int(att_num)
+            except (ValueError, TypeError):
+                clean_att_num = 1
+
             att = Attempt(
                 id=aid,
                 problem_id=pid,
-                attempt_number=att_num,
-                approach_summary=app_sum or f"Attempt {att_num}",
+                attempt_number=clean_att_num,
+                approach_summary=app_sum or f"Attempt {clean_att_num}",
                 reasoning=reasoning,
                 analysis=analysis,
                 status=SubmissionStatus.parse(att_status),
@@ -520,8 +533,12 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
             )
             attempts.append(att)
 
-        # Load notes
-        note_rows = self.conn.execute("SELECT * FROM notes WHERE problem_id = ? ORDER BY created_at ASC", [pid]).fetchall()
+        # Load notes using explicit column list
+        note_rows = self.conn.execute(
+            "SELECT id, problem_id, attempt_id, content, note_type, created_at "
+            "FROM notes WHERE problem_id = ? ORDER BY created_at ASC",
+            [pid],
+        ).fetchall()
         notes: list[ProblemNote] = []
         for n_row in note_rows:
             nid, _, n_aid, content, n_type, n_created = n_row

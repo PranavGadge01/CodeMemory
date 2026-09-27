@@ -967,17 +967,20 @@ class CodeMemoryService:
         return self.ai_analyzer.analyze_evolution(prob, submissions, force_refresh=force_refresh)
 
     # 8. Grounded Insight Pipeline
-    def get_grounded_insight(self) -> GroundedInsight:
+    def get_grounded_insight(self, account: str | None = None) -> GroundedInsight:
         """Generate AI-interpreted insight grounded in deterministic analytics evidence."""
-        return self.insight_service.generate_full_profile_insight()
+        target_account = account if account is not None else self.active_account
+        return self.insight_service.generate_full_profile_insight(account=target_account)
 
-    def get_topic_insight(self, topic: str) -> GroundedInsight:
+    def get_topic_insight(self, topic: str, account: str | None = None) -> GroundedInsight:
         """Generate AI-interpreted insight focused on a specific DSA topic."""
-        return self.insight_service.generate_topic_insight(topic)
+        target_account = account if account is not None else self.active_account
+        return self.insight_service.generate_topic_insight(topic, account=target_account)
 
-    def get_problem_insight(self, problem_identifier: str) -> GroundedInsight:
+    def get_problem_insight(self, problem_identifier: str, account: str | None = None) -> GroundedInsight:
         """Generate AI-interpreted insight focused on a specific problem."""
-        return self.insight_service.generate_problem_insight(problem_identifier)
+        target_account = account if account is not None else self.active_account
+        return self.insight_service.generate_problem_insight(problem_identifier, account=target_account)
 
     def ask_codememory(self, question: str) -> dict[str, Any]:
         """Ask natural language question grounded in personal CodeMemory records."""

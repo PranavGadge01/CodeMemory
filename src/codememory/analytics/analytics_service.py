@@ -72,15 +72,27 @@ class AnalyticsService:
         """Apply account scoping to problems for analytics.
 
         - When ``account`` is a string, filter to that account's submissions.
-        - When ``account`` is None and LeetCode data exists, return empty
+        - When ``account`` is None and all submissions belong to a single account,
+          auto-scope to that account.
+        - When ``account`` is None and multiple accounts exist, return empty
           (prevent cross-account aggregation).
         - When ``account`` is None and no LeetCode data exists, return all
           (legacy behavior for non-LeetCode data).
         """
         if account is not None:
             return self._filter_problems_by_account(problems, account)
-        # No active account: if any LeetCode-sourced submissions exist,
-        # return empty to prevent cross-account data exposure.
+
+        # If account is None, check if all submissions belong to a single account
+        accounts = set()
+        for p in problems:
+            for a in p.attempts:
+                for s in a.submissions:
+                    if s.source_account:
+                        accounts.add(s.source_account)
+        if len(accounts) == 1:
+            return self._filter_problems_by_account(problems, next(iter(accounts)))
+
+        # No active account & multiple accounts exist: return empty
         if self._has_leetcode_submissions(problems):
             return []
         return list(problems)
@@ -291,7 +303,8 @@ class AnalyticsService:
                 GROUP BY language
                 ORDER BY total_subs DESC;
             """
-            rows = self.storage.duckdb_repo.conn.execute(query).fetchall()
+            with self.storage.duckdb_repo._lock:
+                rows = self.storage.duckdb_repo.conn.execute(query).fetchall()
         except Exception:
             rows = []
 
@@ -473,7 +486,8 @@ class AnalyticsService:
             ORDER BY day;
         """
         try:
-            rows = self.storage.duckdb_repo.conn.execute(query).fetchall()
+            with self.storage.duckdb_repo._lock:
+                rows = self.storage.duckdb_repo.conn.execute(query).fetchall()
         except Exception:
             return []
 
@@ -594,7 +608,8 @@ class AnalyticsService:
             ORDER BY submitted_at ASC;
         """
         try:
-            rows = self.storage.duckdb_repo.conn.execute(query).fetchall()
+            with self.storage.duckdb_repo._lock:
+                rows = self.storage.duckdb_repo.conn.execute(query).fetchall()
         except Exception:
             return []
 

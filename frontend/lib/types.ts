@@ -277,3 +277,19 @@ export interface TimelineEvent {
   language: Language | null;
   occurredAt: string;
 }
+
+/* --- Grounded Insights ------------------------------------------------ */
+
+export interface GroundedInsight {
+  scope: string;
+  generatedAt: string;
+  headline: string;
+  narrative: string;
+  keyObservations: string[];
+  recommendedActions: string[];
+  evidenceSummary: string;
+  evidenceRefs: string[];
+  confidenceNotes: string[];
+  evidenceId: string;
+}
+

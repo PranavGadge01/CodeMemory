@@ -77,19 +77,19 @@ class InsightService:
     # Public API
     # ------------------------------------------------------------------
 
-    def generate_full_profile_insight(self) -> GroundedInsight:
+    def generate_full_profile_insight(self, account: str | None = None) -> GroundedInsight:
         """Generate a grounded insight covering the user's full practice profile."""
-        evidence = self.evidence_builder.build_full_profile_evidence()
+        evidence = self.evidence_builder.build_full_profile_evidence(account=account)
         return self._interpret_and_assemble(evidence)
 
-    def generate_topic_insight(self, topic: str) -> GroundedInsight:
+    def generate_topic_insight(self, topic: str, account: str | None = None) -> GroundedInsight:
         """Generate a grounded insight focused on a specific DSA topic."""
-        evidence = self.evidence_builder.build_topic_evidence(topic)
+        evidence = self.evidence_builder.build_topic_evidence(topic, account=account)
         return self._interpret_and_assemble(evidence)
 
-    def generate_problem_insight(self, problem_identifier: str) -> GroundedInsight:
+    def generate_problem_insight(self, problem_identifier: str, account: str | None = None) -> GroundedInsight:
         """Generate a grounded insight focused on a specific problem."""
-        evidence = self.evidence_builder.build_problem_evidence(problem_identifier)
+        evidence = self.evidence_builder.build_problem_evidence(problem_identifier, account=account)
         return self._interpret_and_assemble(evidence)
 
     # ------------------------------------------------------------------

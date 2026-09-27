@@ -410,3 +410,19 @@ export interface HealthDTO {
   };
   timestamp: string;
 }
+
+/* --- Grounded Insights ------------------------------------------------ */
+
+export interface GroundedInsightDTO {
+  scope: string;
+  generated_at: string;
+  headline: string;
+  narrative: string;
+  key_observations: string[];
+  recommended_actions: string[];
+  evidence_summary: string;
+  evidence_refs: string[];
+  confidence_notes: string[];
+  evidence_id: string;
+}
+

@@ -24,6 +24,7 @@ import type {
   RevisionQueueItemDTO,
   SolutionEvolutionDTO,
   SearchResponseDTO,
+  GroundedInsightDTO,
 } from "@/lib/api/types";
 import type {
   ActivityDay,
@@ -40,6 +41,7 @@ import type {
   Submission,
   TimelineEvent,
   TopicStat,
+  GroundedInsight,
 } from "@/lib/types";
 import {
   mapActivityDay,
@@ -57,6 +59,7 @@ import {
   mapSubmission,
   mapTimelineEvent,
   mapTopicStat,
+  mapGroundedInsight,
 } from "@/lib/api/mappers";
 
 /* --- Health ------------------------------------------------------------- */
@@ -306,6 +309,20 @@ export function search(query: string, limit?: number): Promise<SearchResult[]> {
   return apiGet<SearchResponseDTO>("/search", params).then((dto) => dto.results.map(mapSearchResult));
 }
 
+/* --- Grounded Insights ------------------------------------------------ */
+
+export function getFullProfileInsight(): Promise<GroundedInsight> {
+  return apiGet<GroundedInsightDTO>("/insights").then(mapGroundedInsight);
+}
+
+export function getTopicInsight(topic: string): Promise<GroundedInsight> {
+  return apiGet<GroundedInsightDTO>(`/insights/topic/${encodeURIComponent(topic)}`).then(mapGroundedInsight);
+}
+
+export function getProblemInsight(slug: string): Promise<GroundedInsight> {
+  return apiGet<GroundedInsightDTO>(`/insights/problem/${encodeURIComponent(slug)}`).then(mapGroundedInsight);
+}
+
 /* --- LeetCode ---------------------------------------------------------- */
 
 // LeetCode calls live in `lib/api/leetcode.ts` so the whole connector surface
@@ -317,3 +334,4 @@ export {
   syncLeetCode,
   disconnectLeetCode,
 } from "@/lib/api/leetcode";
+
