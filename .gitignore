@@ -35,6 +35,7 @@ ENV/
 
 # Data & Knowledge base (Local User Data)
 data/*.duckdb
+data/*.wal
 data/*.parquet
 data/accounts/
 data/parquet/
@@ -43,6 +44,7 @@ data/attempts/
 data/submissions/
 data/*.json
 knowledge/*/
+src/data/
 
 # IDEs & OS
 .vscode/
@@ -77,3 +79,4 @@ backend/build/
 
 # Local CodeMemory runtime data
 frontend/data/
+frontend/knowledge/
