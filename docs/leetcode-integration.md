@@ -2,12 +2,15 @@
 
 ## Overview
 
-CodeMemory's LeetCode integration has two complementary paths:
+CodeMemory's LeetCode integration has three complementary paths:
 
 1. **Account sync** — a live, read-only connection to LeetCode's *public* GraphQL
    API that syncs your public profile and your most recent accepted submissions.
-   No password, session cookie, or token is ever requested or stored.
-2. **Dataset import** — the import-first fallback that ingests a LeetCode export
+   No credentials are needed for this public path.
+2. **Authenticated sync** — optional encrypted session credentials enable full
+   paginated history, failed submissions, and available code. See
+   [authenticated sync](leetcode-auth.md).
+3. **Dataset import** — the import-first fallback that ingests a LeetCode export
    file (JSON/CSV), including source code, runtime and memory.
 
 ```
@@ -33,7 +36,7 @@ canonical service surface `service.leetcode`:
 service.leetcode.connect(username)   # validate + store account metadata
 service.leetcode.sync(limit=None)    # one sync run, returns a SyncStatus
 service.leetcode.status()            # LeetCodeAccountStatus for display
-service.leetcode.disconnect()        # drop account state, keep history
+service.leetcode.disconnect()        # revoke credentials, drop connection, keep history
 ```
 
 An optional timer can drive that same `sync()` call in the background, through

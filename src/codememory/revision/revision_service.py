@@ -5,7 +5,8 @@ from typing import Sequence
 
 from codememory.analytics.analytics_service import AnalyticsService
 from codememory.domain.enums import DifficultyLevel, NoteType, SubmissionStatus
-from codememory.domain.models import Problem
+from codememory.domain.models import Problem, ProblemNote, RevisionState
+from codememory.domain.ownership import scope_problem
 from codememory.revision.revision_models import (
     RevisionQueueItem,
     RevisionScoreBreakdown,
@@ -17,19 +18,23 @@ from codememory.storage.composite_repository import CompositeStorage
 class RevisionService:
     """Revision engine calculating problem priority queues and tracking reviews."""
 
-    def __init__(self, storage: CompositeStorage, analytics_service: AnalyticsService | None = None):
+    def __init__(self, storage: CompositeStorage, analytics_service: AnalyticsService | None = None, account_resolver=None):
         self.storage = storage
+        self.account_resolver = account_resolver or (lambda: None)
         self.analytics = analytics_service or AnalyticsService(storage=storage)
 
     def get_problem_priority(
         self,
         problem_identifier: str,
         weights: RevisionWeights | None = None,
+        account: str | None = None,
     ) -> RevisionScoreBreakdown:
         """Calculate detailed revision priority score for a problem."""
+        account = account if account is not None else self.account_resolver()
         w = weights or RevisionWeights()
         prob = self.storage.get_by_slug(problem_identifier) or self.storage.get_by_id(problem_identifier)
 
+        prob = scope_problem(prob, account) if prob else None
         if not prob:
             raise ValueError(f"Problem not found: '{problem_identifier}'")
 
@@ -71,7 +76,7 @@ class RevisionService:
         recency_score = min(days_since / 7.0, 10.0)
 
         # 4. Weakness score (belongs to a weak topic)
-        weak_topics = {wt.topic for wt in self.analytics.get_topic_statistics() if wt.success_rate_pct < 50.0}
+        weak_topics = {wt.topic for wt in self.analytics.get_topic_statistics(account=account) if wt.success_rate_pct < 50.0}
         prob_topics = {t.strip() for t in prob.topics}
         weakness_score = 2.0 if any(t in weak_topics for t in prob_topics) else 0.0
 
@@ -116,18 +121,8 @@ class RevisionService:
         When ``account`` is provided, only problems with submissions from that
         account are included.
         """
-        problems = self.storage.list_all()
-        if account:
-            filtered: list[Problem] = []
-            for p in problems:
-                has_account_sub = any(
-                    s.source_account == account
-                    for a in p.attempts
-                    for s in a.submissions
-                )
-                if has_account_sub:
-                    filtered.append(p)
-            problems = filtered
+        account = account if account is not None else self.account_resolver()
+        problems = [view for p in self.storage.list_all() if (view := scope_problem(p, account)) is not None]
         queue: list[RevisionQueueItem] = []
 
         if topic and topic.strip():
@@ -135,7 +130,7 @@ class RevisionService:
             problems = [p for p in problems if any(t_lower in pt.lower() for pt in p.topics)]
 
         for p in problems:
-            bd = self.get_problem_priority(p.id, weights=weights)
+            bd = self.get_problem_priority(p.id, weights=weights, account=account)
 
             # Get latest activity timestamp
             last_dt = p.updated_at
@@ -164,7 +159,7 @@ class RevisionService:
 
     def get_due_problems(self, threshold_days: int = 7, limit: int = 10) -> list[RevisionQueueItem]:
         """Fetch problems that have not been attempted or reviewed in threshold_days."""
-        full_queue = self.get_revision_queue(limit=100)
+        full_queue = self.get_revision_queue(limit=len(self.storage.list_all()))
         due = [item for item in full_queue if item.breakdown.days_since_last_activity >= threshold_days]
         return due[:limit]
 
@@ -174,20 +169,18 @@ class RevisionService:
         if not prob:
             raise ValueError(f"Problem not found: '{problem_identifier}'")
 
+        account = self.account_resolver()
+        if scope_problem(prob, account) is None:
+            raise ValueError("Problem does not belong to this account")
         now = datetime.now(timezone.utc)
-        prob.updated_at = now
-
-        note_content = notes or "Marked problem as reviewed in revision cycle."
-        self.storage.save(prob)
-
-        # Attach note via storage repository
-        from codememory.domain.models import ProblemNote
-        pnote = ProblemNote(
-            problem_id=prob.id,
-            content=note_content,
-            note_type=NoteType.GENERAL,
-            created_at=now,
-        )
-        prob.notes.append(pnote)
-        self.storage.save(prob)
-        return prob
+        state = next((r for r in prob.revision_states if r.source_account == account), None)
+        if state is None:
+            state = RevisionState(source_account=account, last_activity_at=now)
+            prob.revision_states.append(state)
+        state.last_activity_at = now
+        state.last_reviewed_at = now
+        prob.notes.append(ProblemNote(problem_id=prob.id, source_account=account,
+            content=notes or "Marked problem as reviewed in revision cycle.",
+            note_type=NoteType.GENERAL, created_at=now))
+        self.storage.save_private_state(prob, account)
+        return scope_problem(prob, account)

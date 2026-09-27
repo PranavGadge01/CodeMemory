@@ -11,7 +11,9 @@
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
-    "sidecar:build": "cd .. && .venv\\Scripts\\pyinstaller.exe --noconfirm backend/codememory-api.spec --distpath dist"
+    "sidecar:build": "cd .. && .venv\\Scripts\\pyinstaller.exe --noconfirm backend/codememory-api.spec --distpath dist",
+    "test:e2e": "playwright test",
+    "version:check": "node ../scripts/sync-version.mjs --check"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",
@@ -24,6 +26,7 @@
     "tailwind-merge": "^3.3.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@tauri-apps/cli": "^2.0.0",
     "@types/node": "^20",

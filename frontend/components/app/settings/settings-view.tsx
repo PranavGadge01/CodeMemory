@@ -23,7 +23,7 @@ const SECTIONS = [
 export function SettingsView() {
   const [active, setActive] = React.useState("appearance");
 
-  const { settings, setSetting } = useSettings();
+  const { settings, setSetting, isLoading, isSaving, error, reload } = useSettings();
 
   // Appearance settings
   const themePreference = settings.theme as ThemePreference;
@@ -41,10 +41,12 @@ export function SettingsView() {
         <PageHeader
           eyebrow="Settings"
           title="Preferences"
-          description={settings ? "Preferences are saved to your CodeMemory backend." : "Loading settings…"}
+          description={isLoading ? "Loading settings…" : isSaving ? "Saving preferences…" : "Preferences are saved on this computer."}
         />
       </div>
 
+      {error ? <div role="alert" className="mt-4 text-body-sm text-error">{error} <Button variant="ghost" onClick={reload} disabled={isSaving}>Reload settings</Button></div> : null}
+      <fieldset disabled={isLoading} className="min-w-0" aria-busy={isLoading || isSaving}>
       <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[180px_minmax(0,1fr)]">
         {/* Section nav */}
         <nav aria-label="Settings sections" className="hidden lg:block">
@@ -187,15 +189,15 @@ export function SettingsView() {
             id="data"
             eyebrow="Data & sync"
             title="Data management"
-            description="The current API does not expose file import, index rebuild, or data deletion actions in this screen."
+            description="Your history and preferences are stored locally. Manage LeetCode sync in Account above."
           >
-            <SettingRow label="Automatic sync" description="Read-only status reported by the backend. No frequency setting is available here.">
+            <SettingRow label="Automatic sync" description="Background public-sync status.">
               <span className="font-technical-sm text-text-secondary" role="status">
                 {settings.autosyncEnabled ? "Enabled" : "Disabled"}
               </span>
             </SettingRow>
             <div className="border-t border-border-soft px-5 py-4 text-body-sm text-text-muted">
-              Import, rebuild, and clear operations are unavailable through the current frontend API. No file or data changes have been made.
+              {settings.dataDir ? `Data folder: ${settings.dataDir}` : "Data location unavailable while settings are loading."}
             </div>
           </SettingsGroup>
 
@@ -203,8 +205,7 @@ export function SettingsView() {
             <div className="px-5 py-4">
               <dl className="grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
                 <Definition label="Product" value="CodeMemory" />
-                <Definition label="Version" value={settings.version ?? "1.0.0"} mono />
-                <Definition label="Build" value="Development build" mono />
+                <Definition label="Version" value={settings.version || "Unavailable"} mono />
                 <Definition label="Storage" value="DuckDB · Parquet · Markdown" mono />
               </dl>
               <div className="mt-5">
@@ -215,18 +216,12 @@ export function SettingsView() {
                   <li>Markdown knowledge base — your notes and patterns</li>
                 </ul>
               </div>
-              <div className="mt-5 flex flex-wrap gap-2 border-t border-border-soft pt-4">
-                <Button variant="ghost" size="sm" asChild>
-                  <a href="#product">Design system</a>
-                </Button>
-                <Button variant="ghost" size="sm" asChild>
-                  <a href="#evolution">How it works</a>
-                </Button>
-              </div>
+
             </div>
           </SettingsGroup>
         </div>
       </div>
+      </fieldset>
     </PageContainer>
   );
 }

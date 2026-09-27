@@ -1,3 +1,4 @@
+from codememory import __version__
 from fastapi import APIRouter, Depends, HTTPException
 from codememory.core.service import CodeMemoryService
 
@@ -18,8 +19,8 @@ def get_settings(service: CodeMemoryService = Depends(get_service)):
     return SettingsOut(
         leetcode_connected=leetcode_connected,
         autosync_enabled=autosync_enabled,
-        data_dir="data",
-        version="1.0.0",
+        data_dir=str(service.base_dir.resolve()),
+        version=__version__,
         theme=settings.theme,
         accent_emphasis=settings.accent_emphasis,
         compact_density=settings.compact_density,
@@ -46,8 +47,8 @@ def update_settings(
             getattr(service, "_autosync", None) is not None
             and getattr(service._autosync, "is_running", lambda: False)()
         ),
-        data_dir="data",
-        version="1.0.0",
+        data_dir=str(service.base_dir.resolve()),
+        version=__version__,
         theme=settings.theme,
         accent_emphasis=settings.accent_emphasis,
         compact_density=settings.compact_density,

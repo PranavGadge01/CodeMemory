@@ -47,7 +47,7 @@ export class ApiError extends Error {
  * alike. The default matches the local FastAPI server.
  */
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") ?? "http://localhost:8000/api/v1";
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") ?? "http://127.0.0.1:8000/api/v1";
 
 /** Absolute URL for a route-relative path, with optional query parameters. */
 export function buildUrl(path: string, params?: Record<string, unknown>): string {

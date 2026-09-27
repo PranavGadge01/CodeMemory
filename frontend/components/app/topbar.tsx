@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Search, Plus, Menu } from "lucide-react";
+import { Search, Menu } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Kbd } from "@/components/ui/primitives";
@@ -71,8 +71,8 @@ export function Topbar({ onOpenSidebar, title }: TopbarProps) {
           screens it is the only theme control in the app shell. */}
       <ThemeToggle />
 
-      <Button type="button" variant="outline" size="icon" aria-label="Import data" className="hidden sm:inline-flex">
-        <Plus className="h-4 w-4" aria-hidden="true" />
+      <Button type="button" variant="outline" size="sm" onClick={() => router.push("/connect")} className="hidden sm:inline-flex">
+        Connect LeetCode
       </Button>
     </header>
   );

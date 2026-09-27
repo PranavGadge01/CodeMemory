@@ -80,3 +80,13 @@ backend/build/
 # Local CodeMemory runtime data
 frontend/data/
 frontend/knowledge/
+
+# Website, browser checks and recoverable runtime backups
+node_modules/
+website/out/
+website/.next/
+frontend/test-results/
+frontend/playwright-report/
+*.pre-ownership-v1.bak
+*.duckdb.wal
+*.tsbuildinfo

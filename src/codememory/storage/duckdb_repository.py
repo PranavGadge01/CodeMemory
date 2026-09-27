@@ -1,6 +1,7 @@
 """DuckDB storage implementation for relational querying and analytics."""
 
 import threading
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Sequence
@@ -8,7 +9,9 @@ from typing import Sequence
 import duckdb
 
 from codememory.domain.enums import DifficultyLevel, NoteType, Platform, SubmissionStatus
-from codememory.domain.models import Attempt, Problem, ProblemNote, SolutionAnalysis, Submission, compute_submission_hash
+from codememory.domain.models import Attempt, Problem, ProblemNote, RevisionState, SolutionAnalysis, Submission, compute_submission_hash
+from codememory.domain.ownership import inferred_owner, scope_problem
+from codememory.storage.ownership_migration import migrate_ownership, backup_before_open
 from codememory.storage.base import AttemptRepository, ProblemRepository, SubmissionRepository
 
 
@@ -119,6 +122,7 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
         # permanently zeroed dashboard. The fallback therefore stops at
         # read-only and surfaces the failure instead of hiding it.
         try:
+            backup_before_open(self.db_path)
             self.conn = duckdb.connect(self.db_path)
             if shared:
                 _shared_duckdb_connections[self.db_path] = self.conn
@@ -126,6 +130,7 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
                 # Private connection: this instance is responsible for closing it.
                 self._owns_private_connection = True
             self._init_tables()
+            migrate_ownership(self.conn, self.db_path)
             self._repair_empty_submission_hashes()
         except duckdb.IOException:
             try:
@@ -214,6 +219,7 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
         # instance may already have reopened the path underneath this one.
         if registered is self.conn:
             _shared_duckdb_connections.pop(self.db_path, None)
+        if registered is self.conn or self._owns_private_connection:
             try:
                 self.conn.close()
             except Exception:
@@ -355,14 +361,16 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
 
         # Upsert attempts
         for attempt in problem.attempts:
+            if attempt.source_account is None:
+                attempt.source_account = inferred_owner(attempt.submissions)
             tc = attempt.analysis.time_complexity if attempt.analysis else None
             sc = attempt.analysis.space_complexity if attempt.analysis else None
             att_status = attempt.status.value if hasattr(attempt.status, "value") else str(attempt.status)
 
             self.conn.execute(
                 """
-                INSERT INTO attempts (id, problem_id, attempt_number, approach_summary, reasoning, status, time_complexity, space_complexity, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO attempts (id, problem_id, attempt_number, approach_summary, reasoning, status, time_complexity, space_complexity, created_at, updated_at, source_account, mistakes_json, analysis_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (id) DO UPDATE SET
                     attempt_number = excluded.attempt_number,
                     approach_summary = excluded.approach_summary,
@@ -370,7 +378,10 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
                     status = excluded.status,
                     time_complexity = excluded.time_complexity,
                     space_complexity = excluded.space_complexity,
-                    updated_at = excluded.updated_at;
+                    updated_at = excluded.updated_at,
+                    source_account = excluded.source_account,
+                    mistakes_json = excluded.mistakes_json,
+                    analysis_json = excluded.analysis_json;
             """,
                 [
                     str(attempt.id),
@@ -383,6 +394,9 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
                     sc,
                     _to_naive_utc(attempt.created_at),
                     _to_naive_utc(attempt.updated_at),
+                    attempt.source_account if attempt.source_account is not None else inferred_owner(attempt.submissions),
+                    json.dumps(attempt.mistakes),
+                    attempt.analysis.model_dump_json() if attempt.analysis else None,
                 ],
             )
 
@@ -434,11 +448,12 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
             n_type = note.note_type.value if hasattr(note.note_type, "value") else str(note.note_type)
             self.conn.execute(
                 """
-                INSERT INTO notes (id, problem_id, attempt_id, content, note_type, created_at)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO notes (id, problem_id, attempt_id, content, note_type, created_at, source_account)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (id) DO UPDATE SET
                     content = excluded.content,
-                    note_type = excluded.note_type;
+                    note_type = excluded.note_type,
+                    source_account = excluded.source_account;
             """,
                 [
                     str(note.id),
@@ -447,9 +462,13 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
                     note.content,
                     n_type,
                     _to_naive_utc(note.created_at),
+                    note.source_account,
                 ],
             )
 
+        for state in problem.revision_states:
+            self.conn.execute("INSERT INTO account_problem_state VALUES (?, ?, ?) ON CONFLICT(problem_id, account_key) DO UPDATE SET state_json=excluded.state_json",
+                              [problem.id, state.source_account or "", state.model_dump_json()])
         return problem
 
     def get_by_id(self, problem_id: str) -> Problem | None:
@@ -458,6 +477,33 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
             if not res:
                 return None
             return self._build_problem_from_row(res)
+
+    def save_private_state(self, problem: Problem, account: str | None) -> None:
+        """Write only owned notes/reviews; historical submissions are untouched."""
+        with self._lock:
+            canonical = self.get_by_id(problem.id)
+            if canonical is None or scope_problem(canonical, account) is None:
+                raise ValueError("Problem does not belong to this account")
+            self.conn.execute("BEGIN TRANSACTION")
+            try:
+                for note in problem.notes:
+                    if note.source_account != account:
+                        continue
+                    existing = self.conn.execute("SELECT source_account FROM notes WHERE id=?", [note.id]).fetchone()
+                    if existing and existing[0] != account:
+                        raise ValueError("Note does not belong to this account")
+                    self.conn.execute("""INSERT INTO notes VALUES (?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(id) DO UPDATE SET content=excluded.content, note_type=excluded.note_type""",
+                        [note.id, problem.id, note.attempt_id, note.content, note.note_type.value,
+                         _to_naive_utc(note.created_at), account])
+                for state in problem.revision_states:
+                    if state.source_account == account:
+                        self.conn.execute("INSERT INTO account_problem_state VALUES (?, ?, ?) ON CONFLICT(problem_id, account_key) DO UPDATE SET state_json=excluded.state_json",
+                                          [problem.id, account or "", state.model_dump_json()])
+                self.conn.execute("COMMIT")
+            except BaseException:
+                self.conn.execute("ROLLBACK")
+                raise
 
     def get_by_slug(self, slug: str) -> Problem | None:
         # The lock spans the problem lookup *and* the child-row builds: a
@@ -477,14 +523,14 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
 
         # Load attempts using explicit column list matching the unpacking tuple
         att_rows = self.conn.execute(
-            "SELECT id, problem_id, attempt_number, approach_summary, reasoning, status, time_complexity, space_complexity, created_at, updated_at "
+            "SELECT id, problem_id, attempt_number, approach_summary, reasoning, status, time_complexity, space_complexity, created_at, updated_at, source_account, mistakes_json, analysis_json "
             "FROM attempts WHERE problem_id = ? ORDER BY attempt_number ASC",
             [pid],
         ).fetchall()
         attempts: list[Attempt] = []
 
         for a_row in att_rows:
-            aid, _, att_num, app_sum, reasoning, att_status, tc, sc, a_created, a_updated = a_row
+            aid, _, att_num, app_sum, reasoning, att_status, tc, sc, a_created, a_updated, a_owner, a_mistakes, a_analysis = a_row
 
             # Load submissions for this attempt using explicit column list
             sub_rows = self.conn.execute(
@@ -526,27 +572,32 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
                 approach_summary=app_sum or f"Attempt {clean_att_num}",
                 reasoning=reasoning,
                 analysis=analysis,
+                source_account=a_owner,
+                mistakes=json.loads(a_mistakes) if a_mistakes else [],
                 status=SubmissionStatus.parse(att_status),
                 created_at=a_created,
                 updated_at=a_updated,
                 submissions=submissions,
             )
+            if a_analysis:
+                att.analysis = SolutionAnalysis.model_validate_json(a_analysis)
             attempts.append(att)
 
         # Load notes using explicit column list
         note_rows = self.conn.execute(
-            "SELECT id, problem_id, attempt_id, content, note_type, created_at "
+            "SELECT id, problem_id, attempt_id, content, note_type, created_at, source_account "
             "FROM notes WHERE problem_id = ? ORDER BY created_at ASC",
             [pid],
         ).fetchall()
         notes: list[ProblemNote] = []
         for n_row in note_rows:
-            nid, _, n_aid, content, n_type, n_created = n_row
+            nid, _, n_aid, content, n_type, n_created, n_owner = n_row
             note = ProblemNote(
                 id=nid,
                 problem_id=pid,
                 attempt_id=n_aid,
                 content=content,
+                source_account=n_owner,
                 note_type=NoteType(n_type) if n_type in NoteType.__members__.values() else NoteType.GENERAL,
                 created_at=n_created,
             )
@@ -565,6 +616,8 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
             updated_at=updated_at,
             attempts=attempts,
             notes=notes,
+            revision_states=[RevisionState.model_validate_json(r[0]) for r in self.conn.execute(
+                "SELECT state_json FROM account_problem_state WHERE problem_id=?", [pid]).fetchall()],
         )
 
     def list_all(self) -> Sequence[Problem]:

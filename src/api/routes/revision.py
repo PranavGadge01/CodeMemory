@@ -7,6 +7,10 @@ from api.schemas.revision import RevisionQueueItemOut
 
 router = APIRouter(tags=["revision"])
 
+@router.get("/revision/topics", response_model=List[str])
+def revision_topics(service: CodeMemoryService = Depends(get_service)):
+    return sorted({topic for problem in service.list_problems() for topic in problem.topics})
+
 @router.get("/revision", response_model=List[RevisionQueueItemOut])
 def get_revision_queue(
     limit: Optional[int] = Query(50, ge=1, le=100),
@@ -14,16 +18,9 @@ def get_revision_queue(
     service: CodeMemoryService = Depends(get_service)
 ):
     """Get the prioritized revision queue."""
-    # The public service surface is ``revision_service``; ``service.revision``
-    # never existed and raised AttributeError (HTTP 500) on every call.
-    # Topic filtering is applied python-side.
     queue = service.revision_service.get_revision_queue(
-        limit=limit, account=service.active_account
+        limit=limit, topic=topic, account=service.active_account
     )
-    if topic:
-        topic_lower = topic.lower()
-        queue = [q for q in queue if any(topic_lower in t.lower() for t in q.topics)]
-        
     return [RevisionQueueItemOut(**q.model_dump()) for q in queue]
 
 @router.post("/revision/{slug}/reviewed")

@@ -44,6 +44,12 @@ class CompositeStorage(ProblemRepository, SubmissionRepository, AttemptRepositor
     def get_by_id(self, problem_id: str) -> Problem | None:
         return self.duckdb_repo.get_by_id(problem_id)
 
+    def save_private_state(self, problem: Problem, account: str | None) -> None:
+        self.duckdb_repo.save_private_state(problem, account)
+        canonical = self.duckdb_repo.get_by_id(problem.id)
+        self.fs_repo.save(canonical)
+        self.parquet_repo.sync_all(self.duckdb_repo.list_all())
+
     def get_by_slug(self, slug: str) -> Problem | None:
         return self.duckdb_repo.get_by_slug(slug)
 

@@ -16,6 +16,7 @@ import {
   syncLeetCode,
 } from "@/lib/api/leetcode";
 import type { LeetCodeSyncResultDTO } from "@/lib/api/types";
+import { openWorkspace } from "@/lib/onboarding";
 
 export default function ConnectPage() {
   const router = useRouter();
@@ -39,15 +40,19 @@ export default function ConnectPage() {
         if (cancelled) return;
         if (status.connected) {
           setConnectedAs(status.username);
+          setUsername(status.username ?? "");
           setPhase("done");
         } else {
           setPhase("idle");
         }
       })
-      .catch(() => {
+      .catch((failure) => {
         // Status is advisory: if it cannot be read the form still works, and
         // the connect call reports the real reason if the API is down.
-        if (!cancelled) setPhase("idle");
+        if (!cancelled) {
+          setError(failure instanceof ApiError ? failure : new ApiError("Could not load account status. Try connecting again.", "ERROR", 0));
+          setPhase("error");
+        }
       });
 
     return () => {
@@ -79,7 +84,7 @@ export default function ConnectPage() {
       const syncResult = await syncLeetCode();
       setResult(syncResult);
 
-      if (syncResult.status.toLowerCase() === "failed") {
+      if (syncResult.status.toLowerCase() === "failed" || syncResult.recordsFailed > 0 || syncResult.status.toLowerCase() === "partial") {
         setError(
           new ApiError(
             syncResult.errorMessage ?? "Sync did not complete. Your account is connected.",
@@ -93,8 +98,7 @@ export default function ConnectPage() {
 
       setPhase("done");
 
-      // Let the success state be read before leaving the page.
-      window.setTimeout(() => router.push("/dashboard"), 1400);
+      openWorkspace();
     } catch (caught) {
       setError(
         caught instanceof ApiError
@@ -113,7 +117,7 @@ export default function ConnectPage() {
         <div className="mx-auto flex h-14 w-full max-w-[1200px] items-center px-5 md:px-8">
           <Link href="/" className="press inline-flex items-center gap-2 text-text-muted hover:text-text-secondary">
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-            <span className="font-technical-sm">Back to home</span>
+            <span className="font-technical-sm">CodeMemory</span>
           </Link>
         </div>
       </header>
@@ -133,12 +137,12 @@ export default function ConnectPage() {
               <h1 className="mt-2 text-heading-xl text-text-primary">Connect LeetCode</h1>
               <p className="mt-2 text-body-md text-text-muted">
                 CodeMemory reads your public submission history. Enter the username your
-                submissions are published under — nothing else.
+                submissions are published under to get started.
               </p>
             </div>
 
             <div className="px-6 py-6">
-              {phase === "done" ? (
+              {phase === "checking" ? <p role="status" className="text-body-sm text-text-muted">Checking your account…</p> : phase === "done" ? (
                 <SuccessPanel connectedAs={connectedAs} result={result} />
               ) : phase === "syncing" ? (
                 <SyncingPanel connectedAs={connectedAs} />
@@ -167,7 +171,7 @@ export default function ConnectPage() {
                       aria-invalid={error !== null}
                     />
                     <span className="font-technical-sm text-text-faint">
-                      Public profile only — no password, cookie or session token is ever asked for.
+                      No credentials needed for public sync. Full history is optional in Settings.
                     </span>
                   </div>
 
@@ -181,7 +185,7 @@ export default function ConnectPage() {
                       </>
                     ) : (
                       <>
-                        Connect
+                        {connectedAs ? "Retry public sync" : "Continue"}
                         <ArrowRight className="h-4 w-4" aria-hidden="true" />
                       </>
                     )}
@@ -189,9 +193,9 @@ export default function ConnectPage() {
                 </form>
               )}
 
-              {phase === "done" ? (
+              {connectedAs && phase !== "syncing" && phase !== "connecting" ? (
                 <div className="mt-5 flex flex-col gap-2">
-                  <Button variant="primary" size="lg" onClick={() => router.push("/dashboard")}>
+                  <Button variant="primary" size="lg" onClick={openWorkspace}>
                     Open dashboard
                     <ArrowRight className="h-4 w-4" aria-hidden="true" />
                   </Button>
@@ -214,11 +218,8 @@ export default function ConnectPage() {
           <Separator className="my-6" />
 
           <p className="text-caption text-text-faint">
-            Your submissions stay local. CodeMemory only stores the public profile handle and the
-            problems you have already solved.{" "}
-            <Link href="/" className="font-technical-sm text-accent hover:text-accent-hover">
-              Learn how it works
-            </Link>
+            Your imported history stays on this computer. Public sync imports recent accepted
+            submissions. Add encrypted credentials in Settings for full history, failed attempts, and available code.
           </p>
         </div>
       </main>
@@ -296,8 +297,8 @@ function SuccessPanel({
             ? `${result.recordsImported} submission${result.recordsImported === 1 ? "" : "s"} imported` +
               (result.recordsSkipped ? ` · ${result.recordsSkipped} already known` : "") +
               (result.recordsFailed ? ` · ${result.recordsFailed} failed` : "") +
-              ". Taking you to your dashboard."
-            : "Taking you to your dashboard."}
+              "."
+            : "Open your workspace or use a different account below."}
         </p>
       </div>
     </div>

@@ -211,7 +211,7 @@ def test_sync_engine_full_sync_flow():
 
     # Mock service that has no existing problem
     mock_service = MagicMock()
-    mock_service.get_problem.side_effect = ProblemNotFoundError("two-sum")
+    mock_service.storage.get_by_slug.return_value = None
 
     mock_client.fetch_problem_details.return_value = LeetCodeProblemRaw(
         id="1",

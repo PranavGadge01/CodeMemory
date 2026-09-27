@@ -180,6 +180,18 @@ def _meta_int(metadata: Dict[str, Any], key: str) -> Optional[int]:
         return None
 
 
+def _account_operation(method):
+    from functools import wraps
+    import threading
+    @wraps(method)
+    def operation(self, *args, **kwargs):
+        if not hasattr(self, "_operation_lock"):
+            self._operation_lock = threading.RLock()
+        with self._operation_lock:
+            return method(self, *args, **kwargs)
+    return operation
+
+
 class LeetCodeAccountService:
     """Account + sync service surface for the LeetCode integration.
 
@@ -196,6 +208,8 @@ class LeetCodeAccountService:
         sync_limit: Optional[int] = None,
     ) -> None:
         self._app_service = app_service
+        import threading
+        self._operation_lock = threading.RLock()
         self._account_service = account_service or AccountService()
         engine_kwargs: Dict[str, Any] = {"account_service": self._account_service}
         if client is not None:
@@ -212,6 +226,7 @@ class LeetCodeAccountService:
         """Whether a validated LeetCode account is currently connected."""
         return self._account_service.is_connected(PROVIDER)
 
+    @_account_operation
     def connect(self, username: str) -> AccountConnection:
         """Validate ``username`` through the public API and store the connection.
 
@@ -241,6 +256,7 @@ class LeetCodeAccountService:
         except LeetCodeError as exc:
             raise LeetCodeAccountError(safe_error_message(exc)) from exc
 
+    @_account_operation
     def sync(self, limit: Optional[int] = None) -> SyncStatus:
         """Run one LeetCode sync through the Phase B engine.
 
@@ -295,29 +311,45 @@ class LeetCodeAccountService:
             capabilities=dict(conn.capabilities or {}),
         )
 
+    @_account_operation
     def disconnect(self) -> bool:
         """Remove the account connection and sync state, keeping imported history.
 
         Submissions already imported into CodeMemory are untouched, and a later
         reconnect starts from a valid account state without needing any deletion.
         """
+        if self._account_service.get_connection(PROVIDER):
+            self.revoke_authenticated_credentials()
         return self._engine.disconnect_account()
 
+    def _credential_vault(self, account_identifier: str) -> CredentialVault:
+        from pathlib import Path
+        import hashlib
+        safe_name = account_identifier if all(c.isalnum() or c in "_-" for c in account_identifier) else hashlib.sha256(account_identifier.encode()).hexdigest()
+        path = Path(self._account_service.data_dir) / f"leetcode_vault_{safe_name}.json"
+        return CredentialVault(account_identifier=account_identifier, vault_file_path=str(path))
+
+    @_account_operation
     def store_authenticated_credentials(self, session: str, csrf_token: str) -> None:
         """Validate a session with LeetCode before securely storing it."""
         conn = self._account_service.get_connection(PROVIDER)
         account_identifier = conn.username if conn and conn.username else "default"
-        vault = CredentialVault(account_identifier=account_identifier)
+        if not conn:
+            raise LeetCodeAccountError("Connect a LeetCode account first")
+        vault = self._credential_vault(account_identifier)
         if not vault.validate(session, csrf_token):
             raise LeetCodeError("LeetCode session or CSRF token has an invalid format")
         self._validate_authenticated_session(session, csrf_token)
         vault.store(session, csrf_token)
 
+    @_account_operation
     def validate_authenticated_credentials(self) -> bool:
         """Validate stored credentials against LeetCode, not just their format."""
         conn = self._account_service.get_connection(PROVIDER)
         account_identifier = conn.username if conn and conn.username else "default"
-        vault = CredentialVault(account_identifier=account_identifier)
+        if not conn:
+            return False
+        vault = self._credential_vault(account_identifier)
         session, csrf_token = vault.retrieve()
         if not session or not csrf_token or not vault.validate(session, csrf_token):
             return False
@@ -336,21 +368,28 @@ class LeetCodeAccountService:
         )
         client.validate_session()
 
+    @_account_operation
     def revoke_authenticated_credentials(self) -> None:
         """Remove stored authenticated credentials from the vault."""
         conn = self._account_service.get_connection(PROVIDER)
         account_identifier = conn.username if conn and conn.username else "default"
-        vault = CredentialVault(account_identifier=account_identifier)
+        if not conn:
+            return
+        vault = self._credential_vault(account_identifier)
         vault.revoke()
 
+    @_account_operation
     def sync_authenticated_full_history(self) -> SyncStatus:
         """Perform authenticated full-history sync using stored credentials."""
         conn = self._account_service.get_connection("LeetCode")
         username = conn.username if conn and conn.status == AccountStatus.CONNECTED else None
         account_identifier = username if username else "default"
+        if not username:
+            raise LeetCodeAccountError("Connect a LeetCode account first")
         orchestrator = AuthenticatedSyncOrchestrator(
             account_service=self._account_service,
             account_identifier=account_identifier,
+            credential_vault=self._credential_vault(account_identifier),
         )
         return orchestrator.sync_full_history(self._app_service, username)
 

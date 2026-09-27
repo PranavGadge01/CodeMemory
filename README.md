@@ -6,6 +6,38 @@ CodeMemory is a local-first personal developer knowledge system designed to reco
 
 ---
 
+
+## Desktop application and website
+
+The Windows product is **Tauri 2 → static Next.js → FastAPI → DuckDB**.
+The independent public website lives in `website/`. Existing CLI and Streamlit
+commands remain available for developer workflows; `run.ps1`/`run.bat` launch
+that developer studio, not the Windows desktop app.
+
+- [Windows setup, build, test and release](docs/windows-release.md)
+- [Runtime paths, account ownership, migration and recovery](docs/data-migration.md)
+- [Website build and deployment](website/README.md)
+- [Current productization results and limitations](docs/productization-progress.md)
+
+From the repository root, run the public website:
+
+```powershell
+npm --prefix website ci
+npm --prefix website run dev
+```
+
+The website opens at `http://127.0.0.1:4173`. For desktop browser development,
+run `.venv/Scripts/python.exe -m api.app` and `npm --prefix frontend run dev`
+in separate terminals after dependency installation. For installers, run
+`npm run tauri build` inside `frontend/`.
+
+First launch: short intro → LeetCode username → public sync → Dashboard.
+Returning accounts open Dashboard. Optional authenticated sync remains in
+Settings. Public sync covers a recent accepted window; authenticated sync adds
+full paginated history and available code. Imported notes/reviews/search/memory
+are account-scoped. Installed runtime data lives in `%LOCALAPPDATA%\CodeMemory`.
+The release version and download availability are configured in `release.json`.
+
 ## 1. What CodeMemory Is
 CodeMemory records your complete problem-solving evolution for Data Structures and Algorithms (DSA). For every problem, it stores problem metadata, submission attempts, raw source code, execution results (runtime/memory), reasoning, mistakes, time/space complexity analysis, and learning notes.
 
@@ -31,7 +63,8 @@ The goal is to build a **personal searchable knowledge system that remembers HOW
 ## 4. Architecture Overview
 
 ```
-UI / CLI (Streamlit App & Rich CLI)
+Tauri / static Next.js → local FastAPI
+Developer UI / Rich CLI
     ↓
 CodeMemory Core & Services (Search, Revision, Analytics, AI, Graph, Importer, Exporter)
     ↓
@@ -119,7 +152,7 @@ See [docs/memory-architecture.md](docs/memory-architecture.md) for full memory e
 ## 14. Installation & Setup
 
 ```bash
-git clone https://github.com/your-username/codememory.git
+git clone https://github.com/PranavGadge01/CodeMemory.git
 cd codememory
 
 # Install package with development dependencies

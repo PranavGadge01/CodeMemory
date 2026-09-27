@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from codememory.core.service import CodeMemoryService
 from api.config import settings
+from codememory import __version__
 from api.errors import value_error_handler, exception_handler
 import api.errors as errors
 
@@ -21,6 +22,8 @@ async def lifespan(app: FastAPI):
     service = app.state._injected_service
     owns_service = service is None
     if owns_service:
+        from codememory.core.runtime import prepare_runtime
+        prepare_runtime()
         service = CodeMemoryService(
             base_dir=settings.data_dir,
             knowledge_dir=settings.knowledge_dir,
@@ -37,11 +40,21 @@ def create_app(service: Optional[CodeMemoryService] = None) -> FastAPI:
     app = FastAPI(
         title="CodeMemory Local API",
         description="Local thin transport layer for the CodeMemory Next.js UI.",
-        version="1.0.0",
+        version=__version__,
         lifespan=lifespan,
     )
     # Stashed before the lifespan runs so it can pick the injected instance up.
     app.state._injected_service = service
+
+    @app.middleware("http")
+    async def account_context(request, call_next):
+        from codememory.core.account_context import request_account
+        current = getattr(request.app.state, "service", None)
+        token = request_account.set(current.active_account if current else None)
+        try:
+            return await call_next(request)
+        finally:
+            request_account.reset(token)
 
     app.add_middleware(
         CORSMiddleware,
@@ -97,6 +110,17 @@ def main() -> None:
     ``api.config.Settings`` at import time).
     """
     import uvicorn
+    import sys
+    from pathlib import Path
+    from codememory.core.runtime import prepare_runtime
+    prepare_runtime()
+    # PyInstaller windowed builds have no std streams. Keep diagnostics on disk.
+    if sys.stdout is None or sys.stderr is None:
+        log_dir = Path(settings.data_dir) / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        log_stream = (log_dir / "sidecar.log").open("a", encoding="utf-8", buffering=1)
+        sys.stdout = sys.stdout or log_stream
+        sys.stderr = sys.stderr or log_stream
 
     parser = argparse.ArgumentParser(
         prog="codememory-api",

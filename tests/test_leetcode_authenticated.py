@@ -348,9 +348,10 @@ class TestAuthenticatedLeetCodeClient:
 
 
 class TestAuthenticatedCredentialValidation:
-    def _service(self):
+    def _service(self, tmp_path):
         service = LeetCodeAccountService.__new__(LeetCodeAccountService)
         service._account_service = Mock()
+        service._account_service.data_dir = tmp_path
         service._account_service.get_connection.return_value = AccountConnection(
             provider="LeetCode", username="synthetic-user",
         )
@@ -358,8 +359,8 @@ class TestAuthenticatedCredentialValidation:
 
     @patch("codememory.connectors.leetcode.service.AuthenticatedLeetCodeClient")
     @patch("codememory.connectors.leetcode.service.CredentialVault")
-    def test_stored_credentials_are_checked_with_leetcode(self, mock_vault_cls, mock_client_cls):
-        service = self._service()
+    def test_stored_credentials_are_checked_with_leetcode(self, mock_vault_cls, mock_client_cls, tmp_path):
+        service = self._service(tmp_path)
         vault = mock_vault_cls.return_value
         vault.retrieve.return_value = ("synthetic-session", "synthetic-csrf")
         vault.validate.return_value = True
@@ -373,8 +374,8 @@ class TestAuthenticatedCredentialValidation:
 
     @patch("codememory.connectors.leetcode.service.AuthenticatedLeetCodeClient")
     @patch("codememory.connectors.leetcode.service.CredentialVault")
-    def test_rejected_stored_session_is_reported_invalid(self, mock_vault_cls, mock_client_cls):
-        service = self._service()
+    def test_rejected_stored_session_is_reported_invalid(self, mock_vault_cls, mock_client_cls, tmp_path):
+        service = self._service(tmp_path)
         vault = mock_vault_cls.return_value
         vault.retrieve.return_value = ("synthetic-session", "synthetic-csrf")
         vault.validate.return_value = True

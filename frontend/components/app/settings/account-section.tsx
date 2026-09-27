@@ -109,8 +109,12 @@ export function AccountSection() {
       await disconnectLeetCode();
       setConnected(false);
       setUsername(null);
-    } catch {
-      setAuth((prev) => ({ ...prev, error: "Could not disconnect the LeetCode account. Please try again." }));
+      setAuth(EMPTY_AUTH_STATE);
+      setSession("");
+      setCsrfToken("");
+      window.location.replace("/connect");
+    } catch (failure) {
+      setAuth((prev) => ({ ...prev, error: failure instanceof Error ? failure.message : "Could not disconnect the LeetCode account. Please try again." }));
     }
   };
 
@@ -132,11 +136,11 @@ export function AccountSection() {
       }));
       setConnected(result.connected);
       setUsername(result.username);
-    } catch {
+    } catch (failure) {
       setAuth((prev) => ({
         ...prev,
         validating: false,
-        error: "Could not validate and store the credentials. Check that the backend is available and try again.",
+        error: failure instanceof Error ? failure.message : "Could not validate and store the credentials. Check that the backend is available and try again.",
       }));
     }
   };
@@ -152,15 +156,16 @@ export function AccountSection() {
         ...prev,
         syncing: false,
         lastSyncStatus: result.status,
-        lastSyncTime: new Date().toISOString(),
+        lastSyncTime: result.status.toLowerCase() === "success" ? new Date().toISOString() : prev.lastSyncTime,
+        error: result.errorMessage,
         syncProgress: result,
       }));
-    } catch {
+    } catch (failure) {
       setAuth((prev) => ({
         ...prev,
         syncing: false,
         lastSyncStatus: "failed",
-        error: "Authenticated sync failed. Check that your LeetCode account is connected and the stored session is valid, then retry.",
+        error: failure instanceof Error ? failure.message : "Authenticated sync failed. Check that your LeetCode account is connected and the stored session is valid, then retry.",
       }));
     } finally {
       syncInFlight.current = false;
@@ -183,8 +188,8 @@ export function AccountSection() {
       setCsrfToken("");
       setConsentGiven(false);
       setFormOpen(false);
-    } catch {
-      setAuth((prev) => ({ ...prev, error: "Could not revoke the stored credentials. Please try again." }));
+    } catch (failure) {
+      setAuth((prev) => ({ ...prev, error: failure instanceof Error ? failure.message : "Could not revoke the stored credentials. Please try again." }));
     }
   };
 
@@ -202,7 +207,7 @@ export function AccountSection() {
         lastSyncStatus: result.syncState,
         lastSyncTime: result.lastSuccessfulSync,
       }));
-    } catch {
+    } catch (failure) {
       setAuth((prev) => ({
         ...prev,
         checked: true,
@@ -225,7 +230,7 @@ export function AccountSection() {
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-body-sm font-medium text-text-primary">LeetCode</span>
-                <ConnectionBadge connected={connected} connecting={false} />
+                <ConnectionBadge connected={connected} connecting={!auth.checked} />
               </div>
               <p className="mt-1 text-body-sm text-text-muted">
                 {connected && username ? `Connected as @${username}.` : "Public profile sync is not connected."}
@@ -233,13 +238,16 @@ export function AccountSection() {
             </div>
           </div>
           {connected ? (
+            <div className="flex flex-wrap gap-2">
+            <Button variant="ghost" size="sm" disabled={auth.syncing} onClick={() => router.push("/connect")}>Switch account</Button>
             <ConfirmAction
               triggerLabel="Disconnect"
               triggerVariant="outline"
-              description={<span>Disconnect LeetCode? Previously imported history stays in the local index.</span>}
+              description={<span>Disconnect LeetCode? Stored credentials will be revoked. Previously imported history stays on this computer.</span>}
               confirmLabel="Disconnect"
               onConfirm={disconnect}
             />
+            </div>
           ) : (
             <Button variant="subtle" size="sm" onClick={() => router.push("/connect")}>
               Connect LeetCode
@@ -257,7 +265,7 @@ export function AccountSection() {
                 Stores credentials in the backend vault and never displays them after saving.
               </p>
             </div>
-            {!auth.credentialsStored && auth.checked ? (
+            {connected && !auth.credentialsStored && auth.checked ? (
               <Button
                 variant="ghost"
                 size="sm"

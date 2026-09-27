@@ -1,0 +1,433 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------ *
+ * CodeMemory Design System — tokens
+ * Source of truth: frontend/DESIGN.md
+ * ------------------------------------------------------------------ */
+
+@theme {
+  /* Surfaces — near-black ladder */
+  --color-canvas: #07080a;
+  --color-surface: #0c0d0f;
+  --color-surface-elevated: #101214;
+  --color-surface-card: #141618;
+  --color-surface-hover: #181a1d;
+  --color-surface-active: #1c1f22;
+
+  /* Borders — quiet, never heavy */
+  --color-border: rgba(255, 255, 255, 0.09);
+  --color-border-soft: rgba(255, 255, 255, 0.055);
+  --color-border-strong: rgba(255, 255, 255, 0.15);
+
+  /* Text */
+  --color-text-primary: #f5f5f5;
+  --color-text-secondary: #b5b7ba;
+  --color-text-muted: #85888c;
+  --color-text-faint: #5f6266;
+  --color-text-disabled: #45484c;
+
+  /* CodeMemory accent — restrained LeetCode-inspired orange */
+  --color-accent: #ffa116;
+  --color-accent-hover: #ffb13b;
+  --color-accent-pressed: #e8910f;
+  --color-accent-soft: rgba(255, 161, 22, 0.12);
+  --color-accent-border: rgba(255, 161, 22, 0.3);
+  /* The accent used where it appears as *text* on a surface. Identical to the
+     accent in the dark theme, darkened for light surfaces by the overrides
+     below. */
+  --color-accent-ink: #ffa116;
+
+  /* Semantic — state only, never decorative */
+  --color-success: #3ecf8e;
+  --color-success-soft: rgba(62, 207, 142, 0.12);
+  --color-warning: #f5b942;
+  --color-warning-soft: rgba(245, 185, 66, 0.12);
+  --color-error: #ff5c5c;
+  --color-error-soft: rgba(255, 92, 92, 0.12);
+  --color-info: #57a8ff;
+  --color-info-soft: rgba(87, 168, 255, 0.12);
+
+  /* Difficulty */
+  --color-easy: #3ecf8e;
+  --color-medium: #ffa116;
+  --color-hard: #ff5c5c;
+
+  /* Marks — chart and graph strokes that have to invert with the theme.
+     Kept as tokens rather than hardcoded rgba() so both themes read clearly
+     without duplicating the chart components. */
+  --color-chart-grid: rgba(255, 255, 255, 0.09);
+  --color-chart-line: rgba(255, 255, 255, 0.22);
+  --color-chart-bar: rgba(255, 255, 255, 0.1);
+  --color-graph-edge: rgba(255, 255, 255, 0.11);
+  --color-graph-edge-active: rgba(255, 161, 22, 0.6);
+  --color-graph-node-topic: rgba(255, 255, 255, 0.55);
+  --color-heatmap-empty: rgba(255, 255, 255, 0.045);
+
+  /* Code surfaces — the editor pane sits *below* the surface ladder, so it
+     reads as a sunken terminal in both themes. One step darker than the
+     canvas in dark mode, one step darker than the surface in light. */
+  --color-code-surface: #050608;
+  --color-code-line-number: #4a4e54;
+
+  /* Primary button — the inverted CTA. White on the dark canvas, inverted to
+     near-black on a light one so it always reads as the strongest action. */
+  --color-btn-primary: #ffffff;
+  --color-btn-primary-hover: #e6e6e9;
+  --color-btn-primary-pressed: #d6d6da;
+  --color-btn-primary-fg: #07080a;
+
+  /* Typography */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", monospace;
+
+  /* Radius — restrained */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* Elevation */
+  --shadow-floating: 0 8px 32px -12px rgba(0, 0, 0, 0.75);
+
+  /* Motion */
+  --duration-micro: 120ms;
+  --duration-ui: 220ms;
+  --duration-meaningful: 380ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-emphasis: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    color-scheme: dark;
+    -webkit-text-size-adjust: 100%;
+    scrollbar-gutter: stable;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-text-secondary);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background-color: rgba(255, 161, 22, 0.24);
+    color: #fff;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5 {
+    color: var(--color-text-primary);
+    font-weight: 600;
+  }
+
+  /* Focus rings — visible, but quiet */
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  /* Quiet scrollbars to match the canvas */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 3px solid transparent;
+    background-clip: content-box;
+    border-radius: 9999px;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.18);
+    background-clip: content-box;
+  }
+}
+
+@layer utilities {
+  /* --- Settings-driven appearance overrides --- */
+
+  /* Compact density: tighter row padding across tables and lists */
+  :root[data-density="compact"] {
+    --row-padding-y: 0.375rem;
+    --row-padding-x: 0.625rem;
+  }
+  :root[data-density="comfortable"] {
+    --row-padding-y: 0.625rem;
+    --row-padding-x: 0.75rem;
+  }
+
+  /* Accent emphasis: toggle the orange on selected/active states */
+  :root[data-accent="off"] {
+    --color-accent: var(--color-text-muted);
+    --color-accent-hover: var(--color-text-muted);
+    --color-accent-pressed: var(--color-text-muted);
+    --color-accent-soft: transparent;
+    --color-accent-border: rgba(255, 255, 255, 0.08);
+  }
+
+  /* Reduced motion override: when the user enables it, disable all non-essential
+     animations and transitions regardless of the OS preference. */
+  :root[data-reduced-motion="on"] {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* Code font size: consumed by syntax-highlighted views */
+  :root {
+    --code-font-size: 13px;
+  }
+
+  .text-display-xl {
+    font-size: clamp(2.75rem, 6vw, 4rem);
+    line-height: 1.05;
+    letter-spacing: -0.04em;
+    font-weight: 600;
+  }
+  .text-display-lg {
+    font-size: clamp(2.25rem, 4.4vw, 3rem);
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    font-weight: 600;
+  }
+  .text-heading-xl {
+    font-size: 2rem;
+    line-height: 1.2;
+    letter-spacing: -0.035em;
+    font-weight: 600;
+  }
+  .text-heading-lg {
+    font-size: 1.5rem;
+    line-height: 1.3;
+    letter-spacing: -0.02em;
+    font-weight: 600;
+  }
+  .text-heading-md {
+    font-size: 1.25rem;
+    line-height: 1.35;
+    letter-spacing: -0.01em;
+    font-weight: 600;
+  }
+  .text-heading-sm {
+    font-size: 1rem;
+    line-height: 1.4;
+    font-weight: 600;
+  }
+  .text-body-lg {
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+  .text-body-md {
+    font-size: 0.875rem;
+    line-height: 1.55;
+  }
+  .text-body-sm {
+    font-size: 0.8125rem;
+    line-height: 1.5;
+  }
+  .text-caption {
+    font-size: 0.75rem;
+    line-height: 1.45;
+  }
+  .font-technical {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+  }
+  .font-technical-sm {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    line-height: 1.4;
+    letter-spacing: 0.02em;
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  .surface {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+  }
+
+  /* Hairline grid background used behind product surfaces */
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
+  .bg-dots {
+    background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+    background-size: 16px 16px;
+  }
+
+  /* Reveal-on-scroll — see components/system/reveal.tsx */
+  .reveal {
+    opacity: 0;
+    transform: translateY(10px);
+    transition:
+      opacity var(--duration-meaningful) var(--ease-emphasis),
+      transform var(--duration-meaningful) var(--ease-emphasis);
+    will-change: opacity, transform;
+  }
+  .reveal.is-visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Tactile press — used by buttons */
+  .press {
+    transition:
+      transform var(--duration-micro) var(--ease-standard),
+      background-color var(--duration-micro) var(--ease-standard),
+      border-color var(--duration-micro) var(--ease-standard),
+      color var(--duration-micro) var(--ease-standard);
+  }
+  .press:active {
+    transform: scale(0.97);
+  }
+
+  /* Drawer — slides in on mount (see components/app/problems/problem-drawer.tsx).
+     The slide-out is a plain class transition, so both directions stay in the
+     motion system's 180–300ms UI band. */
+  @keyframes drawer-in {
+    from {
+      transform: translateX(100%);
+    }
+  }
+  .drawer-in {
+    animation: drawer-in var(--duration-ui) var(--ease-standard);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Light theme
+ *
+ * Dark is the CodeMemory default; light is the same ladder inverted, not a
+ * second design. The theme tokens above are emitted into @layer theme, so
+ * these overrides sit outside any layer and always win when <html> carries
+ * the `light` class. Only surface, border, text and mark colours move — the
+ * layout, type, spacing, radius and the orange identity are untouched.
+ * ------------------------------------------------------------------ */
+html.light {
+  color-scheme: light;
+
+  --color-canvas: #ffffff;
+  --color-surface: #fafafb;
+  --color-surface-elevated: #f3f4f6;
+  --color-surface-card: #eceef0;
+  --color-surface-hover: #e3e6ea;
+  --color-surface-active: #d9dde2;
+
+  --color-border: rgba(9, 11, 14, 0.1);
+  --color-border-soft: rgba(9, 11, 14, 0.06);
+  --color-border-strong: rgba(9, 11, 14, 0.16);
+
+  --color-text-primary: #15181d;
+  --color-text-secondary: #4b5158;
+  --color-text-muted: #6c7279;
+  --color-text-faint: #8b9198;
+  --color-text-disabled: #aab0b7;
+
+  /* The brand orange stays as a fill; as text on a light surface it drops to
+     a burnt orange that keeps the identity at a legible contrast. */
+  --color-accent-ink: #b45306;
+
+  --color-chart-grid: rgba(9, 11, 14, 0.08);
+  --color-chart-line: rgba(9, 11, 14, 0.26);
+  --color-chart-bar: rgba(9, 11, 14, 0.1);
+  --color-graph-edge: rgba(9, 11, 14, 0.14);
+  --color-graph-edge-active: rgba(180, 83, 6, 0.7);
+  --color-graph-node-topic: rgba(9, 11, 14, 0.55);
+  --color-heatmap-empty: rgba(9, 11, 14, 0.055);
+
+  --color-code-surface: #eceef1;
+  --color-code-line-number: #6c7279;
+
+  --color-btn-primary: #15181d;
+  --color-btn-primary-hover: #2a2e34;
+  --color-btn-primary-pressed: #0d0f12;
+  --color-btn-primary-fg: #f7f7f8;
+
+  --shadow-floating: 0 8px 32px -14px rgba(20, 24, 29, 0.2);
+}
+
+html.light .bg-grid {
+  background-image:
+    linear-gradient(to right, rgba(9, 11, 14, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(9, 11, 14, 0.045) 1px, transparent 1px);
+}
+
+html.light .bg-dots {
+  background-image: radial-gradient(rgba(9, 11, 14, 0.07) 1px, transparent 1px);
+}
+
+/* Quiet scrollbars invert with the canvas — the dark ones are invisible on a
+   light background, which reads as a missing affordance rather than calm. */
+html.light * {
+  scrollbar-color: rgba(9, 11, 14, 0.22) transparent;
+}
+html.light *::-webkit-scrollbar-thumb {
+  background-color: rgba(9, 11, 14, 0.16);
+  background-clip: content-box;
+}
+html.light *::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(9, 11, 14, 0.26);
+  background-clip: content-box;
+}
+
+/* Theme toggle — the visible icon follows the <html> class, so the control
+   needs no client state and renders correctly during hydration. */
+.theme-icon-light {
+  display: none;
+}
+html.light .theme-icon-dark {
+  display: none;
+}
+html.light .theme-icon-light {
+  display: block;
+}

@@ -27,9 +27,13 @@ class SearchService:
         min_attempts: int | None = None,
         max_attempts: int | None = None,
         solved: bool | None = None,
+        account: str | None = None,
     ) -> list[Problem]:
         """Execute multi-criteria search filtering over stored problems."""
+        from codememory.domain.ownership import AccountStorageView, scope_problem
         all_problems = self.storage.list_all()
+        if not isinstance(self.storage, AccountStorageView):
+            all_problems = [v for p in all_problems if (v := scope_problem(p, account)) is not None]
         results: list[Problem] = []
 
         # Parse filter targets

@@ -3,12 +3,16 @@ use tauri::Manager;
 use std::process::Child;
 use std::sync::Mutex;
 use std::time::Duration;
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
 
 const HEALTH_URL: &str = "http://127.0.0.1:8000/api/v1/health";
-const STARTUP_TIMEOUT_SECS: u64 = 30;
+const STARTUP_TIMEOUT_SECS: u64 = 90;
 
 pub struct SidecarState {
     pub child: Mutex<Option<Child>>,
+    #[cfg(windows)]
+    pub _job: crate::process_job::ProcessJob,
 }
 
 fn terminate_sidecar(child: &mut Child) {
@@ -21,10 +25,11 @@ fn terminate_sidecar(child: &mut Child) {
         // separate child process. Killing only the bootloader leaves FastAPI
         // listening after the Tauri app closes, so terminate the full tree.
         let result = std::process::Command::new("taskkill")
+            .creation_flags(0x08000000)
             .args(["/PID", &pid.to_string(), "/T", "/F"])
             .output();
-        if let Err(error) = result {
-            log::error!("Failed to terminate sidecar process tree: {}", error);
+        if !matches!(result, Ok(ref output) if output.status.success()) {
+            log::error!("Failed to terminate sidecar process tree");
             let _ = child.kill();
         }
     }
@@ -102,12 +107,34 @@ pub fn start(handle: &tauri::AppHandle) -> Result<(), String> {
     log::info!("Starting sidecar: {:?}", exe_path);
 
     let current_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
-
-    let mut child = std::process::Command::new(&exe_path)
-        .args(["--host", "127.0.0.1", "--port", "8000"])
-        .current_dir(&current_dir)
-        .spawn()
+    if std::net::TcpStream::connect_timeout(&"127.0.0.1:8000".parse().unwrap(), Duration::from_millis(500)).is_ok() {
+        return Err("Port 8000 is already in use. Close the other CodeMemory/backend process and reopen CodeMemory. No existing process was terminated.".into());
+    }
+    let instance_id = format!("{}-{}", std::process::id(), std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_nanos());
+    let mut command = std::process::Command::new(&exe_path);
+    command.args(["--host", "127.0.0.1", "--port", "8000"])
+        .current_dir(&current_dir).env("CODEMEMORY_SIDECAR_ID", &instance_id);
+    if !cfg!(debug_assertions) {
+        command.env("CODEMEMORY_DESKTOP", "1");
+        if std::env::var_os("CODEMEMORY_LEGACY_DIR").is_none() {
+            let install_dir = std::env::current_exe().ok().and_then(|p| p.parent().map(|p| p.to_path_buf()));
+            let legacy = if current_dir.join("data").exists() { current_dir.clone() }
+                else { install_dir.unwrap_or(current_dir.clone()) };
+            command.env("CODEMEMORY_LEGACY_DIR", legacy);
+        }
+    }
+    #[cfg(windows)]
+    command.creation_flags(0x08000000);
+    let mut child = command.spawn()
         .map_err(|e| format!("Failed to spawn sidecar: {}", e))?;
+    #[cfg(windows)]
+    let job = match crate::process_job::ProcessJob::new(&child) {
+        Ok(job) => job,
+        Err(error) => { terminate_sidecar(&mut child); return Err(error); }
+    };
+    let client = reqwest::blocking::Client::builder().timeout(Duration::from_secs(2)).no_proxy()
+        .build().map_err(|e| e.to_string())?;
 
     log::info!(
         "Sidecar process spawned (pid={}), waiting for health check...",
@@ -138,9 +165,15 @@ pub fn start(handle: &tauri::AppHandle) -> Result<(), String> {
             ));
         }
 
-        match reqwest::blocking::get(HEALTH_URL) {
+        match client.get(HEALTH_URL).send() {
             Ok(resp) => {
                 if resp.status().is_success() {
+                    let body = resp.text().unwrap_or_default();
+                    let health: serde_json::Value = serde_json::from_str(&body).unwrap_or_default();
+                    if health["instance_id"].as_str() != Some(instance_id.as_str()) || health["overall"] != "ok" {
+                        std::thread::sleep(Duration::from_millis(200));
+                        continue;
+                    }
                     if let Some(status) = child
                         .try_wait()
                         .map_err(|e| format!("Failed to check sidecar process: {}", e))?
@@ -162,9 +195,37 @@ pub fn start(handle: &tauri::AppHandle) -> Result<(), String> {
 
     handle.manage(SidecarState {
         child: Mutex::new(Some(child)),
+        #[cfg(windows)]
+        _job: job,
+    });
+
+    let app = handle.clone();
+    std::thread::spawn(move || loop {
+        std::thread::sleep(Duration::from_secs(1));
+        let state = app.state::<SidecarState>();
+        let mut slot = match state.child.lock() { Ok(slot) => slot, Err(_) => return };
+        let Some(child) = slot.as_mut() else { return };
+        if matches!(child.try_wait(), Ok(Some(_))) {
+            slot.take();
+            drop(slot);
+            show_error("The local CodeMemory service stopped. Your saved data is retained. Reopen CodeMemory; diagnostics are in LocalAppData/CodeMemory/logs.");
+            app.exit(1);
+            return;
+        }
     });
 
     Ok(())
+}
+
+pub fn show_error(message: &str) {
+    log::error!("{}", message);
+    #[cfg(windows)]
+    unsafe {
+        use windows_sys::Win32::UI::WindowsAndMessaging::{MessageBoxW, MB_ICONERROR, MB_OK};
+        let text: Vec<u16> = message.encode_utf16().chain(Some(0)).collect();
+        let title: Vec<u16> = "CodeMemory".encode_utf16().chain(Some(0)).collect();
+        MessageBoxW(std::ptr::null_mut(), text.as_ptr(), title.as_ptr(), MB_OK | MB_ICONERROR);
+    }
 }
 
 pub fn stop(handle: &tauri::AppHandle) {

@@ -131,12 +131,13 @@ def test_leetcode_service_passes_its_account_store_to_orchestrator(tmp_path):
     with patch(
         "codememory.connectors.leetcode.service.AuthenticatedSyncOrchestrator",
         return_value=orchestrator,
-    ) as orchestrator_class:
+    ) as orchestrator_class, patch("codememory.connectors.leetcode.service.CredentialVault") as vault_class:
         account_service.sync_authenticated_full_history()
 
     orchestrator_class.assert_called_once_with(
         account_service=accounts,
         account_identifier="alice",
+        credential_vault=vault_class.return_value,
     )
     orchestrator.sync_full_history.assert_called_once()
 

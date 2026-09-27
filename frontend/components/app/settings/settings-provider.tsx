@@ -9,7 +9,7 @@
  * returned model becomes the single in-memory source for every component.
  * When a user flips a switch:
  *   1. frontend state updates immediately (UI responds without network latency)
- *   2. a PATCH /settings request fires to persist the change
+ *   2. a PUT /settings request fires to persist the change
  *   3. on failure the previous value is restored and an error is surfaced
  *
  * Theme is the one exception that also reads ``localStorage`` on first render
@@ -40,8 +40,8 @@ const asThemePref = (v: string): ThemePref => (isThemePreference(v) ? (v as Them
 const DEFAULTS: SettingsDTO = {
   leetcodeConnected: false,
   autosyncEnabled: false,
-  dataDir: "data",
-  version: "1.0.0",
+  dataDir: "",
+  version: "",
   theme: DEFAULT_THEME_PREFERENCE,
   accentEmphasis: true,
   compactDensity: false,
@@ -65,6 +65,8 @@ interface SettingsContextValue {
   setSetting: SetSetting;
   updateSettingsBatch: (patch: Partial<SettingsDTO>) => Promise<void>;
   isLoading: boolean;
+  isSaving: boolean;
+  reload: () => void;
   error: string | null;
   /** Resolved theme (dark/light) for the current preference. */
   resolvedTheme: Theme;
@@ -127,13 +129,16 @@ function mergeSettings(patch: Partial<SettingsDTO>): SettingsState {
 }
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
-  const [settings, setSettings] = React.useState<SettingsState>(() => {
-    // Seed from localStorage on first render so the no-flash script's class
-    // is not immediately overwritten before the backend responds.
-    const cachedTheme = readThemePreference();
-    return { ...DEFAULTS, theme: cachedTheme };
-  });
+  // Static export and initial hydration use the same snapshot. The no-flash
+  // script handles cached appearance; the backend then supplies preferences.
+  const [settings, setSettings] = React.useState<SettingsState>(DEFAULTS);
   const [isLoading, setIsLoading] = React.useState(true);
+  const confirmed = React.useRef(settings);
+  const pending = React.useRef<Array<{ patch: Partial<SettingsDTO> }>>([]);
+  const writes = React.useRef<Promise<void>>(Promise.resolve());
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [fetchKey, setFetchKey] = React.useState(0);
+  const reload = React.useCallback(() => { setIsLoading(true); setFetchKey((key) => key + 1); }, []);
   const [error, setError] = React.useState<string | null>(null);
 
   const resolvedTheme: Theme = React.useMemo(() => {
@@ -149,6 +154,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       .then((fresh) => {
         if (cancelled) return;
         const merged = mergeSettings(fresh);
+        confirmed.current = merged;
         setSettings(merged);
         applyAppearance(merged);
          applyTheme(asThemePref(merged.theme));
@@ -166,7 +172,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [fetchKey]);
 
   // Apply appearance CSS whenever those values change.
   React.useEffect(() => {
@@ -182,50 +188,35 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
   // Apply theme class whenever the theme preference changes.
   React.useEffect(() => {
-    applyTheme(asThemePref(settings.theme));
-  }, [settings.theme]);
+    if (!isLoading) applyTheme(asThemePref(settings.theme));
+  }, [settings.theme, isLoading]);
 
-  const setSetting = React.useCallback<SetSetting>(async (key, value) => {
-    const prev = settings;
-    const next = { ...settings, [key]: value } as SettingsState;
-
+  const updateSettingsBatch = React.useCallback<SettingsContextValue["updateSettingsBatch"]>((patch) => {
+    if (isLoading) return Promise.resolve();
+    const operation = { patch };
+    pending.current.push(operation);
     setError(null);
-
-    // 1. Optimistically update frontend state
-    setSettings(next);
-
-    try {
-      // 2. Persist to backend (PUT request with partial body)
-      const patched = await updateSettings({ [key]: value } as Partial<SettingsDTO>);
-      // 3. Reconcile with whatever the backend actually stored
-      const merged = mergeSettings(patched);
-      setSettings(merged);
-    } catch (err) {
-      // 4. Restore previous state on failure
-      setSettings(prev);
-      setError(err instanceof Error ? err.message : String(err));
-    }
-  }, [settings]);
-
-  const updateSettingsBatch = React.useCallback<SettingsContextValue["updateSettingsBatch"]>(
-    async (patch) => {
-      const prev = settings;
-      const next = { ...settings, ...patch } as SettingsState;
-
-      setError(null);
-      setSettings(next);
-
+    setIsSaving(true);
+    setSettings((previous) => ({ ...previous, ...patch }));
+    // Serialize writes, then replay still-pending changes over the last
+    // confirmed server state. A failed request rolls back only its own patch.
+    const request = writes.current.then(async () => {
       try {
-        const patched = await updateSettings(patch);
-        const merged = mergeSettings(patched);
-        setSettings(merged);
-      } catch (err) {
-        setSettings(prev);
-        setError(err instanceof Error ? err.message : String(err));
+        confirmed.current = mergeSettings(await updateSettings(patch));
+      } catch (failure) {
+        setError(failure instanceof Error ? failure.message : String(failure));
+      } finally {
+        pending.current = pending.current.filter((item) => item !== operation);
+        setSettings(pending.current.reduce((state, item) => ({ ...state, ...item.patch }), confirmed.current));
+        setIsSaving(pending.current.length > 0);
       }
-    },
-    [settings],
-  );
+    });
+    writes.current = request;
+    return request;
+  }, [isLoading]);
+
+  const setSetting = React.useCallback<SetSetting>((key, value) =>
+    updateSettingsBatch({ [key]: value } as Partial<SettingsDTO>), [updateSettingsBatch]);
 
   const setTheme = React.useCallback<SettingsContextValue["setTheme"]>(
     async (preference) => {
@@ -240,11 +231,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       setSetting,
       updateSettingsBatch,
       isLoading,
+      isSaving,
+      reload,
       error,
       resolvedTheme,
       setTheme,
     }),
-    [settings, setSetting, updateSettingsBatch, isLoading, error, resolvedTheme, setTheme],
+    [settings, setSetting, updateSettingsBatch, isLoading, isSaving, reload, error, resolvedTheme, setTheme],
   );
 
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
