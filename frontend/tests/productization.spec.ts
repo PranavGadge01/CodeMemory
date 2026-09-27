@@ -71,16 +71,48 @@ test('failed optimistic settings patch preserves the later successful patch and 
   await expect(density).toHaveAttribute('aria-checked', 'true');
 });
 
-test('website homepage and download are responsive and independent', async ({ page }) => {
+test('website homepage, download and public pages are responsive and independent', async ({
+  page,
+}) => {
   for (const width of [1440, 768, 390]) {
     await page.setViewportSize({ width, height: 1000 });
     await page.goto('http://127.0.0.1:4173/');
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Your coding history,remembered.');
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+
+    const heading = page.getByRole('heading', { level: 1 });
+    await expect(heading).toContainText('Your coding history,');
+    await expect(heading).toContainText('remembered.');
+
+    // Every call to action on the homepage stays on the public site.
+    const hrefs = await page
+      .locator('a[href^="/"]')
+      .evaluateAll((links) => links.map((link) => link.getAttribute('href') ?? ''));
+    expect(hrefs.some((href) => href.startsWith('/download/'))).toBe(true);
+    for (const href of hrefs) {
+      expect(href.startsWith('/connect')).toBe(false);
+      expect(href.startsWith('/auth')).toBe(false);
+      expect(href.startsWith('/dashboard')).toBe(false);
+      expect(href.startsWith('/problems')).toBe(false);
+    }
+
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
     await page.screenshot({ path: `../build/browser/website-${width}.png`, fullPage: true });
-    await page.getByRole('link', { name: 'Download for Windows', exact: true }).first().click();
+
+    await page.goto('http://127.0.0.1:4173/download/');
     await expect(page.getByRole('heading', { name: 'CodeMemory for Windows' })).toBeVisible();
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await expect(page.getByRole('button', { name: 'Download for Windows' })).toBeDisabled();
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
     await page.screenshot({ path: `../build/browser/download-${width}.png`, fullPage: true });
   }
+
+  for (const route of ['about', 'contact', 'privacy', 'terms', 'changelog']) {
+    await page.goto(`http://127.0.0.1:4173/${route}/`);
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  }
+
+  await page.goto('http://127.0.0.1:4173/this-page-does-not-exist/');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('not here');
 });

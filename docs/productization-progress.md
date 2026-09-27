@@ -249,18 +249,37 @@ This migration was explicitly approved. The latest instruction authorizes all si
 
 ## Phase 4 — verified locally
 
-- Independent static `website/`: homepage, `/download`, 404; no local backend,
-  Tauri or credential dependency. Shared Geist typography and restrained palette.
-  Product explanations contain no invented metrics, testimonials or capabilities.
+- The public site is a standalone static Next.js export in `website/`. It has no
+  FastAPI, DuckDB, Tauri, credential or runtime-data dependency; the only external
+  input is `../release.json`, read at build time.
+- **Homepage recovery.** The first Phase 4 pass wrote a simplified hand-built
+  homepage. That was replaced, at the maintainer's direction, with the product
+  homepage the desktop application shipped before productization:
+  `frontend/app/page.tsx` at `d8dbf31` (431 lines). The recovered page is ported
+  with its sections, hierarchy, product window, charts, knowledge graph, revision
+  queue and animation intact. See "Website homepage recovery" below for the exact
+  difference.
+- Routes: `/`, `/download`, `/about`, `/contact`, `/privacy`, `/terms`,
+  `/changelog` and a 404 page. Pages exist only where there is real content — no
+  empty docs or releases routes.
+- CTA rules are enforced by test: `Connect LeetCode`, `Open CodeMemory`,
+  `Browse problems`, `Open queue` and the demo rows all resolve to `/download`;
+  no page links to `/connect`, `/auth/sign-in`, `/dashboard`, `/problems`,
+  `/revision` or `/settings`.
 - `release.json` centralizes version, repository and platform/artifact metadata.
-  `CODEMEMORY_RELEASE_DIR` can build a self-hosted site with actual local installers;
-  default GitHub downloads stay unavailable until release publication is verified.
-- Website typecheck/build and **3 link/config tests passed**. Edge checked home and
-  download at **1440, 768 and 390px** without horizontal overflow; screenshots in
-  `build/browser/` were reviewed. No runtime JavaScript or remote font requests.
-- Files: website/package*.json, tsconfig.json, build.mjs, style.css, tests;
-  scripts/serve-static.mjs; release.json.
-- The GitHub repository currently has **no published releases**. Public release
+  It is read by `next.config.ts` and inlined into the build, so the app never
+  reaches outside `website/` at build time. While `published` is false the
+  download buttons render disabled and no artifact URL is emitted;
+  `CODEMEMORY_RELEASE_DIR` builds a self-hosted site and copies local installers
+  into `out/releases/v<version>/`.
+- Website typecheck, production export and **11 tests passed**. Playwright
+  checked the homepage, download page, supporting pages and 404 at **1440, 768
+  and 390px** with no horizontal overflow; screenshots in `build/browser/`.
+- Files: `website/{app,components,lib,public,scripts}/`, `website/package*.json`,
+  `website/tsconfig.json`, `website/next.config.ts`,
+  `website/postcss.config.mjs`, `website/tests/site.test.mjs`,
+  `website/README.md`, `scripts/serve-static.mjs`, `release.json`.
+- The GitHub repository currently has no published releases. Public release
   hosting and deployment remain external work; no nonexistent download is claimed.
 
 ## Phase 5 — installers built and verified
@@ -373,9 +392,11 @@ open, with a backup.
 
 - `node scripts/sync-version.mjs --check` → `Release versions consistent: 0.1.0`.
 - `npm --prefix website run typecheck` — clean.
-- `npm --prefix website run build` — `/` and `/download` built into `website/out`.
-- `npm --prefix website test` — **3 passed** (standalone pages, valid internal
-  links, download availability matching `release.json`).
+- `npm --prefix website run build` — static export of `/`, `/about`, `/changelog`,
+  `/contact`, `/download`, `/privacy`, `/terms` and the 404 page into `website/out`.
+- `npm --prefix website test` — **11 passed** (every route standalone with valid
+  internal links, the recovered product sections present, no desktop routes on
+  any page, download availability matching `release.json`).
 
 ### Known leftover
 
@@ -384,3 +405,36 @@ open, with a backup.
 working directory. It is inside a git-ignored build directory, is not referenced
 by the WiX or NSIS scripts, and is not shipped in either installer. It was left in
 place rather than deleted.
+
+### Website homepage recovery — 2026-09-27
+
+The website homepage is the product homepage recovered from Git, not a new design.
+`build/recovery/old-page.tsx` (extracted from `HEAD~1`, i.e. `d8dbf31`) and
+`website/app/page.tsx` differ only in:
+
+- a nine-line header comment recording the provenance;
+- one added import for the shared public footer;
+- five destinations — `/dashboard` (×2), `/revision`, `/problems?slug=<slug>` and
+  `/problems` — changed to `/download/`;
+- the inline footer function removed, because the same markup now lives in
+  `components/site/site-footer.tsx` with the public page links.
+
+Everything else — the six sections (`product`, `memory`, `evolution`, `analytics`,
+`knowledge`, `revision`), the hero product window, the activity heatmap, recent
+memory timeline, solution-evolution panel, weekly-submission bar chart, language
+distribution, difficulty cards, knowledge graph, revision queue and the closing
+call to action — is byte-identical, together with the design tokens in
+`app/globals.css` and the copied `components/{ui,system,charts,app,home}`,
+`lib/mock` and `lib/format` modules.
+
+Two components were adapted for the public site only:
+
+- `components/system/theme-toggle.tsx` uses the local theme store instead of the
+  desktop settings store (the website has no backend); the markup is unchanged.
+- The demo rows in `components/app/timeline.tsx` and
+  `components/app/knowledge/knowledge-graph.tsx` link to `/download/` rather than
+  the workspace problem route.
+
+Verified in a real browser: all six sections render, all twelve reveal-on-scroll
+elements reach their visible state, and the homepage, download page, supporting
+pages and 404 render at 1440/768/390px without horizontal overflow.
