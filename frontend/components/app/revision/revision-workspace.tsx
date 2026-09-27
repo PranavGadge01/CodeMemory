@@ -19,6 +19,7 @@ import { ScoreBreakdown } from "@/components/app/revision/score-breakdown";
 import { ErrorState } from "@/components/app/data-states";
 import { formatRelative } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { apiGet } from "@/lib/api/client";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -44,14 +45,6 @@ const CONFIDENCE_VALUE: Record<RevisionQueueItem["confidence"], number> = {
   High: 3,
 };
 
-const TOPICS: { value: string; label: string }[] = [
-  { value: "all", label: "All topics" },
-  { value: "dynamic-programming", label: "Dynamic Programming" },
-  { value: "array", label: "Array" },
-  { value: "tree", label: "Tree" },
-  { value: "graph", label: "Graph" },
-];
-
 /**
  * Revision workspace.
  *
@@ -65,6 +58,7 @@ export function RevisionWorkspace() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<ApiError | null>(null);
   const [topic, setTopic] = React.useState("all");
+  const [topics, setTopics] = React.useState<string[]>([]);
   // Bumped by Retry/Refresh: those refetch the *same* topic, which alone would
   // leave the effect's dependency list unchanged and skip the request.
   const [refreshKey, setRefreshKey] = React.useState(0);
@@ -74,10 +68,11 @@ export function RevisionWorkspace() {
 
   const load = React.useCallback(async (topicFilter: string) => {
     try {
-      const next = await getRevisionQueue({
+      const [next, availableTopics] = await Promise.all([getRevisionQueue({
         limit: 50,
         topic: topicFilter !== "all" ? topicFilter : undefined,
-      });
+      }), apiGet<string[]>("/revision/topics")]);
+      setTopics(availableTopics);
       setQueue(next);
       setSelectedId(next[0]?.problemId ?? null);
       setError(null);
@@ -219,7 +214,7 @@ export function RevisionWorkspace() {
             description="Ordered by priority score. Select a row to see how it was computed."
             action={
               <div className="flex items-center gap-3">
-                <TopicSelect value={topic} onChange={reload} />
+                <TopicSelect value={topic} onChange={reload} topics={topics} />
                 <span className="font-technical-sm text-text-faint">
                   {queue.length} item{queue.length === 1 ? "" : "s"}
                 </span>
@@ -283,7 +278,7 @@ export function RevisionWorkspace() {
                     </Button>
                     <Button variant="outline" size="sm" onClick={snooze}>
                       <Clock className="h-3.5 w-3.5" aria-hidden="true" />
-                      Snooze 7d
+                      Hide for this session
                     </Button>
                     <Button variant="ghost" size="sm" asChild>
                       <Link href={`/problems?slug=${selected.slug}`}>Open problem</Link>
@@ -370,9 +365,11 @@ function PriorityScore({ value }: { value: number }) {
 function TopicSelect({
   value,
   onChange,
+  topics,
 }: {
   value: string;
   onChange: (value: string) => void;
+  topics: string[];
 }) {
   return (
     <div className="relative">
@@ -389,7 +386,7 @@ function TopicSelect({
           "hover:border-border-strong focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/40",
         )}
       >
-        {TOPICS.map((option) => (
+        {[{ value: "all", label: "All topics" }, ...topics.map((value) => ({ value, label: value }))].map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
           </option>

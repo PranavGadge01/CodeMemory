@@ -45,46 +45,8 @@ class MemoryService:
         contract of ``CodeMemoryService.list_problems``. Problems that become
         empty after filtering are excluded entirely.
         """
-        from codememory.domain.enums import Platform
-
-        if account is None:
-            # No active account: exclude problems with ONLY LeetCode-sourced submissions.
-            filtered: list[Problem] = []
-            for p in problems:
-                has_non_leetcode = False
-                kept_attempts = []
-                for a in p.attempts:
-                    non_leetcode = [s for s in a.submissions if s.source_provider is None]
-                    if non_leetcode:
-                        has_non_leetcode = True
-                        import copy
-                        a_copy = copy.copy(a)
-                        a_copy.submissions = non_leetcode
-                        kept_attempts.append(a_copy)
-                if has_non_leetcode:
-                    import copy
-                    p_copy = copy.copy(p)
-                    p_copy.attempts = kept_attempts
-                    filtered.append(p_copy)
-            return filtered
-
-        # Account provided: keep only submissions from that account.
-        filtered = []
-        for p in problems:
-            kept_attempts = []
-            for a in p.attempts:
-                matching = [s for s in a.submissions if s.source_account == account]
-                if matching:
-                    import copy
-                    a_copy = copy.copy(a)
-                    a_copy.submissions = matching
-                    kept_attempts.append(a_copy)
-            if kept_attempts:
-                import copy
-                p_copy = copy.copy(p)
-                p_copy.attempts = kept_attempts
-                filtered.append(p_copy)
-        return filtered
+        from codememory.domain.ownership import scope_problem
+        return [view for p in problems if (view := scope_problem(p, account)) is not None]
 
     def index_all(
         self, force_rebuild: bool = False, account: str | None = None
@@ -100,7 +62,7 @@ class MemoryService:
         docs = self.pipeline.extract_documents(problems)
 
         if force_rebuild:
-            self.index.clear()
+            self.index.clear_account(account)
 
         indexed_count = 0
         skipped_count = 0
@@ -136,14 +98,13 @@ class MemoryService:
         When ``account`` is provided, only documents matching that account
         (or with no account set) are cached.
         """
-        if not self._doc_cache:
-            problems = list(self.storage.list_all())
-            problems = self._filter_problems_by_account(problems, account)
-            self._doc_cache = self.pipeline.extract_documents(problems)
-            self._doc_map = {d.memory_id: d for d in self._doc_cache}
-        if account is not None:
-            return [d for d in self._doc_cache if d.source_account is None or d.source_account == account]
-        return self._doc_cache
+        # Rebuild from current scoped records: account switches and new reviews
+        # must not reuse private documents from an earlier request.
+        problems = self._filter_problems_by_account(list(self.storage.list_all()), account)
+        docs = self.pipeline.extract_documents(problems)
+        self._doc_cache = docs
+        self._doc_map = {d.memory_id: d for d in docs}
+        return docs
 
     def search(
         self,

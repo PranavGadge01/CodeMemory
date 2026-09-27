@@ -29,10 +29,19 @@ class AnalyticsService:
 
     def __init__(self, storage: CompositeStorage):
         self.storage = storage
+        from codememory.domain.ownership import AccountStorageView
+        self._query_storage = storage.storage if isinstance(storage, AccountStorageView) else storage
 
     def _get_all_problems(self) -> Sequence[Problem]:
         """Fetch all problems from storage."""
         return self.storage.list_all()
+
+    def _query_rows(self, query, parameters):
+        # DuckDB execute/fetch share cursor state. Both must use the same
+        # repository lock as problem reads and account-scoped mutations.
+        repository = self._query_storage.duckdb_repo
+        with repository._lock:
+            return repository.conn.execute(query, parameters).fetchall()
 
     def _filter_problems_by_account(self, problems: Sequence[Problem], account: str | None) -> list[Problem]:
         """Return problems with only the submissions matching ``account``.
@@ -41,22 +50,8 @@ class AnalyticsService:
         some matching submissions are returned shallow-copied so the caller
         cannot mutate the original domain objects.
         """
-        filtered: list[Problem] = []
-        for p in problems:
-            keep = []
-            for a in p.attempts:
-                matching = [s for s in a.submissions if s.source_account == account]
-                if not matching:
-                    continue
-                a_copy = copy.copy(a)
-                a_copy.submissions = matching
-                keep.append(a_copy)
-            if not keep:
-                continue
-            p_copy = copy.copy(p)
-            p_copy.attempts = keep
-            filtered.append(p_copy)
-        return filtered
+        from codememory.domain.ownership import scope_problem
+        return [view for p in problems if (view := scope_problem(p, account)) is not None]
 
     @staticmethod
     def _has_leetcode_submissions(problems: Sequence[Problem]) -> bool:
@@ -77,6 +72,9 @@ class AnalyticsService:
         - When ``account`` is None and no LeetCode data exists, return all
           (legacy behavior for non-LeetCode data).
         """
+        from codememory.domain.ownership import AccountStorageView
+        if isinstance(self.storage, AccountStorageView):
+            return list(problems)
         if account is not None:
             return self._filter_problems_by_account(problems, account)
         # No active account: if any LeetCode-sourced submissions exist,
@@ -280,7 +278,8 @@ class AnalyticsService:
     def get_language_statistics(self, account: str | None = None) -> list[LanguageStat]:
         """Calculate submission statistics grouped by programming language using DuckDB."""
         try:
-            account_filter = f" AND source_account = '{account}'" if account is not None else " AND source_provider IS NULL"
+            account = self.storage.account() if self._query_storage is not self.storage else account
+            account_filter = " AND source_account = ?" if account is not None else " AND source_provider IS NULL"
             query = f"""
                 SELECT
                     language,
@@ -291,7 +290,7 @@ class AnalyticsService:
                 GROUP BY language
                 ORDER BY total_subs DESC;
             """
-            rows = self.storage.duckdb_repo.conn.execute(query).fetchall()
+            rows = self._query_rows(query, [account] if account is not None else [])
         except Exception:
             rows = []
 
@@ -459,7 +458,8 @@ class AnalyticsService:
         When ``account`` is provided, only submissions from that source account are
         counted (e.g. a specific LeetCode username).
         """
-        account_filter = f" AND source_account = '{account}'" if account is not None else " AND source_provider IS NULL"
+        account = self.storage.account() if hasattr(self.storage, "account") else account
+        account_filter = " AND source_account = ?" if account is not None else " AND source_provider IS NULL"
         query = f"""
             SELECT
                 strftime(DATE(submitted_at), '%Y-%m-%d') as day,
@@ -473,7 +473,7 @@ class AnalyticsService:
             ORDER BY day;
         """
         try:
-            rows = self.storage.duckdb_repo.conn.execute(query).fetchall()
+            rows = self._query_rows(query, [account] if account is not None else [])
         except Exception:
             return []
 
@@ -499,7 +499,8 @@ class AnalyticsService:
         When ``account`` is provided, only submissions from that source account
         are considered.
         """
-        account_filter = f"WHERE source_account = '{account}'" if account is not None else "WHERE source_provider IS NULL"
+        account = self.storage.account() if hasattr(self.storage, "account") else account
+        account_filter = "WHERE source_account = ?" if account is not None else "WHERE source_provider IS NULL"
         query = f"""
             SELECT DISTINCT CAST(strftime(submitted_at, '%Y-%m-%d') AS VARCHAR) as day
             FROM submissions
@@ -511,8 +512,8 @@ class AnalyticsService:
             # repository and other concurrent API requests. Keep the execute
             # and fetch together under its connection lock so another query
             # cannot replace the result set between them.
-            with self.storage.duckdb_repo._lock:
-                rows = self.storage.duckdb_repo.conn.execute(query).fetchall()
+            with self._query_storage.duckdb_repo._lock:
+                rows = self._query_rows(query, [account] if account is not None else [])
         except Exception:
             return StreakInfo()
 
@@ -586,7 +587,8 @@ class AnalyticsService:
         """
         events: list[TimelineEvent] = []
 
-        account_filter = f"WHERE source_account = '{account}'" if account is not None else "WHERE source_provider IS NULL"
+        account = self.storage.account() if hasattr(self.storage, "account") else account
+        account_filter = "WHERE source_account = ?" if account is not None else "WHERE source_provider IS NULL"
         query = f"""
             SELECT id, submitted_at, status, problem_id, language
             FROM submissions
@@ -594,7 +596,7 @@ class AnalyticsService:
             ORDER BY submitted_at ASC;
         """
         try:
-            rows = self.storage.duckdb_repo.conn.execute(query).fetchall()
+            rows = self._query_rows(query, [account] if account is not None else [])
         except Exception:
             return []
 

@@ -198,6 +198,8 @@ class CredentialVault:
                     json.dump(vault_data, f)
                 logger.info(f"Stored encrypted credentials in file: {self.vault_file_path}")
 
+            if os.path.exists(self.vault_file_path + ".revoked"):
+                os.remove(self.vault_file_path + ".revoked")
         except Exception as e:
             logger.error(f"Failed to store credentials: {e}")
             raise CredentialVaultError(f"Could not store credentials: {e}")
@@ -212,6 +214,8 @@ class CredentialVault:
         Raises:
             CredentialVaultError: If retrieval fails but credentials exist
         """
+        if os.path.exists(self.vault_file_path + ".revoked"):
+            return None, None
         if not HAS_CRYPTO_DEPS:
             raise CredentialVaultError("Cannot retrieve credentials - cryptography dependencies missing")
 
@@ -264,6 +268,11 @@ class CredentialVault:
         """
         Remove stored credentials from both keyring and file storage.
         """
+        # Record revocation before cleanup; an unavailable keyring must not
+        # revive a stale session on reconnect.
+        os.makedirs(os.path.dirname(self.vault_file_path), exist_ok=True)
+        with open(self.vault_file_path + ".revoked", "w", encoding="utf-8") as marker:
+            marker.write("revoked\n")
         try:
             # Remove from keyring
             if keyring is not None:
@@ -280,7 +289,7 @@ class CredentialVault:
 
         except Exception as e:
             logger.error("Error during credential revocation")
-            # Don't raise - best effort cleanup
+            raise CredentialVaultError("Credential cleanup failed; local revocation is recorded") from e
 
     def validate(self, session: str, csrf_token: str) -> bool:
         """

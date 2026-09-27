@@ -122,7 +122,9 @@ class AICodeAnalyzer:
         force_refresh: bool = False,
     ) -> SolutionEvolution:
         """Analyze multi-attempt solution evolution with caching."""
-        cache_key = (problem.id, self.analysis_version)
+        scope = hashlib.sha256((problem.model_dump_json() + "|" + "|".join(
+            s.model_dump_json() for s in submissions)).encode()).hexdigest()
+        cache_key = (problem.id, f"{self.analysis_version}:account-v1:{scope}")
 
         if not force_refresh and cache_key in self._evolution_cache:
             return self._evolution_cache[cache_key]

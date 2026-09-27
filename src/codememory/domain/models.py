@@ -189,6 +189,7 @@ class Attempt(BaseModel):
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     problem_id: str
+    source_account: str | None = None
     attempt_number: int = 1
     approach_summary: str = "Attempt"
     reasoning: str | None = None
@@ -236,6 +237,7 @@ class ProblemNote(BaseModel):
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     problem_id: str
+    source_account: str | None = None
     attempt_id: str | None = None
     content: str
     note_type: NoteType = NoteType.GENERAL
@@ -245,6 +247,22 @@ class ProblemNote(BaseModel):
     @classmethod
     def validate_note_date(cls, v: Any) -> datetime:
         return _ensure_utc(v)
+
+
+class RevisionState(BaseModel):
+    """Private activity baseline and review state; None denotes local/manual data."""
+
+    source_account: str | None = None
+    last_activity_at: datetime
+    last_reviewed_at: datetime | None = None
+    priority_override: float | None = None
+    due_at: datetime | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("last_activity_at", "last_reviewed_at", "due_at", mode="before")
+    @classmethod
+    def validate_date(cls, value: Any):
+        return _ensure_utc(value) if value is not None else None
 
 
 class Problem(BaseModel):
@@ -262,6 +280,7 @@ class Problem(BaseModel):
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     attempts: list[Attempt] = Field(default_factory=list)
     notes: list[ProblemNote] = Field(default_factory=list)
+    revision_states: list[RevisionState] = Field(default_factory=list)
 
     @field_validator("created_at", "updated_at", mode="before")
     @classmethod

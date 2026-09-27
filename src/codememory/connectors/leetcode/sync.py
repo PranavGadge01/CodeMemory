@@ -215,7 +215,11 @@ class LeetCodeSyncEngine:
                     # Ensure problem exists in storage or fetch problem metadata
                     prob = None
                     try:
-                        prob = service.get_problem(problem_slug)
+                        # Ingestion resolves the shared definition in canonical
+                        # storage; the account-scoped read view may hide it.
+                        prob = service.storage.get_by_slug(problem_slug)
+                        if prob is None:
+                            raise ProblemNotFoundError(problem_slug)
                     except ProblemNotFoundError:
                         # Problem not found locally -> fetch problem details from LeetCode
                         raw_prob = self.client.fetch_problem_details(problem_slug)

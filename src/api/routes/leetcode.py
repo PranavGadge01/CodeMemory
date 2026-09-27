@@ -111,7 +111,8 @@ def validate_authenticated_credentials(
         auth_status.validation_message = (
             None if is_valid else "No valid authenticated LeetCode session was confirmed. Check or refresh the stored credentials."
         )
-        auth_status.connected = is_valid and status.connected
+        # Public connection and authenticated session validity are independent.
+        auth_status.connected = status.connected
         return auth_status
     except Exception as e:
         logger.exception("Failed to validate authenticated credentials")

@@ -177,4 +177,19 @@ class DocumentPipeline:
                         except Exception:
                             pass
 
+        # Note IDs and aggregate IDs must be distinct across account projections.
+        for p in problems:
+            for note in p.notes:
+                docs.append(MemoryDocument(memory_id=f"note_{note.id}", memory_type=MemoryType.NOTE,
+                    problem_id=p.id, title=f"{p.title} — note", content=note.content,
+                    topics=p.topics, timestamp=note.created_at, source="Learning note",
+                    source_reference={"problem_id": p.id, "note_id": note.id},
+                    content_hash=compute_content_hash(note.content),
+                    source_provider="leetcode" if note.source_account else None,
+                    source_account=note.source_account))
+        import hashlib
+        for doc in docs:
+            if doc.source_account:
+                scope = hashlib.sha256(doc.source_account.encode()).hexdigest()[:16]
+                doc.memory_id = f"{scope}:{doc.memory_id}"
         return docs

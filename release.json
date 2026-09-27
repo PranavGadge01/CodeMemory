@@ -1,0 +1,16 @@
+{
+  "version": "0.1.0",
+  "repository": "https://github.com/PranavGadge01/CodeMemory",
+  "published": false,
+  "platforms": [
+    {
+      "id": "windows",
+      "name": "Windows",
+      "requirements": "Windows 10/11 · x64",
+      "artifacts": [
+        { "label": "Download for Windows", "file": "CodeMemory_{version}_x64-setup.exe", "kind": "NSIS" },
+        { "label": "Download MSI", "file": "CodeMemory_{version}_x64_en-US.msi", "kind": "MSI" }
+      ]
+    }
+  ]
+}

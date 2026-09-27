@@ -1,6 +1,9 @@
 import os
 from dataclasses import dataclass
 from typing import List
+from codememory.core.runtime import runtime_paths
+
+_data, _knowledge, _db = runtime_paths()
 
 try:
     from dotenv import load_dotenv
@@ -13,9 +16,9 @@ except ImportError:
 class Settings:
     """API Configuration settings loaded from environment variables."""
 
-    data_dir: str = os.getenv("CODEMEMORY_DATA_DIR", "data")
-    knowledge_dir: str = os.getenv("CODEMEMORY_KNOWLEDGE_DIR", "knowledge")
-    db_path: str = os.getenv("CODEMEMORY_DB_PATH", "data/codememory.duckdb")
+    data_dir: str = str(_data)
+    knowledge_dir: str = str(_knowledge)
+    db_path: str = _db
 
     host: str = os.getenv("CODEMEMORY_API_HOST", "127.0.0.1")
     port: int = int(os.getenv("CODEMEMORY_API_PORT", "8000"))

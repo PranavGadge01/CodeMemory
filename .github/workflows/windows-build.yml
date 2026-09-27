@@ -1,0 +1,40 @@
+name: Windows release verification
+on:
+  workflow_dispatch:
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install backend
+        run: |
+          python -m venv .venv
+          .venv/Scripts/python -m pip install -e '.[dev]'
+      - run: npm ci
+        working-directory: frontend
+      - run: npm ci
+        working-directory: website
+      - run: node scripts/sync-version.mjs --check
+      - name: Backend regression
+        run: |
+          New-Item -ItemType Directory -Force build/tests | Out-Null
+          Set-Location build/tests
+          ../../.venv/Scripts/python -m pytest ../../tests
+      - run: npm run typecheck
+        working-directory: frontend
+      - run: npm run typecheck && npm run build && npm test
+        working-directory: website
+      - run: npm run tauri build
+        working-directory: frontend
+      - run: ./scripts/collect-release.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CodeMemory-Windows
+          path: build/release/*

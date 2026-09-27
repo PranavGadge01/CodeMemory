@@ -135,6 +135,8 @@ class SemanticIndex:
 
         scores: List[Tuple[str, float]] = []
         for m_id, data in self._index.items():
+            if account is None and (data.get("source_account") or data.get("source_provider")):
+                continue
             if account is not None:
                 doc_account = data.get("source_account", "")
                 if doc_account != account:
@@ -148,4 +150,9 @@ class SemanticIndex:
     def clear(self) -> None:
         """Clear all entries from index."""
         self._index.clear()
+        self._persist()
+
+    def clear_account(self, account: str | None) -> None:
+        self._index = {key: value for key, value in self._index.items()
+                       if (value.get("source_account") or None) != account}
         self._persist()

@@ -30,6 +30,7 @@ from codememory.revision.revision_service import RevisionService
 from codememory.search.search_service import SearchService
 from codememory.storage.composite_repository import CompositeStorage
 from codememory.core.settings import SettingsStore, UserSettings
+from codememory.domain.ownership import AccountStorageView, scope_problem
 from codememory.ai.fallback_provider import HeuristicAIProvider
 from codememory.ai.providers import BaseAIProvider, get_ai_provider
 from codememory.ai.evolution_service import EvolutionService, EvolutionSummary
@@ -90,17 +91,18 @@ class CodeMemoryService:
         self.import_service = ImportService(storage=self.storage)
         self.exporter = KnowledgeExporter(output_dir=knowledge_dir)
         self.settings_store = SettingsStore(data_dir=self.base_dir)
-        self.analytics_service = AnalyticsService(storage=self.storage)
-        self.search_service = SearchService(storage=self.storage)
+        self.account_storage = AccountStorageView(self.storage, lambda: self.active_account)
+        self.analytics_service = AnalyticsService(storage=self.account_storage)
+        self.search_service = SearchService(storage=self.account_storage)
         self.pattern_analyzer = PatternAnalyzer(analytics_service=self.analytics_service)
-        self.revision_service = RevisionService(storage=self.storage, analytics_service=self.analytics_service)
+        self.revision_service = RevisionService(storage=self.storage, analytics_service=self.analytics_service, account_resolver=lambda: self.active_account)
         self.insights_generator = InsightsGenerator(analytics_service=self.analytics_service, pattern_analyzer=self.pattern_analyzer)
 
         # Phase 5, 6, & 7 services
         self.ai_provider = ai_provider or get_ai_provider()
         self.evolution_service = EvolutionService(ai_provider=self.ai_provider)
-        self.ai_analyzer = AICodeAnalyzer(provider=self.ai_provider, cache_dir=base_dir)
-        self.memory_service = AIMemoryService(storage=self.storage, search_service=self.search_service, ai_provider=self.ai_provider)
+        self.ai_analyzer = AICodeAnalyzer(provider=self.ai_provider, cache_dir=base_dir, analysis_version="v2-account")
+        self.memory_service = AIMemoryService(storage=self.account_storage, search_service=self.search_service, ai_provider=self.ai_provider)
         self.memory_engine = MemoryEngineService(storage=self.storage, base_dir=base_dir, ai_analyzer=self.ai_analyzer)
         self.semantic_search_engine = LocalSemanticSearchEngine()
         self.my_patterns_service = MyPatternsService()
@@ -111,7 +113,7 @@ class CodeMemoryService:
             analytics_service=self.analytics_service,
             pattern_analyzer=self.pattern_analyzer,
             ai_analyzer=self.ai_analyzer,
-            storage=self.storage,
+            storage=self.account_storage,
         )
         self.insight_service = InsightService(
             ai_provider=self.ai_provider,
@@ -137,6 +139,10 @@ class CodeMemoryService:
         user-facing queries exclude LeetCode-sourced submissions to prevent
         cross-account aggregation.
         """
+        from codememory.core.account_context import request_account, UNSET
+        captured = request_account.get()
+        if captured is not UNSET:
+            return captured
         try:
             conn = self.leetcode._account_service.get_connection("LeetCode")
             if conn and conn.username:
@@ -158,57 +164,8 @@ class CodeMemoryService:
         return self.settings_store.update(**fields)
 
     def list_problems(self) -> Sequence[Problem]:
-        """List stored problems, scoped to the active account.
-
-        When a LeetCode account is connected, only problems with submissions
-        belonging to that account are returned, with non-matching submissions
-        stripped.
-
-        When no LeetCode account is connected, problems with only LeetCode-sourced
-        submissions are excluded — only problems with non-LeetCode or legacy
-        (NULL source_provider) submissions are returned, preventing cross-account
-        aggregation.
-        """
-        all_problems = self.storage.list_all()
-        active = self.active_account
-        if active is not None:
-            # Filter to problems that have submissions from the active account,
-            # stripping submissions from other accounts or unattributed/legacy records.
-            filtered: list[Problem] = []
-            for p in all_problems:
-                kept_attempts = []
-                for a in p.attempts:
-                    matching = [s for s in a.submissions if s.source_account == active]
-                    if not matching:
-                        continue
-                    import copy
-                    a_copy = copy.copy(a)
-                    a_copy.submissions = matching
-                    kept_attempts.append(a_copy)
-                if not kept_attempts:
-                    continue
-                import copy
-                p_copy = copy.copy(p)
-                p_copy.attempts = kept_attempts
-                filtered.append(p_copy)
-            return filtered
-        # No active account: exclude problems that have ONLY LeetCode-sourced
-        # submissions (source_provider is not None). Keep problems with no
-        # source_provider (manually added) or mixed/no provenance.
-        from codememory.domain.enums import Platform
-        unscoped: list[Problem] = []
-        for p in all_problems:
-            is_leetcode_only = False
-            for a in p.attempts:
-                for s in a.submissions:
-                    if s.source_provider is not None:
-                        is_leetcode_only = True
-                        break
-                if is_leetcode_only:
-                    break
-            if not is_leetcode_only:
-                unscoped.append(p)
-        return unscoped
+        """List complete account-scoped projections, never raw private metadata."""
+        return self.account_storage.list_all()
 
     def add_problem(
         self,
@@ -236,52 +193,17 @@ class CodeMemoryService:
         return self.storage.save(problem)
 
     def get_problem(self, identifier: str, account: str | None = None) -> Problem:
-        """Retrieve problem by ID or slug.
-
-        When ``account`` is provided, only submissions from that account are
-        included in the returned problem. The caller is responsible for passing
-        the active account; most service methods default to ``self.active_account``.
-
-        When ``account`` is None (no active LeetCode account), LeetCode-sourced
-        submissions are excluded to prevent cross-account aggregation.
-        """
-        prob = self.storage.get_by_slug(identifier) or self.storage.get_by_id(identifier)
-        if not prob:
+        """Read a private problem projection in the active/requested context."""
+        active = self.active_account if account is None else account
+        raw = self.storage.get_by_slug(identifier) or self.storage.get_by_id(identifier)
+        view = scope_problem(raw, active) if raw else None
+        if view is None:
             raise ProblemNotFoundError(identifier)
-        if account is None:
-            # No active account: strip LeetCode-sourced submissions to prevent
-            # cross-account data exposure. Keep submissions with NULL
-            # source_provider (non-LeetCode / legacy).
-            import copy
-            filtered_attempts = []
-            for a in prob.attempts:
-                non_leetcode = [s for s in a.submissions if s.source_provider is None]
-                if not non_leetcode:
-                    continue
-                a_copy = copy.copy(a)
-                a_copy.submissions = non_leetcode
-                filtered_attempts.append(a_copy)
-            if not filtered_attempts:
-                return copy.copy(prob)
-            prob_copy = copy.copy(prob)
-            prob_copy.attempts = filtered_attempts
-            return prob_copy
-        # Filter submissions to only those belonging to the specified account.
-        import copy
-        filtered_attempts = []
-        for a in prob.attempts:
-            matching = [s for s in a.submissions if s.source_account == account]
-            if not matching:
-                continue
-            a_copy = copy.copy(a)
-            a_copy.submissions = matching
-            filtered_attempts.append(a_copy)
-        if not filtered_attempts:
-            raise ProblemNotFoundError(identifier)
-        prob_copy = copy.copy(prob)
-        prob_copy.attempts = filtered_attempts
-        return prob_copy
+        return view
 
+    def _owned_mutation_problem(self, identifier: str) -> Problem:
+        self.get_problem(identifier, account=self.active_account)
+        return self.storage.get_by_slug(identifier) or self.storage.get_by_id(identifier)
 
     # 2. Submission & Attempt operations
     def add_submission(
@@ -380,7 +302,8 @@ class CodeMemoryService:
         target_attempt = None
         if prob.attempts:
             last_att = prob.attempts[-1]
-            if not last_att.is_accepted and last_att.status == sub_status:
+            if (last_att.source_account == source_account and not last_att.is_accepted
+                    and last_att.status == sub_status):
                 target_attempt = last_att
 
         if not target_attempt:
@@ -389,6 +312,7 @@ class CodeMemoryService:
                 problem_id=prob.id,
                 attempt_number=att_num,
                 approach_summary=f"Attempt {att_num}",
+                source_account=source_account,
                 reasoning=reasoning,
                 status=sub_status,
             )
@@ -494,7 +418,7 @@ class CodeMemoryService:
         mistakes: list[str] | None = None,
     ) -> Attempt:
         """Create a new attempt with detailed solution analysis."""
-        prob = self.get_problem(problem_identifier)
+        prob = self._owned_mutation_problem(problem_identifier)
         att_num = len(prob.attempts) + 1
 
         analysis = SolutionAnalysis(
@@ -507,6 +431,7 @@ class CodeMemoryService:
             problem_id=prob.id,
             attempt_number=att_num,
             approach_summary=approach_summary,
+            source_account=self.active_account,
             reasoning=reasoning,
             mistakes=mistakes or [],
             analysis=analysis,
@@ -524,17 +449,20 @@ class CodeMemoryService:
         attempt_id: str | None = None,
     ) -> ProblemNote:
         """Add learning note or intuition to a problem."""
-        prob = self.get_problem(problem_identifier)
+        prob = self._owned_mutation_problem(problem_identifier)
+        if attempt_id is not None and not any(a.id == attempt_id for a in self.get_problem(problem_identifier).attempts):
+            raise ValueError("Attempt does not belong to this account")
         nt = NoteType(note_type) if isinstance(note_type, str) and note_type in NoteType.__members__.values() else NoteType.GENERAL
 
         note = ProblemNote(
             problem_id=prob.id,
             attempt_id=attempt_id,
             content=content,
+            source_account=self.active_account,
             note_type=nt,
         )
         prob.notes.append(note)
-        self.storage.save(prob)
+        self.storage.save_private_state(prob, self.active_account)
         return note
 
     # 3. History Reconstruction Concept
@@ -867,8 +795,9 @@ class CodeMemoryService:
             for attempt in prob.attempts:
                 submissions.extend(attempt.submissions)
 
-        self.semantic_search_engine.index_dataset(problems, submissions)
-        return self.semantic_search_engine.search(query, top_k=top_k)
+        engine = LocalSemanticSearchEngine()
+        engine.index_dataset(problems, submissions)
+        return engine.search(query, top_k=top_k)
 
     def get_personal_patterns(self) -> PersonalPatternSummary:
         """Compute actionable long-term personal DSA pattern summary."""
@@ -995,7 +924,7 @@ class CodeMemoryService:
             tier_health = self.storage.tier_health()
             results["storage"] = {
                 "status": "ok" if self.storage.health() else "error",
-                "problems": len(self.storage.list_all()),
+                "problems": len(self.list_problems()),
                 "tiers": ", ".join(f"{tier}={'ok' if ok else 'error'}" for tier, ok in tier_health.items()),
             }
             results["duckdb"] = {"status": "ok" if tier_health.get("duckdb") else "error"}
@@ -1012,7 +941,7 @@ class CodeMemoryService:
 
         # Memory engine
         try:
-            mem_stats = self.memory_engine.get_memory_stats()
+            mem_stats = self.memory_engine.get_memory_stats(account=self.active_account)
             results["memory_engine"] = {
                 "status": "ok",
                 "documents": mem_stats.get("total_documents", 0),

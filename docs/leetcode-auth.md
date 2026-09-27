@@ -7,6 +7,25 @@
 
 ---
 
+## Current desktop behavior (2026-09-27)
+
+Connect a public username during onboarding. In Settings → Account, add
+`LEETCODE_SESSION` and `csrftoken`, validate, then choose Sync full history.
+Credentials go directly to the encrypted backend vault and are never returned
+in API responses. Keep session values out of terminal commands and logs.
+
+`submissionList` uses `limit`, `offset` and optional `lastKey`; the scanner advances
+by the raw page size and respects `hasNext`. Duplicate IDs, failed records,
+repeated pages and code-fetch failures have explicit accounting and regression
+tests. Missing code remains an honest missing-code state, not a fabricated
+solution. Public and authenticated paths remain separate.
+
+Disconnect revokes the active vault and clears its connection, while retaining
+history. Revoke keeps the public connection. Switching accounts selects a separate
+vault; reconnect after disconnect requires fresh credentials. Validation of an
+absent/expired authenticated session does not disconnect the public profile.
+See [ownership/recovery](data-migration.md) and [desktop builds](windows-release.md).
+
 ## Executive Summary
 
 This document specifies a production-ready authenticated LeetCode synchronization system for CodeMemory that retrieves complete submission history (including source code) while maintaining security, reliability, and user trust. The design extends the existing public sync architecture without replacing it.

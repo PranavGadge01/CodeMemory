@@ -7,8 +7,7 @@
  * surface and the wire types stay in one place.
  *
  * The account identifier is the LeetCode username. The backend takes no
- * password, cookie or session token anywhere in this flow, and neither does
- * this module.
+ * password for public sync. Optional session credentials go directly to the encrypted vault.
  */
 
 import { apiGet, apiPost, apiDelete } from "@/lib/api/client";

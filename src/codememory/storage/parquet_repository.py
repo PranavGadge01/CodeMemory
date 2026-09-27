@@ -56,6 +56,7 @@ class ParquetStorage(ProblemRepository, SubmissionRepository, AttemptRepository)
                     "statement": str(p.statement or ""),
                     "created_at": _clean_dt(p.created_at),
                     "updated_at": _clean_dt(p.updated_at),
+                    "record_json": p.model_dump_json(),
                 }
             )
 
@@ -89,6 +90,8 @@ class ParquetStorage(ProblemRepository, SubmissionRepository, AttemptRepository)
                             "submitted_at": _clean_dt(s.submitted_at),
                             "error_message": str(s.error_message or ""),
                             "submission_hash": str(s.submission_hash or ""),
+                            "source_provider": s.source_provider,
+                            "source_account": s.source_account,
                         }
                     )
 
@@ -145,6 +148,9 @@ class ParquetStorage(ProblemRepository, SubmissionRepository, AttemptRepository)
 
         problems: list[Problem] = []
         for p_row in df_p.iter_rows(named=True):
+            if p_row.get("record_json"):
+                problems.append(Problem.model_validate_json(p_row["record_json"]))
+                continue
             pid = p_row["id"]
             # match attempts
             p_attempts: list[Attempt] = []

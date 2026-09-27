@@ -1,10 +1,15 @@
 # CodeMemory Development & Testing Guide
 
+For the Windows product and public website, use the current
+[desktop/release guide](windows-release.md) and [website guide](../website/README.md).
+The studio commands below remain developer tools. Keep test exports isolated:
+run pytest from `build/tests` with `../../tests` as the target.
+
 ## Setup Development Environment
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/codememory.git
+   git clone https://github.com/PranavGadge01/CodeMemory.git
    cd codememory
    ```
 
@@ -17,12 +22,12 @@
 
 Run the full pytest suite:
 ```bash
-pytest -v
+python -m pytest ../../tests -v
 ```
 
 Run test suite with test coverage:
 ```bash
-pytest --cov=codememory
+python -m pytest ../../tests --cov=codememory
 ```
 
 ## Running the Web App

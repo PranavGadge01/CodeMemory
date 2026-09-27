@@ -275,6 +275,7 @@ def test_auth_validate_reports_unconfirmed_session(client: TestClient, connected
 
     assert response.status_code == 200
     assert response.json()["credentialsStored"] is False
+    assert response.json()["connected"] is True
     assert "session was confirmed" in response.json()["validationMessage"]
 
 

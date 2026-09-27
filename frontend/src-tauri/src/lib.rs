@@ -1,4 +1,5 @@
 mod sidecar;
+mod process_job;
 
 use tauri::Manager;
 
@@ -14,7 +15,10 @@ pub fn run() {
         )?;
       }
 
-      sidecar::start(app.handle())?;
+      if let Err(error) = sidecar::start(app.handle()) {
+        sidecar::show_error(&error);
+        return Err(error.into());
+      }
 
       Ok(())
     })
