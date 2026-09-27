@@ -88,7 +88,7 @@ export default function AnalyticsPage() {
               description={`Weekly submission volume across the last ${weeks.length} weeks.`}
             />
             <div className="flex flex-col gap-6 px-5 py-5 sm:flex-row sm:items-center sm:gap-10">
-              <div className="min-w-0 flex-1 sm:max-w-[640px]">
+              <div className="min-w-0 flex-1 sm:max-w-160">
                 {weeks.length > 0 ? (
                   <BarChart
                     data={weeks.map((week) => ({
