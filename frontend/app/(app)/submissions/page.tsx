@@ -33,6 +33,15 @@ export default function SubmissionsPage() {
   return <React.Suspense fallback={<SubmissionsSurface><PageSkeleton /></SubmissionsSurface>}><SubmissionsContent /></React.Suspense>;
 }
 
+type SubmissionsData =
+  | { mode: "detail"; submission: Submission; problem: Problem | null }
+  | { mode: "list"; rows: any[]; problems: Problem[]; summary: any; filteredTotal: number };
+
+type SubmissionsState =
+  | { status: "loading" }
+  | { status: "success"; data: SubmissionsData }
+  | { status: "error"; error: ApiError };
+
 function SubmissionsContent() {
   const searchParams = useSearchParams();
   const raw = Object.fromEntries(searchParams.entries());
@@ -42,7 +51,7 @@ function SubmissionsContent() {
     language: typeof raw.language === "string" ? raw.language : DEFAULTS.language,
   };
 
-  const [state, setState] = React.useState<any>({ status: "loading" });
+  const [state, setState] = React.useState<SubmissionsState>({ status: "loading" });
 
   React.useEffect(() => {
     let cancelled = false;
@@ -116,7 +125,7 @@ function SubmissionsContent() {
             />
             <Reveal><SubmissionDetail submission={state.data.submission} problem={state.data.problem} /></Reveal>
           </>
-        ) : state.status === "success" ? (
+        ) : state.status === "success" && state.data.mode === "list" ? (
           <>
             <StatStrip
               stats={[

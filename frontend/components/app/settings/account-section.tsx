@@ -207,7 +207,7 @@ export function AccountSection() {
         lastSyncStatus: result.syncState,
         lastSyncTime: result.lastSuccessfulSync,
       }));
-    } catch (failure) {
+    } catch {
       setAuth((prev) => ({
         ...prev,
         checked: true,

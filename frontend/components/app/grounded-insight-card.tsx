@@ -5,7 +5,7 @@ import { getFullProfileInsight, getTopicInsight, getProblemInsight, ApiError } f
 import type { GroundedInsight } from "@/lib/types";
 import { Surface, SurfaceHeader } from "@/components/ui/surface";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, CheckCircle2, Lightbulb, AlertCircle, RefreshCw } from "lucide-react";
+import { CheckCircle2, Lightbulb, AlertCircle, RefreshCw } from "lucide-react";
 
 export interface GroundedInsightCardProps {
   type?: "full" | "topic" | "problem";
@@ -54,8 +54,29 @@ export function GroundedInsightCard({
   }, [type, topic, slug]);
 
   React.useEffect(() => {
-    fetchInsight();
-  }, [fetchInsight]);
+    let promise: Promise<GroundedInsight>;
+    if (type === "topic" && topic) {
+      promise = getTopicInsight(topic);
+    } else if (type === "problem" && slug) {
+      promise = getProblemInsight(slug);
+    } else {
+      promise = getFullProfileInsight();
+    }
+
+    promise
+      .then((data) => {
+        setInsight(data);
+        setLoading(false);
+      })
+      .catch((err: unknown) => {
+        const msg =
+          err instanceof ApiError
+            ? err.message
+            : "Could not fetch grounded insight.";
+        setError(msg);
+        setLoading(false);
+      });
+  }, [type, topic, slug]);
 
   return (
     <Surface className={className}>

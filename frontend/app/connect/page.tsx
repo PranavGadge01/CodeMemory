@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { AlertCircle, ArrowLeft, ArrowRight, Check, RotateCw } from "lucide-react";
 import { MemoryMark } from "@/components/system/logo";
 import { Button } from "@/components/ui/button";
@@ -19,8 +18,6 @@ import type { LeetCodeSyncResultDTO } from "@/lib/api/types";
 import { openWorkspace } from "@/lib/onboarding";
 
 export default function ConnectPage() {
-  const router = useRouter();
-
   // "checking" reads GET /leetcode/status first, so an account that is already
   // connected never asks for a username again. Every later phase is driven by
   // real API responses — there is no local "connected" flag.
