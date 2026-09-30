@@ -80,3 +80,13 @@ backend/build/
 # Local CodeMemory runtime data
 frontend/data/
 frontend/knowledge/
+
+# Node / Frontend / Website build artifacts & dependencies
+node_modules/
+**/node_modules/
+.next/
+**/.next/
+out/
+**/out/
+frontend/test-results/
+
