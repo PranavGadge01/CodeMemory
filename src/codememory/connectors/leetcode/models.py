@@ -37,3 +37,4 @@ class LeetCodeProblemRaw(BaseModel):
     topics: List[str] = Field(default_factory=list)
     url: Optional[str] = None
     content: Optional[str] = None
+    is_paid_only: bool = False

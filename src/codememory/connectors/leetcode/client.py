@@ -650,3 +650,113 @@ class LeetCodeClient:
             url=f"https://leetcode.com/problems/{problem_slug}/",
             content=q.get("content"),
         )
+
+    def fetch_problem_list(
+        self,
+        limit: int = 200,
+        skip: int = 0,
+        tags: Optional[List[str]] = None,
+        difficulty: Optional[str] = None,
+    ) -> List[LeetCodeProblemRaw]:
+        """Fetch real published problem metadata via the public problem list.
+
+        This is the same read-only public endpoint LeetCode exposes for its
+        problem set.  No authentication is sent.  The result is *metadata only*
+        -- it is used to build candidate recommendations and is never written
+        into the user's stored problems.
+
+        Returns an empty list on any failure so callers can fall back to the
+        local catalogue without special-casing network errors.
+        """
+        try:
+            bounded_limit = max(1, min(int(limit), 1000))
+        except (TypeError, ValueError):
+            bounded_limit = 200
+        try:
+            bounded_skip = max(0, int(skip))
+        except (TypeError, ValueError):
+            bounded_skip = 0
+
+        filters: Dict[str, Any] = {}
+        if tags:
+            filters["tags"] = [str(tag) for tag in tags]
+        if difficulty:
+            filters["difficulty"] = str(difficulty)
+
+        query = """
+        query problemsetQuestionList(
+            $categorySlug: String,
+            $limit: Int,
+            $skip: Int,
+            $filters: QuestionListFilterInput
+        ) {
+            problemsetQuestionList: questionList(
+                categorySlug: $categorySlug
+                limit: $limit
+                skip: $skip
+                filters: $filters
+            ) {
+                total: totalNum
+                questions: data {
+                    difficulty
+                    frontendQuestionId: questionFrontendId
+                    isPaidOnly
+                    title
+                    titleSlug
+                    topicTags {
+                        name
+                    }
+                }
+            }
+        }
+        """
+        result = self.execute_query(
+            query,
+            {
+                "categorySlug": "",
+                "limit": bounded_limit,
+                "skip": bounded_skip,
+                "filters": filters,
+            },
+        )
+        data = self._graphql_data(result)
+        if not data:
+            return []
+
+        container = data.get("problemsetQuestionList")
+        if not isinstance(container, dict):
+            return []
+        questions = container.get("questions")
+        if not isinstance(questions, list):
+            return []
+
+        problems: List[LeetCodeProblemRaw] = []
+        for index, item in enumerate(questions):
+            if not isinstance(item, dict):
+                logger.warning("Skipping malformed problem at index %d (not an object)", index)
+                continue
+            slug = item.get("titleSlug")
+            title = item.get("title")
+            if not slug or not title:
+                continue
+            topic_tags = item.get("topicTags")
+            topics = (
+                [t["name"] for t in topic_tags if isinstance(t, dict) and t.get("name")]
+                if isinstance(topic_tags, list)
+                else []
+            )
+            frontend_id = item.get("frontendQuestionId")
+            identifier = str(frontend_id) if frontend_id is not None else str(slug)
+            problems.append(
+                LeetCodeProblemRaw(
+                    id=identifier,
+                    question_id=identifier,
+                    title=str(title),
+                    title_slug=str(slug),
+                    difficulty=item.get("difficulty"),
+                    topics=topics,
+                    url=f"https://leetcode.com/problems/{slug}/",
+                    is_paid_only=bool(item.get("isPaidOnly")),
+                )
+            )
+        return problems

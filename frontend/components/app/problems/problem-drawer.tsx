@@ -20,6 +20,9 @@ import {
 } from "@/lib/mock/derive";
 import { getProblemEvolution } from "@/lib/api";
 import type { SolutionEvolutionData } from "@/lib/api/resources";
+import { LearningAnalysisCard } from "@/components/app/problems/learning-analysis-card";
+import { OptimizationExplanationCard } from "@/components/app/problems/optimization-explanation-card";
+
 import {
   formatDateTime,
   formatMemory,
@@ -299,11 +302,21 @@ export function ProblemDrawer({
             <Separator />
           ) : null}
 
+          {/* ── AI Learning Analysis ─────────────────────────────── */}
+          <Separator />
+          {problem && (
+            <div className="px-5 py-4 space-y-4">
+              <LearningAnalysisCard slug={problem.slug} />
+              <OptimizationExplanationCard slug={problem.slug} />
+            </div>
+          )}
+
           <Separator />
           <SectionLabel
             eyebrow="Notes"
             meta={problem.notes.length > 0 ? `${problem.notes.length} saved` : "none"}
           />
+
 
           {problem.notes.length > 0 ? (
             <div className="flex flex-col">

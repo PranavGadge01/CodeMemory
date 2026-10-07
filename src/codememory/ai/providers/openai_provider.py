@@ -3,7 +3,15 @@ import os
 from typing import List, Optional
 from pydantic import ValidationError
 
-from codememory.ai.models import SubmissionAnalysis, SolutionEvolution
+from codememory.ai.models import (
+    SubmissionAnalysis,
+    SolutionEvolution,
+    OptimizationExplanation,
+    AttemptEvolutionAnalysis,
+    SubmissionPatternInsights,
+    ProblemRecommendation,
+    PersonalizedRoadmap,
+)
 from codememory.ai.prompts import (
     SYSTEM_ASK_CODEMEMORY_PROMPT,
     SYSTEM_EVOLUTION_ANALYSIS_PROMPT,
@@ -17,8 +25,8 @@ from codememory.ai.prompts import (
 from codememory.ai.providers.base_provider import BaseAIProvider, InterpretationResult
 from codememory.ai.providers.heuristic_provider import HeuristicAIProvider
 from codememory.domain.models import Problem, Submission
-
 from codememory.ai.evidence_models import InsightEvidence
+
 
 
 class OpenAIProvider(BaseAIProvider):
@@ -277,3 +285,44 @@ class OpenAIProvider(BaseAIProvider):
                 lines.append(f"  - {lim}")
 
         return "\n".join(lines)
+
+    def explain_optimization(
+        self,
+        problem: Problem,
+        submission: Optional[Submission],
+        evidence: InsightEvidence,
+    ) -> OptimizationExplanation:
+        return self.fallback.explain_optimization(problem, submission, evidence)
+
+    def analyze_attempt_evolution(
+        self,
+        problem: Problem,
+        submissions: List[Submission],
+        evidence: InsightEvidence,
+    ) -> AttemptEvolutionAnalysis:
+        return self.fallback.analyze_attempt_evolution(problem, submissions, evidence)
+
+    def explain_submission_patterns(
+        self,
+        evidence: InsightEvidence,
+    ) -> SubmissionPatternInsights:
+        return self.fallback.explain_submission_patterns(evidence)
+
+    def recommend_next_problems(
+        self,
+        evidence: InsightEvidence,
+        candidate_problems: List[Problem],
+        limit: int = 3,
+        latest_solved_topics: Optional[List[str]] = None,
+    ) -> List[ProblemRecommendation]:
+        return self.fallback.recommend_next_problems(
+            evidence, candidate_problems, limit=limit,
+            latest_solved_topics=latest_solved_topics,
+        )
+
+    def generate_roadmap(
+        self,
+        evidence: InsightEvidence,
+        candidate_problems: List[Problem],
+    ) -> PersonalizedRoadmap:
+        return self.fallback.generate_roadmap(evidence, candidate_problems)

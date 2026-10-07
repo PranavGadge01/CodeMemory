@@ -35,13 +35,32 @@ from codememory.ai.providers import BaseAIProvider, get_ai_provider
 from codememory.ai.evolution_service import EvolutionService, EvolutionSummary
 from codememory.ai.analyzer import AICodeAnalyzer
 from codememory.ai.memory_service import MemoryService as AIMemoryService
-from codememory.ai.models import SubmissionAnalysis, SolutionEvolution
+from codememory.ai.models import (
+    SubmissionAnalysis,
+    SolutionEvolution,
+    OptimizationExplanation,
+    AttemptEvolutionAnalysis,
+    SubmissionPatternInsights,
+    ProblemRecommendation,
+    PersonalizedRoadmap,
+    CollectiveLearningInsight,
+    SubmissionLearningAnalysis,
+)
+
 from codememory.ai.evidence_builder import EvidenceBuilder
 from codememory.ai.insight_service import GroundedInsight, InsightService
 from codememory.memory.service import MemoryService as MemoryEngineService
 from codememory.search.semantic_search import LocalSemanticSearchEngine, SemanticSearchResult
 from codememory.patterns.my_patterns_service import MyPatternsService, PersonalPatternSummary
 from codememory.graph.knowledge_graph import KnowledgeGraphBuilder, KnowledgeGraph
+from codememory.learning.candidates import CandidateFilterPolicy, filter_candidates
+from codememory.learning.collective import build_collective_learning_insight
+from codememory.learning.profile import build_learning_profile
+from codememory.learning.recommend import RecommendationOptions, build_next_recommendations
+from codememory.learning.roadmap import build_roadmap
+from codememory.learning.sources import build_problem_source
+from codememory.learning.submission_insight import build_submission_learning_analysis
+from codememory.learning.taxonomy import patterns_for_topics
 
 if TYPE_CHECKING:
     from codememory.connectors.leetcode.service import LeetCodeAccountService
@@ -87,6 +106,10 @@ class CodeMemoryService:
             db_path=db_path,
             shared_duckdb_connection=shared_duckdb_connection,
         )
+        # Real problem candidates: local catalogue plus (only when configured)
+        # a cached, read-only LeetCode problem source.  Never network-bound by
+        # default, so a page load cannot depend on LeetCode being reachable.
+        self.problem_source = build_problem_source(self.storage, self.base_dir)
         self.import_service = ImportService(storage=self.storage)
         self.exporter = KnowledgeExporter(output_dir=knowledge_dir)
         self.settings_store = SettingsStore(data_dir=self.base_dir)
@@ -985,6 +1008,184 @@ class CodeMemoryService:
     def ask_codememory(self, question: str) -> dict[str, Any]:
         """Ask natural language question grounded in personal CodeMemory records."""
         return self.memory_service.ask_codememory(question)
+
+    def get_optimization_explanation(
+        self,
+        slug: str,
+        submission_id: Optional[str] = None,
+        account: str | None = None,
+    ) -> OptimizationExplanation:
+        """Return an explainable optimization analysis for a problem/submission."""
+        target_account = account if account is not None else self.active_account
+        problem = self.storage.get_by_slug(slug) or self.storage.get_by_id(slug)
+        if problem is None:
+            from codememory.domain.exceptions import ProblemNotFoundError
+            raise ProblemNotFoundError(slug)
+
+        submission: Optional[Any] = None
+        if submission_id:
+            submissions = list(self.storage.list_by_problem(problem.id))
+            submission = next((s for s in submissions if s.id == submission_id), None)
+        else:
+            # Use the most recent submission if none specified
+            import datetime as _dt
+            all_subs = sorted(
+                self.storage.list_by_problem(problem.id),
+                key=lambda s: s.submitted_at or _dt.datetime.min.replace(tzinfo=_dt.timezone.utc),
+                reverse=True,
+            )
+            submission = all_subs[0] if all_subs else None
+
+        evidence = self.evidence_builder.build_problem_evidence(slug, account=target_account)
+        return self.ai_provider.explain_optimization(problem, submission, evidence)
+
+    def get_attempt_evolution_analysis(
+        self,
+        slug: str,
+        account: str | None = None,
+    ) -> AttemptEvolutionAnalysis:
+        """Return a structured chronological learning narrative across all attempts for a problem."""
+        target_account = account if account is not None else self.active_account
+        problem = self.storage.get_by_slug(slug) or self.storage.get_by_id(slug)
+        if problem is None:
+            from codememory.domain.exceptions import ProblemNotFoundError
+            raise ProblemNotFoundError(slug)
+
+        all_subs = list(self.storage.list_by_problem(problem.id))
+        evidence = self.evidence_builder.build_problem_evidence(slug, account=target_account)
+        return self.ai_provider.analyze_attempt_evolution(problem, all_subs, evidence)
+
+    def get_submission_pattern_insights(
+        self,
+        account: str | None = None,
+    ) -> SubmissionPatternInsights:
+        """Return structured comprehensive learning analysis across all submissions."""
+        target_account = account if account is not None else self.active_account
+        evidence = self.evidence_builder.build_full_profile_evidence(account=target_account)
+        return self.ai_provider.explain_submission_patterns(evidence)
+
+    def get_collective_learning_insight(
+        self,
+        account: str | None = None,
+    ) -> CollectiveLearningInsight:
+        """Analyse the user's entire recorded history into a structured profile.
+
+        Deterministic: statistics, strengths, weaknesses, recurring mistakes,
+        complexity trends and early-vs-recent progress are all computed from
+        stored data.  Interpretations are labelled as such and never presented
+        as observed facts.
+        """
+        target_account = account if account is not None else self.active_account
+        evidence = self.evidence_builder.build_full_profile_evidence(account=target_account)
+        problems = self.analytics_service._scope_problems(
+            self.analytics_service._get_all_problems(), target_account
+        )
+        analyses = self.ai_analyzer.get_cached_analyses()
+        insight = build_collective_learning_insight(evidence, problems, analyses)
+        try:
+            insight.practice_next = self.get_next_problem_recommendations(
+                limit=3, account=target_account
+            )
+        except Exception:  # recommendations are supplementary, never fatal
+            insight.practice_next = []
+        return insight
+
+    def get_submission_learning_analysis(
+        self,
+        submission_id: str,
+        account: str | None = None,
+    ) -> SubmissionLearningAnalysis:
+        """Return a structured, grounded learning analysis for one submission."""
+        target_account = account if account is not None else self.active_account
+        problems = self.analytics_service._scope_problems(
+            self.analytics_service._get_all_problems(), target_account
+        )
+
+        problem = None
+        submission = None
+        previous = None
+        for prob in problems:
+            ordered: list[Submission] = []
+            for attempt in sorted(prob.attempts, key=lambda a: a.attempt_number):
+                ordered.extend(sorted(attempt.submissions, key=lambda s: s.submitted_at))
+            for idx, sub in enumerate(ordered):
+                if sub.id == submission_id:
+                    problem, submission = prob, sub
+                    if idx > 0:
+                        previous = ordered[idx - 1]
+                    break
+            if submission is not None:
+                break
+
+        if problem is None or submission is None:
+            raise ValueError(f"Submission ID '{submission_id}' not found.")
+
+        analyses = self.ai_analyzer.get_cached_analyses(submission_ids=[submission_id])
+        analysis = analyses.get(submission_id)
+
+        pattern_history = self._pattern_history(problems)
+        return build_submission_learning_analysis(
+            problem,
+            submission,
+            previous_submission=previous,
+            analysis=analysis,
+            pattern_history=pattern_history,
+        )
+
+    @staticmethod
+    def _pattern_history(problems) -> dict[str, list[str]]:
+        """Map demonstrated pattern labels to the solved problems that used them."""
+        history: dict[str, list[str]] = {}
+        for prob in problems:
+            if prob.latest_accepted_submission is None:
+                continue
+            for pattern in patterns_for_topics(list(prob.topics or [])):
+                history.setdefault(pattern, []).append(prob.title)
+        return history
+
+    def get_next_problem_recommendations(
+        self,
+        limit: int = 3,
+        account: str | None = None,
+    ) -> list[ProblemRecommendation]:
+        """Return ranked next-problem recommendations grounded in real data.
+
+        The profile is computed from the stored submission history, candidates
+        come from the verified problem source, and ranking is deterministic and
+        explainable. No language model participates in retrieval or ranking.
+        """
+        target_account = account if account is not None else self.active_account
+        profile = build_learning_profile(self.analytics_service, account=target_account)
+        pool = self._recommendation_pool(profile)
+        return build_next_recommendations(
+            profile,
+            pool.accepted,
+            RecommendationOptions(limit=limit),
+        )
+
+    def get_personalized_roadmap(
+        self,
+        account: str | None = None,
+    ) -> PersonalizedRoadmap:
+        """Generate a personalized roadmap from the user's complete history.
+
+        Phases are derived from the whole profile (recent solve, recorded
+        struggles, adjacent patterns, foundational gaps) rather than a fixed
+        template, and problems are de-duplicated across every phase.
+        """
+        target_account = account if account is not None else self.active_account
+        profile = build_learning_profile(self.analytics_service, account=target_account)
+        pool = self._recommendation_pool(profile)
+        return build_roadmap(profile, pool.accepted)
+
+    def _recommendation_pool(self, profile):
+        """Retrieve and filter real candidate problems for a profile."""
+        candidates = self.problem_source.list_candidates()
+        return filter_candidates(
+            candidates,
+            profile=profile,
+            policy=CandidateFilterPolicy(exclude_solved=True, exclude_recent=False),
+        )
 
     def health_check(self) -> dict[str, Any]:
         """Run per-component health check and return status report."""

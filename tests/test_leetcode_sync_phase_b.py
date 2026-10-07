@@ -341,8 +341,18 @@ def test_unavailable_fields_are_the_api_blind_spots():
 
 def test_window_truncated_when_window_is_full(tmp_path):
     """A full window means the server may have more we cannot reach."""
+    # Give each submission a unique title (and thus a unique problem slug) to
+    # avoid placing all 100 submissions onto the same storage problem, which
+    # causes quadratic read growth in the idempotency check and hangs the test.
     full_window = [
-        _raw(id=str(i), submission_id=str(i), timestamp=1700000000 + i) for i in range(1, 101)
+        _raw(
+            id=str(i),
+            submission_id=str(i),
+            title=f"Problem {i}",
+            title_slug=f"problem-{i}",
+            timestamp=1700000000 + i,
+        )
+        for i in range(1, 101)
     ]
     engine, service, _ = _connected_engine(tmp_path, _profile_client(full_window))
     result = engine.sync(service)

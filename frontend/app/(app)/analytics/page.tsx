@@ -16,8 +16,12 @@ import { DifficultyDistribution } from "@/components/app/analytics/difficulty-di
 import { TopicTable } from "@/components/app/analytics/topic-table";
 import { StruggleList } from "@/components/app/analytics/struggle-list";
 import { GroundedInsightCard } from "@/components/app/grounded-insight-card";
+import { CollectiveInsightsCard } from "@/components/app/analytics/collective-insights-card";
+import { NextProblemsCard } from "@/components/app/analytics/next-problems-card";
+import { PersonalizedRoadmapCard } from "@/components/app/analytics/personalized-roadmap-card";
 import { formatNumber, formatPercent } from "@/lib/format";
 import { ErrorState, PageSkeleton, EmptyDataState } from "@/components/app/data-states";
+
 
 /** Weekly buckets shown across the time-series sections. ~18 weeks exist in a full history; 12 keeps the labels readable. */
 const WEEKS_SHOWN = 12;
@@ -82,7 +86,19 @@ export default function AnalyticsPage() {
         />
 
         <Reveal>
+          <CollectiveInsightsCard />
+        </Reveal>
+
+        <Reveal>
           <GroundedInsightCard type="full" />
+        </Reveal>
+
+        <Reveal>
+          <NextProblemsCard limit={1} />
+        </Reveal>
+
+        <Reveal>
+          <PersonalizedRoadmapCard />
         </Reveal>
 
         <Reveal>

@@ -323,6 +323,54 @@ export function getProblemInsight(slug: string): Promise<GroundedInsight> {
   return apiGet<GroundedInsightDTO>(`/insights/problem/${encodeURIComponent(slug)}`).then(mapGroundedInsight);
 }
 
+/* --- Learning / Explainable AI --------------------------------------- */
+
+import type {
+  OptimizationExplanationDTO,
+  AttemptEvolutionAnalysisDTO,
+  SubmissionPatternInsightsDTO,
+  NextProblemsDTO,
+  PersonalizedRoadmapDTO,
+  CollectiveLearningInsightDTO,
+  SubmissionLearningAnalysisDTO,
+} from "@/lib/api/types";
+
+export function getOptimizationExplanation(
+  slug: string,
+  submissionId?: string
+): Promise<OptimizationExplanationDTO> {
+  const qs = submissionId ? `?submission_id=${encodeURIComponent(submissionId)}` : "";
+  return apiGet<OptimizationExplanationDTO>(`/problems/${encodeURIComponent(slug)}/optimization${qs}`);
+}
+
+export function getLearningAnalysis(slug: string): Promise<AttemptEvolutionAnalysisDTO> {
+  return apiGet<AttemptEvolutionAnalysisDTO>(`/problems/${encodeURIComponent(slug)}/learning-analysis`);
+}
+
+export function getSubmissionPatterns(): Promise<SubmissionPatternInsightsDTO> {
+  return apiGet<SubmissionPatternInsightsDTO>("/learning/patterns");
+}
+
+export function getCollectiveLearningProfile(): Promise<CollectiveLearningInsightDTO> {
+  return apiGet<CollectiveLearningInsightDTO>("/learning/profile");
+}
+
+export function getSubmissionLearningAnalysis(
+  submissionId: string
+): Promise<SubmissionLearningAnalysisDTO> {
+  return apiGet<SubmissionLearningAnalysisDTO>(
+    `/learning/submissions/${encodeURIComponent(submissionId)}`
+  );
+}
+
+export function getNextRecommendations(limit = 3): Promise<NextProblemsDTO> {
+  return apiGet<NextProblemsDTO>(`/learning/recommendations?limit=${limit}`);
+}
+
+export function getPersonalizedRoadmap(): Promise<PersonalizedRoadmapDTO> {
+  return apiGet<PersonalizedRoadmapDTO>("/learning/roadmap");
+}
+
 /* --- LeetCode ---------------------------------------------------------- */
 
 // LeetCode calls live in `lib/api/leetcode.ts` so the whole connector surface
@@ -334,4 +382,3 @@ export {
   syncLeetCode,
   disconnectLeetCode,
 } from "@/lib/api/leetcode";
-

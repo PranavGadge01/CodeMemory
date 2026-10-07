@@ -70,9 +70,10 @@ def create_app(service: Optional[CodeMemoryService] = None) -> FastAPI:
         leetcode,
         search,
         insights,
+        learning,
         settings as settings_router
     )
-    
+
     app.include_router(health.router, prefix="/api/v1")
     app.include_router(dashboard.router, prefix="/api/v1")
     app.include_router(problems.router, prefix="/api/v1")
@@ -83,6 +84,7 @@ def create_app(service: Optional[CodeMemoryService] = None) -> FastAPI:
     app.include_router(leetcode.router, prefix="/api/v1")
     app.include_router(search.router, prefix="/api/v1")
     app.include_router(insights.router, prefix="/api/v1")
+    app.include_router(learning.router, prefix="/api/v1")
     app.include_router(settings_router.router, prefix="/api/v1")
 
     return app

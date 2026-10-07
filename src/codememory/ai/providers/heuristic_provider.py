@@ -1,12 +1,32 @@
 """Rule-based heuristic AI analysis provider for offline use without external API keys."""
 
 import re
+from datetime import datetime, timezone
 from typing import List, Optional
-from codememory.ai.models import SubmissionAnalysis, SolutionEvolution, EvolutionStepDetail
+from codememory.ai.models import (
+    SubmissionAnalysis,
+    SolutionEvolution,
+    EvolutionStepDetail,
+    OptimizationExplanation,
+    ComplexityComparison,
+    AttemptEvolutionAnalysis,
+    SubmissionPatternInsights,
+    SubmissionPatternFinding,
+    ProblemRecommendation,
+    PersonalizedRoadmap,
+    RoadmapMilestone,
+)
 from codememory.ai.providers.base_provider import BaseAIProvider, InterpretationResult
+from codememory.learning.optimization import build_optimization_explanation
+from codememory.learning.candidates import CandidateFilterPolicy, filter_candidates
+from codememory.learning.profile import profile_from_evidence
+from codememory.learning.recommend import RecommendationOptions, build_next_recommendations
+from codememory.learning.roadmap import build_roadmap
+from codememory.learning.sources import candidates_from_problems
+from codememory.learning.taxonomy import patterns_for_topics
 from codememory.domain.models import Problem, Submission
-
 from codememory.ai.evidence_models import InsightEvidence
+
 
 
 class HeuristicAIProvider(BaseAIProvider):
@@ -410,3 +430,305 @@ class HeuristicAIProvider(BaseAIProvider):
             evidence_refs=refs,
         )
 
+    # ---------------------------------------------------------------------------
+    # Grounded Explainable AI Methods (Features A - E)
+    # ---------------------------------------------------------------------------
+
+    def explain_optimization(
+        self,
+        problem: Problem,
+        submission: Optional[Submission],
+        evidence: InsightEvidence,
+    ) -> OptimizationExplanation:
+        valid_refs = list(evidence.all_evidence_ids())
+        ref_ids = [valid_refs[0]] if valid_refs else []
+        return build_optimization_explanation(problem, submission, evidence_refs=ref_ids)
+
+
+    def analyze_attempt_evolution(
+        self,
+        problem: Problem,
+        submissions: List[Submission],
+        evidence: InsightEvidence,
+    ) -> AttemptEvolutionAnalysis:
+        valid_refs = list(evidence.all_evidence_ids())
+        ref_ids = [valid_refs[0]] if valid_refs else []
+
+        if not submissions:
+            return AttemptEvolutionAnalysis(
+                problem_slug=problem.slug,
+                problem_title=problem.title,
+                has_code_snapshots=False,
+                timeline=[],
+                changes_between_attempts=[],
+                improvements=[],
+                regressions=[],
+                unresolved_issues=["No submission attempts recorded for this problem yet."],
+                learning_summary="No attempts found. Start by writing an initial approach to begin tracking evolution.",
+                recommended_next_action="Submit your first solution attempt.",
+                evidence_refs=ref_ids,
+            )
+
+        sorted_subs = sorted(submissions, key=lambda s: s.submitted_at or datetime.min.replace(tzinfo=timezone.utc))
+        has_code = any(bool(s.code and s.code.strip()) for s in sorted_subs)
+
+        timeline = []
+        changes = []
+        improvements = []
+        regressions = []
+        unresolved = []
+
+        for idx, sub in enumerate(sorted_subs, 1):
+            status_val = sub.status.value if hasattr(sub.status, "value") else str(sub.status)
+            timeline.append({
+                "attempt": idx,
+                "submission_id": sub.id,
+                "status": status_val,
+                "language": sub.language,
+                "runtime_ms": sub.runtime_ms,
+                "memory_mb": sub.memory_mb,
+                "date": sub.submitted_at.isoformat() if sub.submitted_at else None,
+            })
+
+            if idx > 1:
+                prev_sub = sorted_subs[idx - 2]
+                prev_status = prev_sub.status.value if hasattr(prev_sub.status, "value") else str(prev_sub.status)
+                if prev_status != status_val:
+                    changes.append(f"Attempt #{idx}: Status changed from {prev_status} to {status_val}.")
+                    if status_val == "Accepted":
+                        improvements.append(f"Attempt #{idx}: Successfully resolved previous {prev_status} verdict.")
+                    elif prev_status == "Accepted":
+                        regressions.append(f"Attempt #{idx}: Regressed from Accepted to {status_val}.")
+
+                if sub.runtime_ms is not None and prev_sub.runtime_ms is not None:
+                    delta = sub.runtime_ms - prev_sub.runtime_ms
+                    if delta < -5.0:
+                        improvements.append(f"Attempt #{idx}: Runtime improved by {abs(delta):.1f} ms.")
+                    elif delta > 10.0:
+                        regressions.append(f"Attempt #{idx}: Runtime increased by {delta:.1f} ms.")
+
+        final_status = sorted_subs[-1].status.value if hasattr(sorted_subs[-1].status, "value") else str(sorted_subs[-1].status)
+        if final_status != "Accepted":
+            unresolved.append(f"Final attempt status is {final_status}.")
+
+        learning = f"Across {len(sorted_subs)} attempt(s) for '{problem.title}', the solution progressed to {final_status}."
+        if has_code:
+            learning += " Code snapshots were available to verify structure."
+        else:
+            learning += " Analysis was conducted based on available submission metadata."
+
+        next_action = "Review time/space trade-offs or attempt a higher-difficulty problem in the same topic." if final_status == "Accepted" else "Fix the failing edge cases or optimize time complexity to achieve Accepted status."
+
+        return AttemptEvolutionAnalysis(
+            problem_slug=problem.slug,
+            problem_title=problem.title,
+            has_code_snapshots=has_code,
+            timeline=timeline,
+            changes_between_attempts=changes if changes else ["Initial attempt established baseline approach."],
+            improvements=improvements,  # empty list is accurate when no improvement occurred
+            regressions=regressions,
+            unresolved_issues=unresolved,
+            learning_summary=learning,
+            recommended_next_action=next_action,
+            evidence_refs=ref_ids,
+        )
+
+
+    def explain_submission_patterns(
+        self,
+        evidence: InsightEvidence,
+    ) -> SubmissionPatternInsights:
+        valid_refs = list(evidence.all_evidence_ids())
+        ref_ids = [valid_refs[0]] if valid_refs else []
+
+        findings: List[SubmissionPatternFinding] = []
+        overview = evidence.metrics.overview
+        total = overview.get("total_problems", 0)
+        solved = overview.get("accepted_problems", 0)
+        acc_rate = overview.get("overall_acceptance_rate_pct", 0.0)
+
+        # 1. Profile Baseline Fact
+        findings.append(SubmissionPatternFinding(
+            title="Practice Profile Baseline",
+            observation=f"{solved} of {total} recorded problems solved ({acc_rate:.1f}% acceptance rate).",
+            category="fact",
+            metric_or_examples=f"{solved}/{total} Solved, {acc_rate:.1f}% Acceptance",
+            why_it_matters="Establishes your overall practice baseline across all platforms and topics.",
+            suggested_action="Target topics with below-average acceptance rates to boost overall mastery.",
+            evidence_refs=ref_ids,
+        ))
+
+        # 2. Weak Topics
+        if evidence.patterns.weak_topics:
+            wt_names = [wt.get("topic", "?") for wt in evidence.patterns.weak_topics[:3]]
+            wt_str = ", ".join(wt_names)
+            findings.append(SubmissionPatternFinding(
+                title="Recurring Topic Struggles",
+                observation=f"Demonstrated weakness or low success rate in: {wt_str}.",
+                category="interpretation",
+                metric_or_examples=f"Weak Topics: {wt_str}",
+                why_it_matters="Struggles in foundational topics slow down progress in advanced multi-topic problems.",
+                suggested_action=f"Focus next practice session specifically on {wt_names[0]}.",
+                evidence_refs=ref_ids,
+            ))
+            gap = f"Strengthen core concepts in {wt_names[0]}."
+        else:
+            gap = "Maintain steady practice across diverse problem topics."
+
+        # 3. Repeated Failure Patterns
+        if evidence.patterns.repeated_tle_problems:
+            tle_count = len(evidence.patterns.repeated_tle_problems)
+            findings.append(SubmissionPatternFinding(
+                title="Time Limit Exceeded (TLE) Patterns",
+                observation=f"{tle_count} problem(s) exhibit repeated TLE failures.",
+                category="recommendation",
+                metric_or_examples=f"{tle_count} TLE problems",
+                why_it_matters="Indicates a reliance on high-complexity algorithms on large test inputs.",
+                suggested_action="Prioritize Big-O analysis prior to writing code for complex problems.",
+                evidence_refs=ref_ids,
+            ))
+
+        # 4. Unpracticed topics are gaps, NOT weaknesses.
+        if evidence.patterns.unpracticed_topics:
+            names = [ut.get("topic", "?") for ut in evidence.patterns.unpracticed_topics[:4]]
+            findings.append(SubmissionPatternFinding(
+                title="Unpracticed Topics (exposure gaps)",
+                observation=f"No recorded practice yet in: {', '.join(names)}.",
+                category="caveat",
+                metric_or_examples=f"{len(evidence.patterns.unpracticed_topics)} unpracticed topic(s)",
+                why_it_matters=(
+                    "These are exposure gaps, not demonstrated weaknesses -- there is simply no "
+                    "evidence either way yet."
+                ),
+                suggested_action=f"Schedule one {names[0]} problem to establish a baseline.",
+                evidence_refs=ref_ids,
+            ))
+
+        # 5. Difficulty distribution.
+        if evidence.metrics.difficulty_stats:
+            solved_desc = ", ".join(
+                f"{ds.get('difficulty', '?')}: {ds.get('solved_problems', 0)}"
+                for ds in evidence.metrics.difficulty_stats
+            )
+            findings.append(SubmissionPatternFinding(
+                title="Difficulty Distribution",
+                observation=f"Solved problems by difficulty -> {solved_desc}.",
+                category="fact",
+                metric_or_examples=solved_desc,
+                why_it_matters="Shows whether the difficulty ceiling is rising or staying flat.",
+                suggested_action="Attempt one problem above your current comfort difficulty.",
+                evidence_refs=ref_ids,
+            ))
+
+        # 6. First-attempt accuracy.
+        first_try = overview.get("first_attempt_acceptance_rate_pct")
+        if first_try is not None and total >= 3:
+            findings.append(SubmissionPatternFinding(
+                title="First-Attempt Accuracy",
+                observation=f"{first_try:.0f}% of problems were accepted on the first attempt.",
+                category="fact",
+                metric_or_examples=f"{first_try:.0f}% first-try acceptance",
+                why_it_matters="Low first-attempt accuracy means the approach is refined in code, not on paper.",
+                suggested_action=(
+                    "Before submitting, state the algorithm and its edge cases, then implement."
+                    if first_try < 60
+                    else "Keep this accuracy while increasing problem difficulty."
+                ),
+                evidence_refs=ref_ids,
+            ))
+
+        # 7. Improvement trends (deterministic earlier-vs-recent comparison).
+        for imp in evidence.patterns.improvement_patterns:
+            summary = imp.get("summary", "")
+            if not summary:
+                continue
+            findings.append(SubmissionPatternFinding(
+                title="Improvement Trend",
+                observation=summary,
+                category="fact",
+                metric_or_examples=imp.get("metric", "trend"),
+                why_it_matters="Confirms that recent practice is measurably more effective than earlier practice.",
+                suggested_action="Continue the habit that produced the recent improvement.",
+                evidence_refs=ref_ids,
+            ))
+
+        # 8. High-failure topics.
+        for hf in evidence.patterns.high_failure_topics[:2]:
+            topic = hf.get("topic", "?")
+            findings.append(SubmissionPatternFinding(
+                title=f"High Failure Rate: {topic}",
+                observation=(
+                    f"{topic} shows {hf.get('acceptance_rate_pct', 0):.0f}% acceptance across "
+                    f"{hf.get('total_submissions', 0)} submissions."
+                ),
+                category="interpretation",
+                metric_or_examples=f"{topic}: {hf.get('acceptance_rate_pct', 0):.0f}% acceptance",
+                why_it_matters="Repeated failures in a topic point to a specific missing sub-skill.",
+                suggested_action=f"Re-solve one {topic} problem slowly, stating the invariant before coding.",
+                evidence_refs=ref_ids,
+            ))
+
+        notes = list(evidence.limitations)
+        if total < 5:
+            notes.append("Limited practice history recorded; additional problem submissions will improve pattern accuracy.")
+
+        return SubmissionPatternInsights(
+            summary=f"Analyzed {total} problems ({solved} solved). Highlighting key topic performance and pattern insights.",
+            findings=findings,
+            most_important_gap=gap,
+            evidence_refs=ref_ids,
+            sample_size_notes=notes,
+        )
+
+    def recommend_next_problems(
+        self,
+        evidence: InsightEvidence,
+        candidate_problems: List[Problem],
+        limit: int = 3,
+        latest_solved_topics: Optional[List[str]] = None,
+    ) -> List[ProblemRecommendation]:
+        """Explain deterministic next-problem recommendations from real candidates.
+
+        Candidate retrieval and ranking are performed here by the deterministic
+        learning layer -- never by the language model.
+        """
+        profile = profile_from_evidence(evidence)
+        if latest_solved_topics and not profile.seed_patterns:
+            profile.seed_topics = list(latest_solved_topics)
+            profile.seed_patterns = list(patterns_for_topics(list(latest_solved_topics)))
+        candidates = candidates_from_problems(candidate_problems)
+        pool = filter_candidates(
+            candidates,
+            profile=profile,
+            policy=CandidateFilterPolicy(exclude_solved=True, exclude_recent=False),
+        )
+        return build_next_recommendations(
+            profile,
+            pool.accepted,
+            RecommendationOptions(limit=limit),
+            evidence_refs=sorted(evidence.all_evidence_ids()),
+        )
+
+    def generate_roadmap(
+        self,
+        evidence: InsightEvidence,
+        candidate_problems: List[Problem],
+    ) -> PersonalizedRoadmap:
+        """Build a deterministic, whole-history roadmap from real candidates.
+
+        The profile comes from the full evidence bundle (the entire history), while
+        phase/problem selection is deterministic and de-duplicated globally.
+        """
+        profile = profile_from_evidence(evidence)
+        candidates = candidates_from_problems(candidate_problems)
+        pool = filter_candidates(
+            candidates,
+            profile=profile,
+            policy=CandidateFilterPolicy(exclude_solved=True, exclude_recent=False),
+        )
+        return build_roadmap(
+            profile,
+            pool.accepted,
+            evidence_id=evidence.evidence_id,
+            evidence_refs=sorted(evidence.all_evidence_ids()),
+        )

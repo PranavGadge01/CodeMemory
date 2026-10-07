@@ -13,6 +13,7 @@ import {
   formatRuntime,
 } from "@/lib/format";
 import type { Problem, Submission } from "@/lib/types";
+import { SubmissionLearningCard } from "@/components/app/submissions/submission-learning-card";
 
 export function SubmissionDetail({
   submission,
@@ -78,6 +79,9 @@ export function SubmissionDetail({
           </Button>
         ) : null}
       </Surface>
+
+      {/* Learning analysis */}
+      <SubmissionLearningCard submissionId={submission.id} />
 
       {/* Code */}
       <Surface className="flex flex-col gap-4 p-5">

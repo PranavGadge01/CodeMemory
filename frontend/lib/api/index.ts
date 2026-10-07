@@ -28,6 +28,13 @@ export {
   getFullProfileInsight,
   getTopicInsight,
   getProblemInsight,
+  getOptimizationExplanation,
+  getLearningAnalysis,
+  getSubmissionPatterns,
+  getCollectiveLearningProfile,
+  getSubmissionLearningAnalysis,
+  getNextRecommendations,
+  getPersonalizedRoadmap,
   type DashboardData,
   type ProblemListParams,
   type ProblemListResult,
@@ -40,3 +47,4 @@ export {
   type SolutionEvolutionData,
   type SearchResult,
 } from "@/lib/api/resources";
+

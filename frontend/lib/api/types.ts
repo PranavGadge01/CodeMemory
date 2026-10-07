@@ -426,3 +426,249 @@ export interface GroundedInsightDTO {
   evidence_id: string;
 }
 
+/* --- Learning / Explainable AI --------------------------------------- */
+
+export interface ComplexityComparisonDTO {
+  current_time: string;
+  proposed_time: string;
+  current_space: string;
+  proposed_space: string;
+  explanation: string;
+  assumptions: string;
+}
+
+export interface OptimizationExplanationDTO {
+  problem_slug: string;
+  submission_id: string | null;
+  current_approach: string;
+  approach_source: string;
+  current_solution_summary: string;
+  bottleneck: string;
+  why_it_matters: string;
+  recommended_approach: string;
+  why_it_works: string;
+  complexity_comparison: ComplexityComparisonDTO;
+  transformation_steps: string[];
+  tradeoffs: string;
+  worked_example: string | null;
+  edge_cases: string[];
+  when_original_is_acceptable: string;
+  takeaway: string;
+  general_pattern: string;
+  follow_up_question: string | null;
+  evidence_refs: string[];
+}
+
+export interface AttemptTimelineEntryDTO {
+  attempt: number;
+  submission_id: string;
+  status: string;
+  language: string;
+  runtime_ms: number | null;
+  memory_mb: number | null;
+  date: string | null;
+}
+
+export interface AttemptEvolutionAnalysisDTO {
+  problem_slug: string;
+  problem_title: string;
+  has_code_snapshots: boolean;
+  timeline: AttemptTimelineEntryDTO[];
+  changes_between_attempts: string[];
+  improvements: string[];
+  regressions: string[];
+  unresolved_issues: string[];
+  learning_summary: string;
+  recommended_next_action: string;
+  evidence_refs: string[];
+}
+
+export interface SubmissionPatternFindingDTO {
+  title: string;
+  observation: string;
+  category: string;
+  metric_or_examples: string;
+  why_it_matters: string;
+  suggested_action: string;
+  evidence_refs: string[];
+}
+
+export interface SubmissionPatternInsightsDTO {
+  summary: string;
+  findings: SubmissionPatternFindingDTO[];
+  most_important_gap: string;
+  evidence_refs: string[];
+  sample_size_notes: string[];
+}
+
+export interface ProblemRecommendationDTO {
+  problem_slug: string;
+  title: string;
+  difficulty: string;
+  topics: string[];
+  url: string | null;
+  is_revision: boolean;
+  selection_rationale: string;
+  target_skill: string;
+  prior_attempt_connection: string;
+  difficulty_rationale: string;
+  solving_focus: string;
+  reflection_checklist: string[];
+  next_step_after: string;
+  evidence_refs: string[];
+  similarity_reasons: string[];
+  source: string;
+  source_problem_slug: string | null;
+}
+
+export interface NextProblemsDTO {
+  recommendations: ProblemRecommendationDTO[];
+  generated_at: string;
+}
+
+export interface RoadmapMilestoneDTO {
+  id: string;
+  title: string;
+  order: number;
+  learning_objective: string;
+  relevance: string;
+  objective: string;
+  rationale: string;
+  prerequisites: string[];
+  concepts_to_study: string[];
+  target_skills: string[];
+  recommended_problems: ProblemRecommendationDTO[];
+  completion_criteria: string;
+  reflection_question: string;
+  transition: string;
+  next_milestone_id: string | null;
+  status: string;
+  evidence_refs: string[];
+}
+
+export interface PersonalizedRoadmapDTO {
+  title: string;
+  description: string;
+  learning_profile_summary: string;
+  overall_rationale: string;
+  milestones: RoadmapMilestoneDTO[];
+  limitations: string[];
+  is_early_stage: boolean;
+  generated_at: string;
+  evidence_id: string;
+  is_read_only: boolean;
+}
+
+/* --- Collective learning profile ------------------------------------- */
+
+export interface LearningInsightItemDTO {
+  category: string;
+  title: string;
+  summary: string;
+  evidence: string;
+  impact: string;
+  interpretation: string;
+  action: string;
+  priority: string;
+  confidence: string;
+  topics: string[];
+  examples: string[];
+  evidence_refs: string[];
+}
+
+export interface LearningProgressTrendDTO {
+  metric: string;
+  earlier: string;
+  recent: string;
+  delta: string;
+  summary: string;
+  evidence_refs: string[];
+}
+
+export interface CollectiveLearningProfileDTO {
+  total_problems: number;
+  total_attempted: number;
+  total_solved: number;
+  total_submissions: number;
+  total_attempts: number;
+  acceptance_rate_pct: number;
+  first_attempt_acceptance_rate_pct: number;
+  avg_attempts_per_solved_problem: number;
+  difficulty_solved: Record<string, number>;
+  topic_observations: Record<string, unknown>[];
+  language_share: Record<string, unknown>[];
+  patterns_practiced: string[];
+  complexity_signals: Record<string, unknown>[];
+}
+
+export interface CollectiveLearningInsightDTO {
+  scope: string;
+  generated_at: string;
+  overall_summary: string;
+  profile: CollectiveLearningProfileDTO;
+  strengths: LearningInsightItemDTO[];
+  weaknesses: LearningInsightItemDTO[];
+  recurring_mistakes: LearningInsightItemDTO[];
+  optimization_trends: LearningInsightItemDTO[];
+  progress: LearningProgressTrendDTO[];
+  focus_areas: LearningInsightItemDTO[];
+  recommended_actions: string[];
+  practice_next: ProblemRecommendationDTO[];
+  limitations: string[];
+  is_early_stage: boolean;
+  evidence_id: string;
+  evidence_refs: string[];
+}
+
+/* --- Per-submission learning analysis -------------------------------- */
+
+export interface SubmissionImprovementDTO {
+  title: string;
+  what: string;
+  why: string;
+  how: string;
+  evidence_refs: string[];
+}
+
+export interface AttemptComparisonDTO {
+  available: boolean;
+  previous_submission_id: string | null;
+  previous_status: string | null;
+  current_status: string | null;
+  summary: string;
+  changes: string[];
+  improvement: string;
+  lesson: string;
+  evidence_refs: string[];
+}
+
+export interface SubmissionLearningAnalysisDTO {
+  submission_id: string;
+  problem_id: string;
+  problem_slug: string;
+  problem_title: string;
+  difficulty: string;
+  topics: string[];
+  status: string;
+  language: string;
+  overview: string;
+  what_went_well: string[];
+  improvements: SubmissionImprovementDTO[];
+  current_approach: string;
+  current_time_complexity: string;
+  current_space_complexity: string;
+  complexity_source: string;
+  alternative_approach: string;
+  alternative_time_complexity: string;
+  alternative_space_complexity: string;
+  tradeoffs: string;
+  edge_cases: string[];
+  cross_problem_connections: string[];
+  previous_attempt_comparison: AttemptComparisonDTO;
+  lesson: string;
+  next_action: string;
+  general_pattern: string;
+  has_code: boolean;
+  limitations: string[];
+  evidence_refs: string[];
+}

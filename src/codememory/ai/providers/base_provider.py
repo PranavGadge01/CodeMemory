@@ -5,7 +5,15 @@ from typing import TYPE_CHECKING, Optional, List
 
 from pydantic import BaseModel, Field
 
-from codememory.ai.models import SubmissionAnalysis, SolutionEvolution
+from codememory.ai.models import (
+    SubmissionAnalysis,
+    SolutionEvolution,
+    OptimizationExplanation,
+    AttemptEvolutionAnalysis,
+    SubmissionPatternInsights,
+    ProblemRecommendation,
+    PersonalizedRoadmap,
+)
 from codememory.domain.models import Problem, Submission
 
 if TYPE_CHECKING:
@@ -70,6 +78,64 @@ class BaseAIProvider(ABC):
         supplied evidence bundle.
         """
         pass
+
+    @abstractmethod
+    def explain_optimization(
+        self,
+        problem: Problem,
+        submission: Optional[Submission],
+        evidence: "InsightEvidence",
+    ) -> OptimizationExplanation:
+        """Explain why the current approach is inefficient, how to optimize it, trade-offs, and complexity."""
+        pass
+
+    @abstractmethod
+    def analyze_attempt_evolution(
+        self,
+        problem: Problem,
+        submissions: List[Submission],
+        evidence: "InsightEvidence",
+    ) -> AttemptEvolutionAnalysis:
+        """Analyze chronological attempt history and explain changes, improvements, and regressions."""
+        pass
+
+    @abstractmethod
+    def explain_submission_patterns(
+        self,
+        evidence: "InsightEvidence",
+    ) -> SubmissionPatternInsights:
+        """Explain overall submission patterns across practice history."""
+        pass
+
+    @abstractmethod
+    def recommend_next_problems(
+        self,
+        evidence: "InsightEvidence",
+        candidate_problems: List[Problem],
+        limit: int = 3,
+        latest_solved_topics: Optional[List[str]] = None,
+    ) -> List[ProblemRecommendation]:
+        """Generate structured rationale for next problem recommendations from candidate list.
+
+        Args:
+            evidence: Full profile evidence bundle.
+            candidate_problems: Unsolved problems pre-ranked by the caller.
+            limit: Maximum number of recommendations to return.
+            latest_solved_topics: Topics of the most recently solved problem; used
+                to make the recommendation contextually relevant to what the user
+                just practiced.
+        """
+        pass
+
+    @abstractmethod
+    def generate_roadmap(
+        self,
+        evidence: "InsightEvidence",
+        candidate_problems: List[Problem],
+    ) -> PersonalizedRoadmap:
+        """Generate a personalized DSA learning roadmap with structured milestones."""
+        pass
+
 
 
 def serialize_evidence(evidence: "InsightEvidence") -> str:
