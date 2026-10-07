@@ -18,12 +18,14 @@ def get_analytics(
     """
     safe_granularity = granularity if granularity in ["day", "week", "month"] else "day"
     account = service.active_account
+    # One history expansion shared by every analytics call below.
+    snapshot = service.history_snapshot()
 
     return AnalyticsOut(
-        overview=service.analytics_service.get_overview(account=account).model_dump(),
-        topics=[t.model_dump() for t in service.analytics_service.get_topic_statistics(account=account)],
-        difficulties=[d.model_dump() for d in service.analytics_service.get_difficulty_statistics(account=account)],
+        overview=service.analytics_service.get_overview(account=account, snapshot=snapshot).model_dump(),
+        topics=[t.model_dump() for t in service.analytics_service.get_topic_statistics(account=account, snapshot=snapshot)],
+        difficulties=[d.model_dump() for d in service.analytics_service.get_difficulty_statistics(account=account, snapshot=snapshot)],
         languages=[l.model_dump() for l in service.analytics_service.get_language_statistics(account=account)],
-        progress=[p.model_dump() for p in service.analytics_service.get_progress_over_time(granularity=safe_granularity, account=account)],
-        struggles=[s.model_dump() for s in service.analytics_service.get_struggle_problems(limit=10, account=account)]
+        progress=[p.model_dump() for p in service.analytics_service.get_progress_over_time(granularity=safe_granularity, account=account, snapshot=snapshot)],
+        struggles=[s.model_dump() for s in service.analytics_service.get_struggle_problems(limit=10, account=account, snapshot=snapshot)]
     )

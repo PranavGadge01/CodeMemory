@@ -29,8 +29,20 @@ export interface SubmissionSummaryDTO {
   languageCount: number;
 }
 
-export interface SubmissionListDTO extends PaginatedResponse<SubmissionDTO> {
+export interface SubmissionFilterOptionsDTO {
+  total: number;
+  statusCounts: Record<string, number>;
+  languageCounts: Record<string, number>;
+}
+
+export interface SubmissionListItemDTO extends SubmissionDTO {
+  problemTitle: string | null;
+  problemSlug: string | null;
+}
+
+export interface SubmissionListDTO extends PaginatedResponse<SubmissionListItemDTO> {
   summary: SubmissionSummaryDTO;
+  filterOptions: SubmissionFilterOptionsDTO;
 }
 
 /* --- Analytics --------------------------------------------------------- */
@@ -217,6 +229,14 @@ export interface ProblemListItemDTO {
   topics: string[];
   createdAt: string;
   updatedAt: string;
+  attemptCount: number;
+  acceptedCount: number;
+  submissionCount: number;
+  languages: string[];
+  bestRuntime: number | null;
+  bestMemory: number | null;
+  lastActivityAt: string | null;
+  status: string;
 }
 
 /* --- Revision ---------------------------------------------------------- */

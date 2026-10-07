@@ -22,6 +22,7 @@ from codememory.analytics.analytics_models import (
 from codememory.domain.enums import SubmissionStatus
 from codememory.domain.models import Problem, _ensure_utc
 from codememory.storage.composite_repository import CompositeStorage
+from codememory.storage.history import HistorySnapshot
 
 
 class AnalyticsService:
@@ -30,8 +31,10 @@ class AnalyticsService:
     def __init__(self, storage: CompositeStorage):
         self.storage = storage
 
-    def _get_all_problems(self) -> Sequence[Problem]:
-        """Fetch all problems from storage."""
+    def _get_all_problems(self, snapshot: HistorySnapshot | None = None) -> Sequence[Problem]:
+        """Fetch all problems from storage, or reuse a shared history snapshot."""
+        if snapshot is not None:
+            return snapshot.problems
         return self.storage.list_all()
 
     def _filter_problems_by_account(self, problems: Sequence[Problem], account: str | None) -> list[Problem]:
@@ -98,13 +101,13 @@ class AnalyticsService:
         return list(problems)
 
     # 1. System Overview Statistics
-    def get_overview(self, account: str | None = None) -> AnalyticsOverview:
+    def get_overview(self, account: str | None = None, snapshot: HistorySnapshot | None = None) -> AnalyticsOverview:
         """Calculate complete system overview statistics.
 
         When ``account`` is provided, only submissions from that source account
         are counted (e.g. a specific LeetCode username).
         """
-        problems = self._get_all_problems()
+        problems = self._get_all_problems(snapshot)
         problems = self._scope_problems(problems, account)
         if not problems:
             return AnalyticsOverview()
@@ -175,9 +178,11 @@ class AnalyticsService:
         )
 
     # 2. Topic Statistics
-    def get_topic_statistics(self, account: str | None = None) -> list[TopicStat]:
+    def get_topic_statistics(
+        self, account: str | None = None, snapshot: HistorySnapshot | None = None
+    ) -> list[TopicStat]:
         """Calculate problem solving metrics grouped by DSA topic."""
-        problems = self._get_all_problems()
+        problems = self._get_all_problems(snapshot)
         if not problems:
             return []
         problems = self._scope_problems(problems, account)
@@ -239,9 +244,11 @@ class AnalyticsService:
         return stats
 
     # 3. Difficulty Statistics
-    def get_difficulty_statistics(self, account: str | None = None) -> list[DifficultyStat]:
+    def get_difficulty_statistics(
+        self, account: str | None = None, snapshot: HistorySnapshot | None = None
+    ) -> list[DifficultyStat]:
         """Calculate problem solving metrics grouped by difficulty."""
-        problems = self._get_all_problems()
+        problems = self._get_all_problems(snapshot)
         problems = self._scope_problems(problems, account)
         diff_data: dict[str, dict] = defaultdict(
             lambda: {
@@ -327,9 +334,11 @@ class AnalyticsService:
         return stats
 
     # 5. Attempt Statistics & Progression
-    def get_attempt_statistics(self, account: str | None = None) -> AttemptStat:
+    def get_attempt_statistics(
+        self, account: str | None = None, snapshot: HistorySnapshot | None = None
+    ) -> AttemptStat:
         """Calculate statistics on attempt counts and brute-force->optimized progressions."""
-        problems = self._get_all_problems()
+        problems = self._get_all_problems(snapshot)
         problems = self._scope_problems(problems, account)
         if not problems:
             return AttemptStat()
@@ -371,9 +380,14 @@ class AnalyticsService:
         )
 
     # 6. Progress Over Time
-    def get_progress_over_time(self, granularity: str = "day", account: str | None = None) -> list[ProgressOverTime]:
+    def get_progress_over_time(
+        self,
+        granularity: str = "day",
+        account: str | None = None,
+        snapshot: HistorySnapshot | None = None,
+    ) -> list[ProgressOverTime]:
         """Aggragate solved problems and submission counts over time using Polars."""
-        problems = self._get_all_problems()
+        problems = self._get_all_problems(snapshot)
         problems = self._scope_problems(problems, account)
         rows: list[dict] = []
 
@@ -427,9 +441,14 @@ class AnalyticsService:
         return results
 
     # 7. Struggle Problems
-    def get_struggle_problems(self, limit: int = 10, account: str | None = None) -> list[StruggleProblem]:
+    def get_struggle_problems(
+        self,
+        limit: int = 10,
+        account: str | None = None,
+        snapshot: HistorySnapshot | None = None,
+    ) -> list[StruggleProblem]:
         """Identify problems with high failure rates or multiple failed attempts."""
-        problems = self._get_all_problems()
+        problems = self._get_all_problems(snapshot)
         problems = self._scope_problems(problems, account)
         struggles: list[StruggleProblem] = []
 
@@ -586,7 +605,12 @@ class AnalyticsService:
         )
 
     # 10. Timeline Events
-    def get_timeline_events(self, limit: int = 14, account: str | None = None) -> list[TimelineEvent]:
+    def get_timeline_events(
+        self,
+        limit: int = 14,
+        account: str | None = None,
+        snapshot: HistorySnapshot | None = None,
+    ) -> list[TimelineEvent]:
         """Derive chronological timeline events from actual stored data.
 
         Event types:
@@ -614,7 +638,7 @@ class AnalyticsService:
             return []
 
         # Load problems to get slug/title mappings
-        problems = self._get_all_problems()
+        problems = self._get_all_problems(snapshot)
         scoped = self._scope_problems(problems, account)
         problem_map: dict[str, Problem] = {p.id: p for p in scoped}
 
@@ -682,7 +706,7 @@ class AnalyticsService:
         return events[:limit]
 
     # 11. Knowledge Clusters
-    def get_knowledge_clusters(self, account: str | None = None) -> list:
+    def get_knowledge_clusters(self, account: str | None = None, snapshot: HistorySnapshot | None = None) -> list:
         """Build knowledge clusters from topic-based problem groupings.
 
         Clusters are formed by grouping problems that share the same primary topic.
@@ -694,7 +718,7 @@ class AnalyticsService:
         from codememory.analytics.analytics_models import KnowledgeCluster
         from codememory.domain.models import Problem
 
-        problems = self._get_all_problems()
+        problems = self._get_all_problems(snapshot)
         if not problems:
             return []
         problems = self._scope_problems(problems, account)

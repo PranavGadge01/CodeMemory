@@ -29,6 +29,7 @@ from codememory.revision.revision_models import RevisionQueueItem, RevisionScore
 from codememory.revision.revision_service import RevisionService
 from codememory.search.search_service import SearchService
 from codememory.storage.composite_repository import CompositeStorage
+from codememory.storage.history import HistorySnapshot
 from codememory.core.settings import SettingsStore, UserSettings
 from codememory.ai.fallback_provider import HeuristicAIProvider
 from codememory.ai.providers import BaseAIProvider, get_ai_provider
@@ -192,7 +193,10 @@ class CodeMemoryService:
         (NULL source_provider) submissions are returned, preventing cross-account
         aggregation.
         """
-        all_problems = self.storage.list_all()
+        return self._scope_problem_list(self.storage.list_all())
+
+    def _scope_problem_list(self, all_problems: Sequence[Problem]) -> list[Problem]:
+        """Apply the active-account scoping rules to an already-loaded list."""
         active = self.active_account
         if active is not None:
             # Filter to problems that have submissions from the active account,
@@ -902,13 +906,17 @@ class CodeMemoryService:
                 submissions.extend(attempt.submissions)
         return self.my_patterns_service.analyze_patterns(problems, submissions)
 
-    def get_knowledge_graph(self, account: str | None = None) -> KnowledgeGraph:
+    def get_knowledge_graph(
+        self, account: str | None = None, snapshot: HistorySnapshot | None = None
+    ) -> KnowledgeGraph:
         """Construct lightweight DSA relationship graph mapping topics, problems, approaches, and mistakes.
 
         When ``account`` is provided, only submissions from that account are
         included in the graph.
         """
-        problems = self.list_problems()
+        problems = self._scope_problem_list(
+            snapshot.problems if snapshot is not None else self.storage.list_all()
+        )
         submissions: list[Submission] = []
         for prob in problems:
             for attempt in prob.attempts:
@@ -993,17 +1001,23 @@ class CodeMemoryService:
     def get_grounded_insight(self, account: str | None = None) -> GroundedInsight:
         """Generate AI-interpreted insight grounded in deterministic analytics evidence."""
         target_account = account if account is not None else self.active_account
-        return self.insight_service.generate_full_profile_insight(account=target_account)
+        return self.insight_service.generate_full_profile_insight(
+            account=target_account, snapshot=self.history_snapshot()
+        )
 
     def get_topic_insight(self, topic: str, account: str | None = None) -> GroundedInsight:
         """Generate AI-interpreted insight focused on a specific DSA topic."""
         target_account = account if account is not None else self.active_account
-        return self.insight_service.generate_topic_insight(topic, account=target_account)
+        return self.insight_service.generate_topic_insight(
+            topic, account=target_account, snapshot=self.history_snapshot()
+        )
 
     def get_problem_insight(self, problem_identifier: str, account: str | None = None) -> GroundedInsight:
         """Generate AI-interpreted insight focused on a specific problem."""
         target_account = account if account is not None else self.active_account
-        return self.insight_service.generate_problem_insight(problem_identifier, account=target_account)
+        return self.insight_service.generate_problem_insight(
+            problem_identifier, account=target_account, snapshot=self.history_snapshot()
+        )
 
     def ask_codememory(self, question: str) -> dict[str, Any]:
         """Ask natural language question grounded in personal CodeMemory records."""
@@ -1017,26 +1031,29 @@ class CodeMemoryService:
     ) -> OptimizationExplanation:
         """Return an explainable optimization analysis for a problem/submission."""
         target_account = account if account is not None else self.active_account
-        problem = self.storage.get_by_slug(slug) or self.storage.get_by_id(slug)
+        snapshot = self.history_snapshot()
+        problem = snapshot.resolve_problem(slug)
         if problem is None:
             from codememory.domain.exceptions import ProblemNotFoundError
             raise ProblemNotFoundError(slug)
 
         submission: Optional[Any] = None
         if submission_id:
-            submissions = list(self.storage.list_by_problem(problem.id))
+            submissions = snapshot.submissions_for_problem(problem.id)
             submission = next((s for s in submissions if s.id == submission_id), None)
         else:
             # Use the most recent submission if none specified
             import datetime as _dt
             all_subs = sorted(
-                self.storage.list_by_problem(problem.id),
+                snapshot.submissions_for_problem(problem.id),
                 key=lambda s: s.submitted_at or _dt.datetime.min.replace(tzinfo=_dt.timezone.utc),
                 reverse=True,
             )
             submission = all_subs[0] if all_subs else None
 
-        evidence = self.evidence_builder.build_problem_evidence(slug, account=target_account)
+        evidence = self.evidence_builder.build_problem_evidence(
+            slug, account=target_account, snapshot=snapshot
+        )
         return self.ai_provider.explain_optimization(problem, submission, evidence)
 
     def get_attempt_evolution_analysis(
@@ -1046,13 +1063,16 @@ class CodeMemoryService:
     ) -> AttemptEvolutionAnalysis:
         """Return a structured chronological learning narrative across all attempts for a problem."""
         target_account = account if account is not None else self.active_account
-        problem = self.storage.get_by_slug(slug) or self.storage.get_by_id(slug)
+        snapshot = self.history_snapshot()
+        problem = snapshot.resolve_problem(slug)
         if problem is None:
             from codememory.domain.exceptions import ProblemNotFoundError
             raise ProblemNotFoundError(slug)
 
-        all_subs = list(self.storage.list_by_problem(problem.id))
-        evidence = self.evidence_builder.build_problem_evidence(slug, account=target_account)
+        all_subs = snapshot.submissions_for_problem(problem.id)
+        evidence = self.evidence_builder.build_problem_evidence(
+            slug, account=target_account, snapshot=snapshot
+        )
         return self.ai_provider.analyze_attempt_evolution(problem, all_subs, evidence)
 
     def get_submission_pattern_insights(
@@ -1061,7 +1081,9 @@ class CodeMemoryService:
     ) -> SubmissionPatternInsights:
         """Return structured comprehensive learning analysis across all submissions."""
         target_account = account if account is not None else self.active_account
-        evidence = self.evidence_builder.build_full_profile_evidence(account=target_account)
+        evidence = self.evidence_builder.build_full_profile_evidence(
+            account=target_account, snapshot=self.history_snapshot()
+        )
         return self.ai_provider.explain_submission_patterns(evidence)
 
     def get_collective_learning_insight(
@@ -1076,15 +1098,16 @@ class CodeMemoryService:
         as observed facts.
         """
         target_account = account if account is not None else self.active_account
-        evidence = self.evidence_builder.build_full_profile_evidence(account=target_account)
-        problems = self.analytics_service._scope_problems(
-            self.analytics_service._get_all_problems(), target_account
+        snapshot = self.history_snapshot()
+        evidence = self.evidence_builder.build_full_profile_evidence(
+            account=target_account, snapshot=snapshot
         )
+        problems = self.analytics_service._scope_problems(snapshot.problems, target_account)
         analyses = self.ai_analyzer.get_cached_analyses()
         insight = build_collective_learning_insight(evidence, problems, analyses)
         try:
             insight.practice_next = self.get_next_problem_recommendations(
-                limit=3, account=target_account
+                limit=3, account=target_account, snapshot=snapshot
             )
         except Exception:  # recommendations are supplementary, never fatal
             insight.practice_next = []
@@ -1097,9 +1120,8 @@ class CodeMemoryService:
     ) -> SubmissionLearningAnalysis:
         """Return a structured, grounded learning analysis for one submission."""
         target_account = account if account is not None else self.active_account
-        problems = self.analytics_service._scope_problems(
-            self.analytics_service._get_all_problems(), target_account
-        )
+        snapshot = self.history_snapshot()
+        problems = self.analytics_service._scope_problems(snapshot.problems, target_account)
 
         problem = None
         submission = None
@@ -1147,6 +1169,7 @@ class CodeMemoryService:
         self,
         limit: int = 3,
         account: str | None = None,
+        snapshot: HistorySnapshot | None = None,
     ) -> list[ProblemRecommendation]:
         """Return ranked next-problem recommendations grounded in real data.
 
@@ -1155,7 +1178,9 @@ class CodeMemoryService:
         explainable. No language model participates in retrieval or ranking.
         """
         target_account = account if account is not None else self.active_account
-        profile = build_learning_profile(self.analytics_service, account=target_account)
+        profile = build_learning_profile(
+            self.analytics_service, account=target_account, snapshot=snapshot
+        )
         pool = self._recommendation_pool(profile)
         return build_next_recommendations(
             profile,
@@ -1166,6 +1191,7 @@ class CodeMemoryService:
     def get_personalized_roadmap(
         self,
         account: str | None = None,
+        snapshot: HistorySnapshot | None = None,
     ) -> PersonalizedRoadmap:
         """Generate a personalized roadmap from the user's complete history.
 
@@ -1174,7 +1200,9 @@ class CodeMemoryService:
         template, and problems are de-duplicated across every phase.
         """
         target_account = account if account is not None else self.active_account
-        profile = build_learning_profile(self.analytics_service, account=target_account)
+        profile = build_learning_profile(
+            self.analytics_service, account=target_account, snapshot=snapshot
+        )
         pool = self._recommendation_pool(profile)
         return build_roadmap(profile, pool.accepted)
 
@@ -1186,6 +1214,16 @@ class CodeMemoryService:
             profile=profile,
             policy=CandidateFilterPolicy(exclude_solved=True, exclude_recent=False),
         )
+
+    def history_snapshot(self) -> HistorySnapshot:
+        """Expand the full problem/attempt/submission graph exactly once.
+
+        Callers performing a logical operation that touches multiple services
+        (dashboard, analytics, collective insight, ...) should build one
+        snapshot and pass it down instead of letting each service re-expand
+        history from DuckDB.
+        """
+        return HistorySnapshot.from_storage(self.storage)
 
     def health_check(self) -> dict[str, Any]:
         """Run per-component health check and return status report."""

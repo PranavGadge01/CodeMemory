@@ -6,11 +6,11 @@ from codememory.domain.models import Submission
 
 from api.dependencies import get_service
 from api.schemas.problems import SubmissionOut
-from api.schemas.submissions import SubmissionListOut
+from api.schemas.submissions import SubmissionListItemOut, SubmissionListOut
 
 router = APIRouter(tags=["submissions"])
 
-def _get_all_submissions(service: CodeMemoryService) -> List[Submission]:
+def _get_all_submissions(service: CodeMemoryService, problems=None) -> List[Submission]:
     """Helper to flatten all submissions from all problems.
 
     When a LeetCode account is connected, only that account's submissions
@@ -18,7 +18,9 @@ def _get_all_submissions(service: CodeMemoryService) -> List[Submission]:
     """
     submissions = []
     account = service.active_account
-    for problem in service.list_problems():
+    if problems is None:
+        problems = service.list_problems()
+    for problem in problems:
         for attempt in problem.attempts:
             for s in attempt.submissions:
                 if account is None or s.source_account == account:
@@ -35,7 +37,9 @@ def list_submissions(
     service: CodeMemoryService = Depends(get_service)
 ):
     """List flattened submissions with filtering and pagination."""
-    all_subs = _get_all_submissions(service)
+    problems = service.list_problems()
+    problem_by_id = {p.id: p for p in problems}
+    all_subs = _get_all_submissions(service, problems)
     
     filtered = all_subs
     if language:
@@ -49,7 +53,7 @@ def list_submissions(
     if problem:
         prob_lower = problem.lower()
         # Find the problem ID for the given slug/title
-        matching_probs = [p.id for p in service.list_problems() if prob_lower in p.slug.lower() or prob_lower in p.title.lower()]
+        matching_probs = [p.id for p in problems if prob_lower in p.slug.lower() or prob_lower in p.title.lower()]
         filtered = [s for s in filtered if s.problem_id in matching_probs]
 
     # Sort descending by submission time
@@ -59,6 +63,14 @@ def list_submissions(
     accepted = sum(1 for submission in filtered if submission.status.value.lower() == "accepted")
     problem_count = len({submission.problem_id for submission in filtered})
     language_count = len({submission.language.casefold() for submission in filtered})
+    # Chip counts are computed over the unfiltered set so they stay stable as a
+    # filter narrows the table (matching the previous client-side derivation).
+    all_status_counts: dict[str, int] = {}
+    all_language_counts: dict[str, int] = {}
+    for submission in all_subs:
+        all_status_counts[submission.status.value] = all_status_counts.get(submission.status.value, 0) + 1
+        all_language_counts[submission.language] = all_language_counts.get(submission.language, 0) + 1
+
     summary = {
         "total": total,
         "accepted": accepted,
@@ -72,11 +84,23 @@ def list_submissions(
     items = filtered[start_idx:end_idx]
     
     return SubmissionListOut(
-        items=[SubmissionOut(**s.model_dump()) for s in items],
+        items=[
+            SubmissionListItemOut(
+                **s.model_dump(),
+                problem_title=(problem_by_id.get(s.problem_id).title if problem_by_id.get(s.problem_id) else None),
+                problem_slug=(problem_by_id.get(s.problem_id).slug if problem_by_id.get(s.problem_id) else None),
+            )
+            for s in items
+        ],
         page=page,
         page_size=page_size,
         total=total,
         summary=summary,
+        filter_options={
+            "total": len(all_subs),
+            "status_counts": all_status_counts,
+            "language_counts": all_language_counts,
+        },
     )
 
 @router.get("/submissions/{id}", response_model=SubmissionOut)

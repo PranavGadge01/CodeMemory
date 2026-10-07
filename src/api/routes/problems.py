@@ -59,7 +59,7 @@ def list_problems(
     items = filtered[start_idx:end_idx]
     
     return PaginatedResponse(
-        items=[ProblemListItemOut(**p.model_dump()) for p in items],
+        items=[ProblemListItemOut.from_problem(p) for p in items],
         page=page,
         page_size=page_size,
         total=total

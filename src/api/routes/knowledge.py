@@ -13,8 +13,9 @@ def get_knowledge(service: CodeMemoryService = Depends(get_service)):
     When a LeetCode account is connected, only that account's data is used.
     """
     account = service.active_account
-    graph = service.get_knowledge_graph(account=account)
-    clusters = service.analytics_service.get_knowledge_clusters(account=account)
+    snapshot = service.history_snapshot()
+    graph = service.get_knowledge_graph(account=account, snapshot=snapshot)
+    clusters = service.analytics_service.get_knowledge_clusters(account=account, snapshot=snapshot)
 
     return KnowledgeOut(
         graph={

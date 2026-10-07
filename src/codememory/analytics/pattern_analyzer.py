@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 from codememory.analytics.analytics_service import AnalyticsService
 from codememory.domain.enums import SubmissionStatus
 from codememory.domain.models import Problem
+from codememory.storage.history import HistorySnapshot
 
 
 class PatternAnalysisResult(BaseModel):
@@ -38,9 +39,10 @@ class PatternAnalyzer:
         weak_topic_success_threshold: float = 50.0,
         high_failure_acceptance_threshold: float = 40.0,
         account: str | None = None,
+        snapshot: HistorySnapshot | None = None,
     ) -> PatternAnalysisResult:
         """Run complete pattern analysis across stored problems and attempts."""
-        all_problems = self.analytics._get_all_problems()
+        all_problems = self.analytics._get_all_problems(snapshot)
         problems = self.analytics._scope_problems(all_problems, account)
         result = PatternAnalysisResult()
 
@@ -50,7 +52,7 @@ class PatternAnalyzer:
         now = datetime.now(timezone.utc)
 
         # 1. Topic performance patterns (Weak topics & High failure topics with sample size checks)
-        topic_stats = self.analytics.get_topic_statistics(account=account)
+        topic_stats = self.analytics.get_topic_statistics(account=account, snapshot=snapshot)
         for ts in topic_stats:
             # Weak topics: requires sufficient problem sample size
             if ts.total_problems >= min_topic_problems_threshold and ts.success_rate_pct < weak_topic_success_threshold:

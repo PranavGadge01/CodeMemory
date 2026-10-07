@@ -1,6 +1,7 @@
 """DuckDB storage implementation for relational querying and analytics."""
 
 import threading
+from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Sequence
@@ -314,6 +315,23 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
         """
         )
 
+        # Child lookup indexes. list_all(), get_by_id()/get_by_slug() and the
+        # analytics expansions all filter the child tables by these columns.
+        # Without an index DuckDB scans the whole child table for every
+        # lookup; the indexes keep those point queries cheap as history grows.
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_attempts_problem_id ON attempts(problem_id);"
+        )
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_submissions_attempt_id ON submissions(attempt_id);"
+        )
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_submissions_problem_id ON submissions(problem_id);"
+        )
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_notes_problem_id ON notes(problem_id);"
+        )
+
     def save(self, problem: Problem) -> Problem:
         """Upsert problem, attempts, submissions, and notes into DuckDB."""
         with self._lock:
@@ -471,46 +489,66 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
                 return None
             return self._build_problem_from_row(res)
 
+    _PROBLEM_COLUMNS = "id, title, slug, difficulty, platform, url, topics, statement, created_at, updated_at"
+    _ATTEMPT_COLUMNS = (
+        "id, problem_id, attempt_number, approach_summary, reasoning, status, "
+        "time_complexity, space_complexity, created_at, updated_at"
+    )
+    _SUBMISSION_COLUMNS = (
+        "id, problem_id, attempt_id, code, language, status, runtime_ms, memory_mb, "
+        "submitted_at, error_message, submission_hash, source_provider, source_account"
+    )
+    _NOTE_COLUMNS = "id, problem_id, attempt_id, content, note_type, created_at"
+
     def _build_problem_from_row(self, row: tuple) -> Problem:
+        """Build one problem graph with a constant number of child queries.
+
+        The problem's attempts, submissions and notes are each fetched once
+        (rather than one submission query per attempt), then grouped in
+        Python. Ordering matches the previous per-problem implementation.
+        """
+        pid = row[0]
+        attempt_rows = self.conn.execute(
+            f"SELECT {self._ATTEMPT_COLUMNS} FROM attempts "
+            "WHERE problem_id = ? ORDER BY attempt_number ASC",
+            [pid],
+        ).fetchall()
+        submission_rows = self.conn.execute(
+            f"SELECT {self._SUBMISSION_COLUMNS} FROM submissions "
+            "WHERE problem_id = ? ORDER BY attempt_id ASC, submitted_at ASC",
+            [pid],
+        ).fetchall()
+        note_rows = self.conn.execute(
+            f"SELECT {self._NOTE_COLUMNS} FROM notes "
+            "WHERE problem_id = ? ORDER BY created_at ASC",
+            [pid],
+        ).fetchall()
+
+        submissions_by_attempt: dict[str, list[tuple]] = defaultdict(list)
+        for s_row in submission_rows:
+            submissions_by_attempt[s_row[2]].append(s_row)
+
+        return self._build_problem(row, attempt_rows, submissions_by_attempt, note_rows)
+
+    def _build_problem(
+        self,
+        row: tuple,
+        attempt_rows: Sequence[tuple],
+        submissions_by_attempt: dict[str, list[tuple]],
+        note_rows: Sequence[tuple],
+    ) -> Problem:
+        """Assemble a ``Problem`` from already-fetched child rows."""
         pid, title, slug, diff, platform, url, topics_str, stmt, created_at, updated_at = row
         topics = [t.strip() for t in topics_str.split(",") if t.strip()] if topics_str else []
 
-        # Load attempts using explicit column list matching the unpacking tuple
-        att_rows = self.conn.execute(
-            "SELECT id, problem_id, attempt_number, approach_summary, reasoning, status, time_complexity, space_complexity, created_at, updated_at "
-            "FROM attempts WHERE problem_id = ? ORDER BY attempt_number ASC",
-            [pid],
-        ).fetchall()
         attempts: list[Attempt] = []
-
-        for a_row in att_rows:
+        for a_row in attempt_rows:
             aid, _, att_num, app_sum, reasoning, att_status, tc, sc, a_created, a_updated = a_row
 
-            # Load submissions for this attempt using explicit column list
-            sub_rows = self.conn.execute(
-                "SELECT id, problem_id, attempt_id, code, language, status, runtime_ms, memory_mb, submitted_at, error_message, submission_hash, source_provider, source_account "
-                "FROM submissions WHERE attempt_id = ? ORDER BY submitted_at ASC",
-                [aid],
-            ).fetchall()
-            submissions: list[Submission] = []
-            for s_row in sub_rows:
-                sid, _, _, code, lang, s_status, rt, mem, s_time, err, s_hash, s_provider, s_account = s_row
-                sub = Submission(
-                    id=sid,
-                    problem_id=pid,
-                    attempt_id=aid,
-                    code=code,
-                    language=lang,
-                    status=SubmissionStatus.parse(s_status),
-                    runtime_ms=rt,
-                    memory_mb=mem,
-                    submitted_at=s_time,
-                    error_message=err,
-                    submission_hash=s_hash,
-                    source_provider=s_provider,
-                    source_account=s_account,
-                )
-                submissions.append(sub)
+            submissions = [
+                self._build_submission_from_row(s_row)
+                for s_row in submissions_by_attempt.get(aid, ())
+            ]
 
             analysis = SolutionAnalysis(time_complexity=tc or "O(N)", space_complexity=sc or "O(1)") if (tc or sc) else None
 
@@ -533,12 +571,6 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
             )
             attempts.append(att)
 
-        # Load notes using explicit column list
-        note_rows = self.conn.execute(
-            "SELECT id, problem_id, attempt_id, content, note_type, created_at "
-            "FROM notes WHERE problem_id = ? ORDER BY created_at ASC",
-            [pid],
-        ).fetchall()
         notes: list[ProblemNote] = []
         for n_row in note_rows:
             nid, _, n_aid, content, n_type, n_created = n_row
@@ -568,9 +600,48 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
         )
 
     def list_all(self) -> Sequence[Problem]:
+        """Return the full problem graph in a constant number of queries.
+
+        The previous implementation issued one attempts query per problem and
+        one submissions query per attempt. This bulk-loads problems, attempts,
+        submissions and notes once each and groups them in Python, so the SQL
+        statement count no longer grows with the size of the history.
+        """
         with self._lock:
-            rows = self.conn.execute("SELECT * FROM problems ORDER BY title ASC").fetchall()
-            return [self._build_problem_from_row(r) for r in rows]
+            problem_rows = self.conn.execute(
+                f"SELECT {self._PROBLEM_COLUMNS} FROM problems ORDER BY title ASC"
+            ).fetchall()
+            attempt_rows = self.conn.execute(
+                f"SELECT {self._ATTEMPT_COLUMNS} FROM attempts ORDER BY problem_id ASC, attempt_number ASC"
+            ).fetchall()
+            submission_rows = self.conn.execute(
+                f"SELECT {self._SUBMISSION_COLUMNS} FROM submissions ORDER BY attempt_id ASC, submitted_at ASC"
+            ).fetchall()
+            note_rows = self.conn.execute(
+                f"SELECT {self._NOTE_COLUMNS} FROM notes ORDER BY problem_id ASC, created_at ASC"
+            ).fetchall()
+
+        attempts_by_problem: dict[str, list[tuple]] = defaultdict(list)
+        for a_row in attempt_rows:
+            attempts_by_problem[a_row[1]].append(a_row)
+
+        submissions_by_attempt: dict[str, list[tuple]] = defaultdict(list)
+        for s_row in submission_rows:
+            submissions_by_attempt[s_row[2]].append(s_row)
+
+        notes_by_problem: dict[str, list[tuple]] = defaultdict(list)
+        for n_row in note_rows:
+            notes_by_problem[n_row[1]].append(n_row)
+
+        return [
+            self._build_problem(
+                prob_row,
+                attempts_by_problem.get(prob_row[0], []),
+                submissions_by_attempt,
+                notes_by_problem.get(prob_row[0], []),
+            )
+            for prob_row in problem_rows
+        ]
 
     def delete(self, problem_id: str) -> bool:
         with self._lock:

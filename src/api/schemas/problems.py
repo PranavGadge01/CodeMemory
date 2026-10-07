@@ -70,6 +70,64 @@ class ProblemListItemOut(BaseCamelModel):
     topics: List[str]
     created_at: datetime
     updated_at: datetime
+    # Summary fields the problems table renders directly, so the list endpoint
+    # does not force the client to fetch every problem individually.
+    attempt_count: int = 0
+    accepted_count: int = 0
+    submission_count: int = 0
+    languages: List[str] = Field(default_factory=list)
+    best_runtime: Optional[float] = None
+    best_memory: Optional[float] = None
+    last_activity_at: Optional[datetime] = None
+    status: str = "Untouched"
+
+    @classmethod
+    def from_problem(cls, problem) -> "ProblemListItemOut":
+        """Project a domain problem into the table summary row."""
+        from codememory.domain.enums import SubmissionStatus
+
+        submissions = [s for a in problem.attempts for s in a.submissions]
+        accepted = [s for s in submissions if s.status == SubmissionStatus.ACCEPTED]
+
+        languages: List[str] = []
+        for submission in sorted(submissions, key=lambda s: s.submitted_at):
+            if submission.language and submission.language not in languages:
+                languages.append(submission.language)
+
+        runtimes = [s.runtime_ms for s in accepted if s.runtime_ms is not None]
+        memories = [s.memory_mb for s in accepted if s.memory_mb is not None]
+
+        if any(a.is_accepted for a in problem.attempts):
+            status = "Solved"
+        elif problem.attempts:
+            status = "Attempted"
+        else:
+            status = "Untouched"
+
+        last_activity = (
+            max(submissions, key=lambda s: s.submitted_at).submitted_at
+            if submissions
+            else problem.updated_at
+        )
+
+        return cls(
+            id=problem.id,
+            title=problem.title,
+            slug=problem.slug,
+            difficulty=problem.difficulty.value,
+            platform=problem.platform.value if hasattr(problem.platform, "value") else str(problem.platform),
+            topics=list(problem.topics),
+            created_at=problem.created_at,
+            updated_at=problem.updated_at,
+            attempt_count=len(problem.attempts),
+            accepted_count=len(accepted),
+            submission_count=len(submissions),
+            languages=languages,
+            best_runtime=min(runtimes) if runtimes else None,
+            best_memory=min(memories) if memories else None,
+            last_activity_at=last_activity,
+            status=status,
+        )
 
 class EvolutionStepOut(BaseCamelModel):
     attempt_number: int

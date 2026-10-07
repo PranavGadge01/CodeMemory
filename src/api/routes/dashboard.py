@@ -17,7 +17,9 @@ def get_dashboard(
     submissions. When no account is connected, all submissions are included.
     """
     account = service.active_account
-    overview = service.analytics_service.get_overview(account=account)
+    # One history expansion shared by every analytics call below.
+    snapshot = service.history_snapshot()
+    overview = service.analytics_service.get_overview(account=account, snapshot=snapshot)
     streaks = service.analytics_service.get_streaks(account=account)
 
     # Update overview streak fields with real data
@@ -25,20 +27,28 @@ def get_dashboard(
     overview.longest_streak_days = streaks.longest_streak_days
     overview.active_days_last_30 = streaks.active_days_last_30
 
-    topics = service.analytics_service.get_topic_statistics(account=account)
-    difficulties = service.analytics_service.get_difficulty_statistics(account=account)
+    topics = service.analytics_service.get_topic_statistics(account=account, snapshot=snapshot)
+    difficulties = service.analytics_service.get_difficulty_statistics(account=account, snapshot=snapshot)
     languages = service.analytics_service.get_language_statistics(account=account)
 
-    progress = service.analytics_service.get_progress_over_time(granularity="week", account=account)
+    progress = service.analytics_service.get_progress_over_time(
+        granularity="week", account=account, snapshot=snapshot
+    )
 
-    struggles = service.analytics_service.get_struggle_problems(limit=5, account=account)
+    struggles = service.analytics_service.get_struggle_problems(
+        limit=5, account=account, snapshot=snapshot
+    )
 
     # Revision queue limit to 5
-    revision_queue = service.revision_service.get_revision_queue(limit=5, account=account)
+    revision_queue = service.revision_service.get_revision_queue(
+        limit=5, account=account, snapshot=snapshot
+    )
 
     # Real activity heatmaps and timeline events
     activity = service.analytics_service.get_activity_heatmap(account=account)
-    timeline = service.analytics_service.get_timeline_events(limit=14, account=account)
+    timeline = service.analytics_service.get_timeline_events(
+        limit=14, account=account, snapshot=snapshot
+    )
 
     return DashboardOut(
         overview=overview.model_dump(mode="json"),

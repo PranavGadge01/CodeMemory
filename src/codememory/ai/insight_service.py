@@ -23,6 +23,7 @@ from codememory.ai.evidence_builder import EvidenceBuilder
 from codememory.ai.evidence_models import InsightEvidence
 from codememory.ai.evidence_validator import EvidenceValidationError, EvidenceValidator
 from codememory.ai.providers.base_provider import BaseAIProvider, InterpretationResult
+from codememory.storage.history import HistorySnapshot
 
 if TYPE_CHECKING:
     pass
@@ -77,19 +78,30 @@ class InsightService:
     # Public API
     # ------------------------------------------------------------------
 
-    def generate_full_profile_insight(self, account: str | None = None) -> GroundedInsight:
+    def generate_full_profile_insight(
+        self, account: str | None = None, snapshot: HistorySnapshot | None = None
+    ) -> GroundedInsight:
         """Generate a grounded insight covering the user's full practice profile."""
-        evidence = self.evidence_builder.build_full_profile_evidence(account=account)
+        evidence = self.evidence_builder.build_full_profile_evidence(account=account, snapshot=snapshot)
         return self._interpret_and_assemble(evidence)
 
-    def generate_topic_insight(self, topic: str, account: str | None = None) -> GroundedInsight:
+    def generate_topic_insight(
+        self, topic: str, account: str | None = None, snapshot: HistorySnapshot | None = None
+    ) -> GroundedInsight:
         """Generate a grounded insight focused on a specific DSA topic."""
-        evidence = self.evidence_builder.build_topic_evidence(topic, account=account)
+        evidence = self.evidence_builder.build_topic_evidence(topic, account=account, snapshot=snapshot)
         return self._interpret_and_assemble(evidence)
 
-    def generate_problem_insight(self, problem_identifier: str, account: str | None = None) -> GroundedInsight:
+    def generate_problem_insight(
+        self,
+        problem_identifier: str,
+        account: str | None = None,
+        snapshot: HistorySnapshot | None = None,
+    ) -> GroundedInsight:
         """Generate a grounded insight focused on a specific problem."""
-        evidence = self.evidence_builder.build_problem_evidence(problem_identifier, account=account)
+        evidence = self.evidence_builder.build_problem_evidence(
+            problem_identifier, account=account, snapshot=snapshot
+        )
         return self._interpret_and_assemble(evidence)
 
     # ------------------------------------------------------------------

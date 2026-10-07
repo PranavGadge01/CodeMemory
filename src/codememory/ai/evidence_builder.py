@@ -26,6 +26,7 @@ from codememory.ai.evidence_models import (
 from codememory.analytics.analytics_service import AnalyticsService
 from codememory.analytics.pattern_analyzer import PatternAnalyzer
 from codememory.domain.exceptions import ProblemNotFoundError
+from codememory.storage.history import HistorySnapshot
 
 if TYPE_CHECKING:
     from codememory.ai.analyzer import AICodeAnalyzer
@@ -60,37 +61,43 @@ class EvidenceBuilder:
     # Public API
     # ------------------------------------------------------------------
 
-    def build_full_profile_evidence(self, account: str | None = None) -> InsightEvidence:
-        """Build evidence covering the user's full practice profile."""
+    def build_full_profile_evidence(
+        self, account: str | None = None, snapshot: HistorySnapshot | None = None
+    ) -> InsightEvidence:
+        """Build evidence covering the user's full practice profile.
+
+        ``snapshot`` lets a caller that already expanded the user's history
+        reuse it instead of triggering a fresh expansion per analytics call.
+        """
         evidence = InsightEvidence(scope="full_profile", generated_at=datetime.now(timezone.utc))
 
         # 1. Overview metrics
-        overview = self.analytics.get_overview(account=account)
+        overview = self.analytics.get_overview(account=account, snapshot=snapshot)
         overview_dict = overview.model_dump()
         evidence.metrics.overview = overview_dict
         self._add_overview_items(evidence, overview_dict)
 
         # 2. Topic statistics
-        topic_stats = self.analytics.get_topic_statistics(account=account)
+        topic_stats = self.analytics.get_topic_statistics(account=account, snapshot=snapshot)
         evidence.metrics.topic_stats = [ts.model_dump() for ts in topic_stats]
         overall_acc_rate = overview.overall_acceptance_rate_pct
         self._add_topic_items(evidence, topic_stats, overall_acc_rate)
 
         # 3. Difficulty statistics
-        diff_stats = self.analytics.get_difficulty_statistics(account=account)
+        diff_stats = self.analytics.get_difficulty_statistics(account=account, snapshot=snapshot)
         evidence.metrics.difficulty_stats = [ds.model_dump() for ds in diff_stats]
         self._add_difficulty_items(evidence, diff_stats)
 
         # 4. Attempt statistics
-        att_stats = self.analytics.get_attempt_statistics(account=account)
+        att_stats = self.analytics.get_attempt_statistics(account=account, snapshot=snapshot)
         evidence.metrics.attempt_stats = att_stats.model_dump()
 
         # 5. Pattern analysis
-        patterns = self.pattern_analyzer.analyze(account=account)
+        patterns = self.pattern_analyzer.analyze(account=account, snapshot=snapshot)
         self._populate_patterns(evidence, patterns)
 
         # 6. Struggle problems
-        struggles = self.analytics.get_struggle_problems(limit=10, account=account)
+        struggles = self.analytics.get_struggle_problems(limit=10, account=account, snapshot=snapshot)
         for sp in struggles:
             diff_str = sp.difficulty
             evidence.supporting_problems.append(
@@ -106,14 +113,16 @@ class EvidenceBuilder:
             )
 
         # 7. Cached submission analyses (optional, never triggers new analysis)
-        self._add_cached_submission_snapshots(evidence, struggles)
+        self._add_cached_submission_snapshots(evidence, struggles, snapshot=snapshot)
 
         # 8. Limitations
         self._compute_limitations(evidence, topic_stats)
 
         return evidence
 
-    def build_topic_evidence(self, topic: str, account: str | None = None) -> InsightEvidence:
+    def build_topic_evidence(
+        self, topic: str, account: str | None = None, snapshot: HistorySnapshot | None = None
+    ) -> InsightEvidence:
         """Build evidence focused on a single DSA topic."""
         evidence = InsightEvidence(
             scope=f"topic:{topic}",
@@ -121,13 +130,13 @@ class EvidenceBuilder:
         )
 
         # Overview for baseline comparison
-        overview = self.analytics.get_overview(account=account)
+        overview = self.analytics.get_overview(account=account, snapshot=snapshot)
         overview_dict = overview.model_dump()
         evidence.metrics.overview = overview_dict
         self._add_overview_items(evidence, overview_dict)
 
         # Filter topic stats to the requested topic
-        all_topic_stats = self.analytics.get_topic_statistics(account=account)
+        all_topic_stats = self.analytics.get_topic_statistics(account=account, snapshot=snapshot)
         matching = [ts for ts in all_topic_stats if ts.topic.lower() == topic.lower()]
         evidence.metrics.topic_stats = [ts.model_dump() for ts in matching]
 
@@ -135,11 +144,11 @@ class EvidenceBuilder:
         self._add_topic_items(evidence, matching, overall_acc_rate)
 
         # Patterns (full, but consumer can focus on the relevant topic)
-        patterns = self.pattern_analyzer.analyze(account=account)
+        patterns = self.pattern_analyzer.analyze(account=account, snapshot=snapshot)
         self._populate_patterns(evidence, patterns)
 
         # Struggle problems filtered by topic
-        struggles = self.analytics.get_struggle_problems(limit=20, account=account)
+        struggles = self.analytics.get_struggle_problems(limit=20, account=account, snapshot=snapshot)
         topic_lower = topic.lower()
         for sp in struggles:
             if any(t.lower() == topic_lower for t in sp.topics):
@@ -155,24 +164,29 @@ class EvidenceBuilder:
                     )
                 )
 
-        self._add_cached_submission_snapshots(evidence, struggles)
+        self._add_cached_submission_snapshots(evidence, struggles, snapshot=snapshot)
         self._compute_limitations(evidence, matching)
 
         return evidence
 
-    def build_problem_evidence(self, problem_identifier: str, account: str | None = None) -> InsightEvidence:
+    def build_problem_evidence(
+        self, problem_identifier: str, account: str | None = None, snapshot: HistorySnapshot | None = None
+    ) -> InsightEvidence:
         """Build evidence focused on a single problem.
 
         Uses the repository's canonical problem identifier (slug or ID).
         """
-        if not self.storage:
+        if not self.storage and snapshot is None:
             return InsightEvidence(
                 scope=f"problem:{problem_identifier}",
                 generated_at=datetime.now(timezone.utc),
                 limitations=["Storage not available for problem-level evidence."],
             )
 
-        prob = self.storage.get_by_slug(problem_identifier) or self.storage.get_by_id(problem_identifier)
+        if snapshot is not None:
+            prob = snapshot.resolve_problem(problem_identifier)
+        else:
+            prob = self.storage.get_by_slug(problem_identifier) or self.storage.get_by_id(problem_identifier)
         if not prob:
             raise ProblemNotFoundError(problem_identifier)
 
@@ -401,7 +415,9 @@ class EvidenceBuilder:
                 value=ut,
             ))
 
-    def _add_cached_submission_snapshots(self, evidence: InsightEvidence, struggles) -> None:
+    def _add_cached_submission_snapshots(
+        self, evidence: InsightEvidence, struggles, snapshot: HistorySnapshot | None = None
+    ) -> None:
         """Add cached AI analyses for struggle problems as supporting submissions.
 
         Uses ``AICodeAnalyzer.get_cached_analyses()`` — never triggers new
@@ -411,31 +427,30 @@ class EvidenceBuilder:
             return
 
         # Collect all submission IDs from struggle problems via storage
-        if not self.storage:
+        if not self.storage and snapshot is None:
             return
 
+        def _resolve_problem(problem_id: str):
+            if snapshot is not None:
+                return snapshot.get_problem_by_id(problem_id)
+            return self.storage.get_by_id(problem_id)
+
         sub_ids: list[str] = []
+        title_by_sub_id: dict[str, str] = {}
         for sp in struggles:
-            prob = self.storage.get_by_id(sp.problem_id)
+            prob = _resolve_problem(sp.problem_id)
             if prob:
                 for att in prob.attempts:
                     for sub in att.submissions:
                         sub_ids.append(sub.id)
+                        title_by_sub_id[sub.id] = sp.title
 
         if not sub_ids:
             return
 
         cached = self.ai_analyzer.get_cached_analyses(submission_ids=sub_ids)
         for sub_id, analysis in cached.items():
-            # Find the problem title for this submission
-            prob_title = "Unknown"
-            for sp in struggles:
-                prob = self.storage.get_by_id(sp.problem_id)
-                if prob:
-                    for att in prob.attempts:
-                        if any(s.id == sub_id for s in att.submissions):
-                            prob_title = sp.title
-                            break
+            prob_title = title_by_sub_id.get(sub_id, "Unknown")
 
             evidence.supporting_submissions.append(
                 SubmissionSnapshot(

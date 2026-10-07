@@ -29,6 +29,7 @@ from codememory.learning.taxonomy import (
     skill_label,
     topics_for_pattern,
 )
+from codememory.storage.history import HistorySnapshot
 
 # Failure statuses that indicate a concrete execution problem (as opposed to
 # "Unknown", which must never be counted as a failure).
@@ -71,6 +72,7 @@ def build_learning_profile(
     now: datetime | None = None,
     recent_days: int = 14,
     max_topics: int = 40,
+    snapshot: HistorySnapshot | None = None,
 ) -> LearningProfile:
     """Build a deterministic :class:`LearningProfile` from scoped storage data.
 
@@ -82,7 +84,7 @@ def build_learning_profile(
         now: Injectable clock for deterministic tests.
         recent_days: Window used to mark problems as "recently attempted".
     """
-    all_problems = list(analytics._get_all_problems())
+    all_problems = list(analytics._get_all_problems(snapshot))
     problems = list(analytics._scope_problems(all_problems, account))
     return profile_from_problems(
         problems, account=account, now=now, recent_days=recent_days, max_topics=max_topics
