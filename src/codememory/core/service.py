@@ -1181,7 +1181,7 @@ class CodeMemoryService:
         profile = build_learning_profile(
             self.analytics_service, account=target_account, snapshot=snapshot
         )
-        pool = self._recommendation_pool(profile)
+        pool = self._recommendation_pool(profile, snapshot)
         return build_next_recommendations(
             profile,
             pool.accepted,
@@ -1203,12 +1203,22 @@ class CodeMemoryService:
         profile = build_learning_profile(
             self.analytics_service, account=target_account, snapshot=snapshot
         )
-        pool = self._recommendation_pool(profile)
+        pool = self._recommendation_pool(profile, snapshot)
         return build_roadmap(profile, pool.accepted)
 
-    def _recommendation_pool(self, profile):
-        """Retrieve and filter real candidate problems for a profile."""
-        candidates = self.problem_source.list_candidates()
+    def _recommendation_pool(self, profile, snapshot: HistorySnapshot | None = None):
+        """Retrieve and filter real candidate problems for a profile.
+
+        When a history snapshot is supplied it backs the local catalogue, so
+        recommendations and the roadmap reuse the history this operation
+        already loaded instead of expanding it a second time. A remote problem
+        source, when one is configured, is unaffected.
+        """
+        source = self.problem_source
+        rebind = getattr(source, "with_local_problems", None)
+        if snapshot is not None and callable(rebind):
+            source = rebind(snapshot.problems)
+        candidates = source.list_candidates()
         return filter_candidates(
             candidates,
             profile=profile,
@@ -1237,7 +1247,7 @@ class CodeMemoryService:
             tier_health = self.storage.tier_health()
             results["storage"] = {
                 "status": "ok" if self.storage.health() else "error",
-                "problems": len(self.storage.list_all()),
+                "problems": self.storage.count_problems(),
                 "tiers": ", ".join(f"{tier}={'ok' if ok else 'error'}" for tier, ok in tier_health.items()),
             }
             results["duckdb"] = {"status": "ok" if tier_health.get("duckdb") else "error"}
@@ -1252,21 +1262,25 @@ class CodeMemoryService:
         except Exception as e:
             results["ai_provider"] = {"status": "error", "detail": str(e)}
 
-        # Memory engine
+        # Memory engine: readiness only. The stats probe built the document
+        # index (a full history expansion plus extraction) as a side effect, so
+        # a cold health poll paid for the whole index to report counts that the
+        # HTTP health response then drops. Counts are still reported once the
+        # index is already warm.
         try:
-            mem_stats = self.memory_engine.get_memory_stats()
-            results["memory_engine"] = {
-                "status": "ok",
-                "documents": mem_stats.get("total_documents", 0),
-                "vectors": mem_stats.get("indexed_vectors", 0),
-            }
+            memory_entry: dict[str, Any] = {"status": "ok"}
+            mem_stats = self.memory_engine.memory_stats_if_indexed()
+            if mem_stats is not None:
+                memory_entry["documents"] = mem_stats.get("total_documents", 0)
+                memory_entry["vectors"] = mem_stats.get("indexed_vectors", 0)
+            results["memory_engine"] = memory_entry
         except Exception as e:
             results["memory_engine"] = {"status": "error", "detail": str(e)}
 
-        # Search service
+        # Search service: readiness only. An unfiltered search re-expanded the
+        # whole history on every poll just to prove the subsystem answers.
         try:
-            self.search_service.search(query=None)
-            results["search"] = {"status": "ok"}
+            results["search"] = {"status": "ok" if self.search_service.health() else "error"}
         except Exception as e:
             results["search"] = {"status": "error", "detail": str(e)}
 

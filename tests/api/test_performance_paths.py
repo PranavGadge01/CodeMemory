@@ -42,6 +42,21 @@ def test_knowledge_expands_history_once(client, mock_service, monkeypatch):
     assert calls["n"] == 1
 
 
+def test_health_does_not_expand_history(client, mock_service, monkeypatch):
+    """The health probe reports the index size without reading the index.
+
+    It previously called ``storage.list_all()`` for the problem count, ran an
+    unfiltered search, and built the memory document index - three full history
+    expansions per poll of an endpoint the UI calls on every page mount.
+    """
+    calls = _count_expansions(mock_service, monkeypatch)
+    response = client.get("/api/v1/health")
+    assert response.status_code == 200
+    assert response.json()["storage"]["problems"] == 1
+    assert response.json()["overall"] == "ok"
+    assert calls["n"] == 0
+
+
 def _seed_service(service: CodeMemoryService) -> None:
     service.add_problem(title="Two Sum", difficulty=DifficultyLevel.EASY, topics=["Array", "Hash Table"])
     service.add_submission(problem_identifier="two-sum", code="pass", status=SubmissionStatus.ACCEPTED)

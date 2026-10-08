@@ -51,12 +51,23 @@ class LocalCatalogSource:
 
     name = "local_catalog"
 
-    def __init__(self, storage) -> None:
+    def __init__(self, storage, problems: Optional[Sequence[Problem]] = None) -> None:
         self._storage = storage
+        # When supplied, this fixed list replaces the storage read. Callers that
+        # already hold a history snapshot pass it here so the same history is
+        # not expanded twice inside one logical operation.
+        self._problems = problems
+
+    def with_problems(self, problems: Sequence[Problem]) -> "LocalCatalogSource":
+        """Return this source bound to an already-loaded problem list."""
+        return LocalCatalogSource(self._storage, problems=problems)
 
     def list_candidates(self) -> list[ProblemCandidate]:
         try:
-            problems = list(self._storage.list_all())
+            if self._problems is not None:
+                problems = list(self._problems)
+            else:
+                problems = list(self._storage.list_all())
         except Exception as exc:  # pragma: no cover - defensive
             logger.warning("Local catalog read failed: %s", exc)
             return []
@@ -250,6 +261,19 @@ class CompositeProblemSource:
 
     def __init__(self, sources: Sequence[ProblemSource]) -> None:
         self._sources = [s for s in sources if s is not None]
+
+    def with_local_problems(self, problems: Sequence[Problem]) -> "CompositeProblemSource":
+        """Return a variant whose local sources read the supplied problems.
+
+        The remote source (when one is configured) is reused unchanged, so a
+        caller holding a history snapshot avoids re-expanding it without losing
+        network-backed candidates.
+        """
+        rebound: list[ProblemSource] = [
+            source.with_problems(problems) if isinstance(source, LocalCatalogSource) else source
+            for source in self._sources
+        ]
+        return CompositeProblemSource(rebound)
 
     def list_candidates(self) -> list[ProblemCandidate]:
         merged: list[ProblemCandidate] = []

@@ -66,11 +66,15 @@ export function Tr({
   className,
   href,
   onClick,
+  onMouseEnter,
+  onFocus,
 }: {
   children: React.ReactNode;
   className?: string;
   href?: string;
   onClick?: () => void;
+  onMouseEnter?: () => void;
+  onFocus?: () => void;
 }) {
   return (
     <tr
@@ -80,6 +84,8 @@ export function Tr({
         className,
       )}
       onClick={onClick}
+      onMouseEnter={onMouseEnter}
+      onFocus={onFocus}
     >
       {children}
     </tr>

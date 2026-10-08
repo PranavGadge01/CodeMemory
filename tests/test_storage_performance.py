@@ -145,3 +145,24 @@ def test_child_lookup_indexes_exist(tmp_path: Path):
         "idx_notes_problem_id",
     } <= names
     repo.close()
+
+
+def test_count_problems_does_not_expand_the_graph(tmp_path: Path):
+    """Health's problem count must not pay for the full history expansion."""
+    repo = DuckDBStorage(db_path=tmp_path / "c.duckdb")
+    for i in range(4):
+        _save_problem(repo, f"Problem {i}", attempts=2, submissions_per_attempt=2)
+
+    original = repo.conn
+    counter = _CountingConnection(original)
+    repo.conn = counter
+    try:
+        counter.statements.clear()
+        count = repo.count_problems()
+    finally:
+        repo.conn = original
+
+    assert count == 4
+    assert len(counter.statements) == 1
+    assert "COUNT(*)" in counter.statements[0]
+    repo.close()

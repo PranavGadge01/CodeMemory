@@ -3,7 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { ArrowUpRight, Network } from "lucide-react";
-import { getKnowledge, getProblem, listProblems, ApiError } from "@/lib/api";
+import { getKnowledge, listProblems, ApiError } from "@/lib/api";
+import type { ProblemListItem } from "@/lib/api";
 import { PageContainer, PageSection } from "@/components/app/page-container";
 import { PageHeader } from "@/components/app/page-header";
 import { Surface, SurfaceHeader } from "@/components/ui/surface";
@@ -11,7 +12,6 @@ import { KnowledgeGraphPanel } from "@/components/app/knowledge/knowledge-graph"
 import { Reveal } from "@/components/system/reveal";
 import { Button } from "@/components/ui/button";
 import { EmptyDataState, ErrorState, PageSkeleton } from "@/components/app/data-states";
-import { isSolved, submissionCount } from "@/lib/mock/derive";
 
 const TYPE_LEGEND = [
   { label: "Problem", color: "var(--color-accent)" },
@@ -27,30 +27,31 @@ export default function KnowledgePage() {
   // centre is chosen from the graph itself rather than derived from a slug.
   const [state, setState] = React.useState<
     | { status: "loading" }
-    | { status: "success"; data: { knowledge: Awaited<ReturnType<typeof getKnowledge>>; problems: { problem: Awaited<ReturnType<typeof getProblem>>; degree: number }[] } }
+    | { status: "success"; data: { knowledge: Awaited<ReturnType<typeof getKnowledge>>; problems: { problem: ProblemListItem; degree: number }[] } }
     | { status: "error"; error: ApiError }
   >({ status: "loading" });
 
   React.useEffect(() => {
     let cancelled = false;
     (async () => {
-      const knowledge = await getKnowledge();
-      const list = await listProblems({ page: 1, pageSize: 100 });
+      // The two requests are independent, so they run together; awaiting them
+      // in sequence made the page pay both round trips one after the other.
+      const [knowledge, list] = await Promise.all([
+        getKnowledge(),
+        listProblems({ page: 1, pageSize: 100 }),
+      ]);
       const edgeCounts = new Map<string, number>();
       for (const edge of knowledge.graph.edges) {
         edgeCounts.set(edge.sourceId, (edgeCounts.get(edge.sourceId) ?? 0) + 1);
         edgeCounts.set(edge.targetId, (edgeCounts.get(edge.targetId) ?? 0) + 1);
       }
-      const mostConnected = list.items
-        .map((item) => ({ item, degree: edgeCounts.get(`prob_${item.id}`) ?? 0 }))
+      // The list row already carries title, topics, status and submission
+      // count, so the table renders from it directly instead of fetching eight
+      // problem details purely to read summary fields.
+      const problems = list.items
+        .map((item) => ({ problem: item, degree: edgeCounts.get(`prob_${item.id}`) ?? 0 }))
         .sort((a, b) => b.degree - a.degree)
         .slice(0, 8);
-      const problems = await Promise.all(
-        mostConnected.map(async ({ item, degree }) => ({
-          problem: await getProblem(item.slug),
-          degree,
-        })),
-      );
       return { knowledge, problems };
     })().then((data) => { if (!cancelled) setState({ status: "success", data }); })
       .catch((error: unknown) => { if (!cancelled) setState({ status: "error", error: error instanceof ApiError ? error : new ApiError("Could not load knowledge data.", "ERROR", 0) }); });
@@ -251,17 +252,19 @@ export default function KnowledgePage() {
                       </div>
                       <div className="flex shrink-0 items-center gap-4">
                         <span className="font-technical-sm text-text-muted">
-                          {submissionCount(problem)} submissions
+                          {problem.submissionCount} submissions
                         </span>
                         <span className="font-technical-sm text-accent tabular-nums">
                           {degree} links
                         </span>
                         <span
-                          className={isSolved(problem) ? "text-success" : "text-warning"}
-                          title={isSolved(problem) ? "Solved" : "Unsolved"}
+                          className={problem.status === "Solved" ? "text-success" : "text-warning"}
+                          title={problem.status === "Solved" ? "Solved" : "Unsolved"}
                         >
-                          {isSolved(problem) ? "●" : "○"}
-                          <span className="sr-only">{isSolved(problem) ? "Solved" : "Unsolved"}</span>
+                          {problem.status === "Solved" ? "●" : "○"}
+                          <span className="sr-only">
+                            {problem.status === "Solved" ? "Solved" : "Unsolved"}
+                          </span>
                         </span>
                       </div>
                     </Link>

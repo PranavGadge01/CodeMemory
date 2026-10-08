@@ -46,7 +46,14 @@ function ProblemsContent() {
   // so sorting is applied client-side over the loaded page (see the browser).
   const [state, setState] = React.useState<
     | { status: "loading" }
-    | { status: "success"; data: { filtered: Awaited<ReturnType<typeof listProblems>>; all: Awaited<ReturnType<typeof getProblem>>[]; drawerProblem: Awaited<ReturnType<typeof getProblem>> | null } }
+    | {
+        status: "success";
+        data: {
+          filtered: Awaited<ReturnType<typeof listProblems>>;
+          all: Awaited<ReturnType<typeof listProblems>>["items"];
+          drawerProblem: Awaited<ReturnType<typeof getProblem>> | null;
+        };
+      }
     | { status: "error"; error: ApiError }
   >({ status: "loading" });
 
@@ -66,15 +73,11 @@ function ProblemsContent() {
         listProblems({ page: 1, pageSize: 100 }),
       ]);
 
-      // The list item carries no attempts, but the table renders attempts,
-      // languages and best runtime — all derived from the full problem.
-      // Details are fetched once, in parallel, for the unfiltered set; the
-      // filtered set is a subset of it, so this is one detail fetch per
-      // problem rather than one per filter state.
-      const all = await Promise.all(unfiltered.items.map((item) => getProblem(item.slug)));
-
+      // The list response now carries the table's summary columns, so only the
+      // single deep-linked problem needs a detail fetch. Row drills fetch their
+      // own detail on demand (see ProblemsBrowser).
       const drawerProblem = slug ? await getProblem(slug) : null;
-      return { filtered, all, drawerProblem };
+      return { filtered, all: unfiltered.items, drawerProblem };
     })().then((data) => { if (!cancelled) setState({ status: "success", data }); })
       .catch((error: unknown) => { if (!cancelled) setState({ status: "error", error: error instanceof ApiError ? error : new ApiError("Could not load problems.", "ERROR", 0) }); });
     return () => { cancelled = true; };

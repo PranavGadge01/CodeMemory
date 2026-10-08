@@ -316,3 +316,15 @@ class MemoryService:
             "type_counts": type_counts,
             "unique_problems": len(set(d.problem_id for d in docs)),
         }
+
+    def memory_stats_if_indexed(self) -> Dict[str, Any] | None:
+        """Stats from the current document cache, or ``None`` when it is cold.
+
+        ``get_memory_stats`` builds the document index (a full history
+        expansion plus extraction) when the cache is empty. Health checks use
+        this variant so probing the engine never triggers that work as a side
+        effect, while still reporting real numbers once the index exists.
+        """
+        if not self._doc_cache:
+            return None
+        return self.get_memory_stats()

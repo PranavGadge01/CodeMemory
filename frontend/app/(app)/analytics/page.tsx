@@ -45,13 +45,11 @@ export default function AnalyticsPage() {
     return () => { cancelled = true; };
   }, []);
 
-  if (state.status !== "success") {
-    return <AnalyticsPending state={state} />;
-  }
-
-  const { overview, difficulties, topics, languages, progress, struggles } = state.data;
-  const weeks = progress.slice(-WEEKS_SHOWN);
-
+  // The four learning/insight cards below fetch their own data, so they are
+  // mounted with the page rather than after the analytics response: their
+  // requests then run in parallel with `getAnalytics` instead of forming a
+  // second round-trip wave. Each card renders its own skeleton, and the stat
+  // strip keeps its height with placeholders, so nothing reflows on arrival.
   return (
     <PageContainer>
       <PageSection className="gap-6">
@@ -60,47 +58,85 @@ export default function AnalyticsPage() {
           title="Coding analytics"
           description="Derived from your own submissions — every number below is computed from problems you have actually attempted, nothing inferred or assumed."
         />
+        {state.status === "success" ? (
+          <StatStrip
+            className="lg:grid-cols-6"
+            stats={[
+              { label: "Problems", value: state.data.overview.totalProblems, hint: `${state.data.overview.acceptedProblems} solved` },
+              { label: "Submissions", value: state.data.overview.totalSubmissions, hint: `${state.data.overview.totalAttempts} attempts` },
+              { label: "Acceptance rate", value: formatPercent(state.data.overview.overallAcceptanceRatePct) },
+              {
+                label: "Avg attempts / solved",
+                value: state.data.overview.avgAttemptsPerSolvedProblem.toFixed(1),
+              },
+              {
+                label: "First-try acceptance",
+                value: formatPercent(state.data.overview.firstAttemptAcceptanceRatePct),
+                hint: "Accepted on attempt 1",
+              },
+              {
+                label: "Current streak",
+                value: `${state.data.overview.currentStreakDays}d`,
+                hint: `Best ${state.data.overview.longestStreakDays}d`,
+                accent: true,
+              },
+            ]}
+          />
+        ) : (
+          <StatStrip
+            className="lg:grid-cols-6"
+            stats={[
+              { label: "Problems", value: "—" },
+              { label: "Submissions", value: "—" },
+              { label: "Acceptance rate", value: "—" },
+              { label: "Avg attempts / solved", value: "—" },
+              { label: "First-try acceptance", value: "—" },
+              { label: "Current streak", value: "—" },
+            ]}
+          />
+        )}
 
-        <StatStrip
-          className="lg:grid-cols-6"
-          stats={[
-            { label: "Problems", value: overview.totalProblems, hint: `${overview.acceptedProblems} solved` },
-            { label: "Submissions", value: overview.totalSubmissions, hint: `${overview.totalAttempts} attempts` },
-            { label: "Acceptance rate", value: formatPercent(overview.overallAcceptanceRatePct) },
-            {
-              label: "Avg attempts / solved",
-              value: overview.avgAttemptsPerSolvedProblem.toFixed(1),
-            },
-            {
-              label: "First-try acceptance",
-              value: formatPercent(overview.firstAttemptAcceptanceRatePct),
-              hint: "Accepted on attempt 1",
-            },
-            {
-              label: "Current streak",
-              value: `${overview.currentStreakDays}d`,
-              hint: `Best ${overview.longestStreakDays}d`,
-              accent: true,
-            },
-          ]}
-        />
+        {state.status !== "error" ? (
+          <>
+            <Reveal>
+              <CollectiveInsightsCard />
+            </Reveal>
 
-        <Reveal>
-          <CollectiveInsightsCard />
-        </Reveal>
+            <Reveal>
+              <GroundedInsightCard type="full" />
+            </Reveal>
 
-        <Reveal>
-          <GroundedInsightCard type="full" />
-        </Reveal>
+            <Reveal>
+              <NextProblemsCard limit={1} />
+            </Reveal>
 
-        <Reveal>
-          <NextProblemsCard limit={1} />
-        </Reveal>
+            <Reveal>
+              <PersonalizedRoadmapCard />
+            </Reveal>
+          </>
+        ) : null}
 
-        <Reveal>
-          <PersonalizedRoadmapCard />
-        </Reveal>
+        {state.status === "error" ? (
+          <Surface>
+            <ErrorState error={state.error} />
+          </Surface>
+        ) : state.status === "loading" ? (
+          <PageSkeleton />
+        ) : (
+          <AnalyticsBody data={state.data} />
+        )}
+      </PageSection>
+    </PageContainer>
+  );
+}
 
+/** Analytics-derived surfaces, rendered once the analytics request lands. */
+function AnalyticsBody({ data }: { data: Awaited<ReturnType<typeof getAnalytics>> }) {
+  const { difficulties, topics, languages, progress, struggles } = data;
+  const weeks = progress.slice(-WEEKS_SHOWN);
+
+  return (
+    <>
         <Reveal>
           <Surface>
             <SurfaceHeader
@@ -255,34 +291,7 @@ export default function AnalyticsPage() {
             </Surface>
           </Reveal>
         </div>
-      </PageSection>
-    </PageContainer>
-  );
-}
-
-/** Loading and error keep the page's frame so the layout never reflows. */
-function AnalyticsPending({
-  state,
-}: {
-  state: { status: "loading" } | { status: "error"; error: import("@/lib/api").ApiError };
-}) {
-  return (
-    <PageContainer>
-      <PageSection className="gap-6">
-        <PageHeader
-          eyebrow="Analytics"
-          title="Coding analytics"
-          description="Derived from your own submissions — every number below is computed from problems you have actually attempted, nothing inferred or assumed."
-        />
-        {state.status === "error" ? (
-          <Surface>
-            <ErrorState error={state.error} />
-          </Surface>
-        ) : (
-          <PageSkeleton />
-        )}
-      </PageSection>
-    </PageContainer>
+    </>
   );
 }
 

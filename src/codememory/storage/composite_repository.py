@@ -50,6 +50,9 @@ class CompositeStorage(ProblemRepository, SubmissionRepository, AttemptRepositor
     def list_all(self) -> Sequence[Problem]:
         return self.duckdb_repo.list_all()
 
+    def count_problems(self) -> int:
+        return self.duckdb_repo.count_problems()
+
     def health(self) -> bool:
         return all(self.tier_health().values())
 

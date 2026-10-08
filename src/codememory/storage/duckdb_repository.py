@@ -643,6 +643,12 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
             for prob_row in problem_rows
         ]
 
+    def count_problems(self) -> int:
+        """Return the number of stored problems without expanding their graph."""
+        with self._lock:
+            row = self.conn.execute("SELECT COUNT(*) FROM problems").fetchone()
+        return int(row[0]) if row else 0
+
     def delete(self, problem_id: str) -> bool:
         with self._lock:
             res = self.conn.execute("DELETE FROM problems WHERE id = ?", [problem_id])

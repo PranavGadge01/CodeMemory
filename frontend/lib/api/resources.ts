@@ -60,6 +60,8 @@ import {
   mapTimelineEvent,
   mapTopicStat,
   mapGroundedInsight,
+  mapSubmissionListItem,
+  type SubmissionListItem,
 } from "@/lib/api/mappers";
 
 /* --- Health ------------------------------------------------------------- */
@@ -175,11 +177,12 @@ export function getProblemEvolution(slug: string): Promise<SolutionEvolutionData
 /* --- Submissions ------------------------------------------------------- */
 
 export interface SubmissionListResult {
-  items: Submission[];
+  items: SubmissionListItem[];
   page: number;
   pageSize: number;
   total: number;
   summary: SubmissionListDTO["summary"];
+  filterOptions: SubmissionListDTO["filterOptions"];
 }
 
 export interface SubmissionListParams {
@@ -202,11 +205,12 @@ export async function listSubmissions(
   });
 
   return {
-    items: dto.items.map(mapSubmission),
+    items: dto.items.map(mapSubmissionListItem),
     page: dto.page,
     pageSize: dto.pageSize,
     total: dto.total,
     summary: dto.summary,
+    filterOptions: dto.filterOptions,
   };
 }
 

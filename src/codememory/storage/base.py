@@ -29,6 +29,15 @@ class ProblemRepository(ABC):
         """Retrieve all problems."""
         pass
 
+    def count_problems(self) -> int:
+        """Return how many problems this repository holds.
+
+        The default walks :meth:`list_all` so every repository stays correct
+        without overriding it. DuckDB overrides it with a ``COUNT(*)`` probe so
+        a health check can report the index size without expanding the graph.
+        """
+        return len(self.list_all())
+
     @abstractmethod
     def delete(self, problem_id: str) -> bool:
         """Delete problem by ID."""

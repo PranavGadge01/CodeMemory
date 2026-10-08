@@ -45,6 +45,7 @@ import type {
   SolutionAnalysisDTO,
   StruggleProblemDTO,
   SubmissionDTO,
+  SubmissionListItemDTO,
   TopicStatDTO,
   GraphNodeDTO,
   GraphEdgeDTO,
@@ -54,6 +55,10 @@ import type {
 } from "@/lib/api/types";
 
 const DIFFICULTIES: Difficulty[] = ["Easy", "Medium", "Hard", "Unknown"];
+
+/** Solve states carried on the problem list summary row. */
+const SOLVE_STATUSES = ["Solved", "Attempted", "Untouched"] as const;
+export type SolveStatus = (typeof SOLVE_STATUSES)[number];
 
 const SUBMISSION_STATUSES: SubmissionStatus[] = [
   "Accepted",
@@ -204,6 +209,14 @@ export type ProblemListItem = {
   topics: string[];
   createdAt: string;
   updatedAt: string;
+  attemptCount: number;
+  acceptedCount: number;
+  submissionCount: number;
+  languages: Language[];
+  bestRuntime: number | null;
+  bestMemory: number | null;
+  lastActivityAt: string;
+  status: SolveStatus;
 };
 
 export function mapProblemListItem(dto: ProblemListItemDTO): ProblemListItem {
@@ -216,6 +229,29 @@ export function mapProblemListItem(dto: ProblemListItemDTO): ProblemListItem {
     topics: dto.topics,
     createdAt: dto.createdAt,
     updatedAt: dto.updatedAt,
+    attemptCount: dto.attemptCount,
+    acceptedCount: dto.acceptedCount,
+    submissionCount: dto.submissionCount,
+    languages: dto.languages.map(mapLanguage),
+    bestRuntime: dto.bestRuntime,
+    bestMemory: dto.bestMemory,
+    lastActivityAt: dto.lastActivityAt ?? dto.updatedAt,
+    status: (SOLVE_STATUSES as readonly string[]).includes(dto.status)
+      ? (dto.status as SolveStatus)
+      : "Untouched",
+  };
+}
+
+export type SubmissionListItem = Submission & {
+  problemTitle: string | null;
+  problemSlug: string | null;
+};
+
+export function mapSubmissionListItem(dto: SubmissionListItemDTO): SubmissionListItem {
+  return {
+    ...mapSubmission(dto),
+    problemTitle: dto.problemTitle ?? null,
+    problemSlug: dto.problemSlug ?? null,
   };
 }
 

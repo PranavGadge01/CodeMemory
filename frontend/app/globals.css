@@ -304,6 +304,13 @@
     transform: none;
   }
 
+  /* Above-the-fold content (already in view at mount) reveals without a fade:
+     the animation exists to soften content scrolling into view, not to delay
+     the page the user just opened. */
+  .reveal.is-visible.reveal-now {
+    transition: none;
+  }
+
   /* Tactile press — used by buttons */
   .press {
     transition:

@@ -11,13 +11,8 @@ import { Surface } from "@/components/ui/surface";
 import { TableHead, TableWrapper, Tbody, Td, Th, Tr } from "@/components/app/data-table";
 import { DifficultyBadge } from "@/components/ui/badges";
 import { ProblemDrawer } from "@/components/app/problems/problem-drawer";
-import {
-  attemptCount,
-  bestRuntime,
-  languagesOf,
-  lastActivityAt,
-  solveStatus,
-} from "@/lib/mock/derive";
+import { getProblem } from "@/lib/api";
+import type { ProblemListItem } from "@/lib/api";
 import { formatDateTime, formatNumber, formatRelative, formatRuntime } from "@/lib/format";
 import type { Difficulty, Problem } from "@/lib/types";
 
@@ -60,7 +55,7 @@ export function ProblemsBrowser({
   initialSlug = null,
   initialProblem = null,
 }: {
-  problems: Problem[];
+  problems: ProblemListItem[];
   visibleSlugs: Set<string>;
   filteredTotal: number;
   params: { q: string; difficulty: string; status: string; sort: string };
@@ -86,13 +81,59 @@ export function ProblemsBrowser({
   const [drawerProblem, setDrawerProblem] = React.useState<Problem | null>(initialProblem);
   const closeTimer = React.useRef<number>(0);
 
+  // Full problem details (attempts, code, notes) are fetched on demand instead
+  // of for every row up front, so listing the table never issues a per-problem
+  // request. A row hover warms the cache so the click usually resolves locally.
+  const problemCache = React.useRef<Map<string, Problem>>(new Map());
+  const pendingDetail = React.useRef<Map<string, Promise<Problem>>>(new Map());
+  React.useEffect(() => {
+    if (initialProblem && initialProblem.slug) {
+      problemCache.current.set(initialProblem.slug, initialProblem);
+    }
+  }, [initialProblem]);
+
+  const loadProblem = React.useCallback((slug: string): Promise<Problem> => {
+    const cached = problemCache.current.get(slug);
+    if (cached) return Promise.resolve(cached);
+    // Share one in-flight request between a hover prefetch and the click.
+    const inFlight = pendingDetail.current.get(slug);
+    if (inFlight) return inFlight;
+    const request = getProblem(slug)
+      .then((problem) => {
+        problemCache.current.set(slug, problem);
+        pendingDetail.current.delete(slug);
+        return problem;
+      })
+      .catch((error: unknown) => {
+        pendingDetail.current.delete(slug);
+        throw error;
+      });
+    pendingDetail.current.set(slug, request);
+    return request;
+  }, []);
+
   const openProblem = React.useCallback(
-    (slug: string, problem: Problem | null) => {
+    (slug: string) => {
       window.clearTimeout(closeTimer.current);
-      setDrawerProblem(problem);
-      setDrawerOpen(true);
+      void loadProblem(slug)
+        .then((problem) => {
+          setDrawerProblem(problem);
+          setDrawerOpen(true);
+        })
+        .catch(() => {
+          /* leave the drawer closed if the detail cannot be loaded */
+        });
     },
-    [],
+    [loadProblem],
+  );
+
+  const prefetchProblem = React.useCallback(
+    (slug: string) => {
+      void loadProblem(slug).catch(() => {
+        /* a failed prefetch is silent; the click will retry */
+      });
+    },
+    [loadProblem],
   );
 
   const closeDrawer = React.useCallback(() => {
@@ -137,7 +178,7 @@ export function ProblemsBrowser({
     let solved = 0;
     let attempted = 0;
     for (const problem of problems) {
-      const current = solveStatus(problem);
+      const current = problem.status;
       if (current === "Solved") solved += 1;
       else if (current === "Attempted") attempted += 1;
     }
@@ -151,7 +192,7 @@ export function ProblemsBrowser({
   const filtered = React.useMemo(() => {
     const matches = problems.filter((problem) => visibleSlugs.has(problem.slug));
 
-    const byTitle = (a: Problem, b: Problem) => a.title.localeCompare(b.title);
+    const byTitle = (a: ProblemListItem, b: ProblemListItem) => a.title.localeCompare(b.title);
 
     switch (sort) {
       case "difficulty":
@@ -161,11 +202,11 @@ export function ProblemsBrowser({
       case "title":
         return [...matches].sort(byTitle);
       case "attempts":
-        return [...matches].sort((a, b) => attemptCount(b) - attemptCount(a) || byTitle(a, b));
+        return [...matches].sort((a, b) => b.attemptCount - a.attemptCount || byTitle(a, b));
       case "activity":
       default:
         return [...matches].sort(
-          (a, b) => lastActivityAt(b).localeCompare(lastActivityAt(a)) || byTitle(a, b),
+          (a, b) => b.lastActivityAt.localeCompare(a.lastActivityAt) || byTitle(a, b),
         );
     }
   }, [problems, visibleSlugs, sort]);
@@ -187,6 +228,7 @@ export function ProblemsBrowser({
         <SearchInput
           value={query}
           onChange={(value) => setParam(QUERY_KEYS.q, value)}
+          debounceMs={300}
           placeholder="Search title or topic…"
           className="lg:max-w-xs"
           aria-label="Search problems by title or topic"
@@ -271,14 +313,19 @@ export function ProblemsBrowser({
           </TableHead>
           <Tbody>
             {filtered.map((problem) => (
-              <Tr key={problem.id} onClick={() => openProblem(problem.slug, problem)}>
+              <Tr
+                key={problem.id}
+                onClick={() => openProblem(problem.slug)}
+                onMouseEnter={() => prefetchProblem(problem.slug)}
+                onFocus={() => prefetchProblem(problem.slug)}
+              >
                 <Td>
                   <div className="flex max-w-[300px] items-baseline">
                     <button
                       type="button"
                       onClick={(event) => {
                         event.stopPropagation();
-                        openProblem(problem.slug, problem);
+                        openProblem(problem.slug);
                       }}
                       title={`Open details for ${problem.title}`}
                       className="press truncate text-left text-body-sm font-medium text-text-primary hover:text-accent"
@@ -297,19 +344,19 @@ export function ProblemsBrowser({
                   <TruncatedList items={problem.topics} title={problem.topics.join(", ")} />
                 </Td>
                 <Td align="right" mono>
-                  {attemptCount(problem)}
+                  {problem.attemptCount}
                 </Td>
                 <Td className="max-w-[180px]">
                   <TruncatedList
-                    items={languagesOf(problem)}
-                    title={languagesOf(problem).join(", ")}
+                    items={problem.languages}
+                    title={problem.languages.join(", ")}
                   />
                 </Td>
                 <Td align="right" mono>
-                  {bestRuntime(problem) === null ? "—" : formatRuntime(bestRuntime(problem))}
+                  {problem.bestRuntime === null ? "—" : formatRuntime(problem.bestRuntime)}
                 </Td>
-                <Td align="right" mono title={formatDateTime(lastActivityAt(problem))}>
-                  {formatRelative(lastActivityAt(problem))}
+                <Td align="right" mono title={formatDateTime(problem.lastActivityAt)}>
+                  {formatRelative(problem.lastActivityAt)}
                 </Td>
               </Tr>
             ))}

@@ -30,7 +30,10 @@ export function Reveal({
   as?: React.ElementType;
 }) {
   const ref = React.useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = React.useState(false);
+  // "hidden" until revealed, then either the staggered fade used for content
+  // that scrolls into view, or an immediate appearance for content that was
+  // already on screen when the page mounted.
+  const [phase, setPhase] = React.useState<"hidden" | "staggered" | "immediate">("hidden");
 
   React.useEffect(() => {
     const element = ref.current;
@@ -38,7 +41,13 @@ export function Reveal({
 
     // Reveal is only ever called from a callback — never synchronously in the
     // effect body — so neither path triggers a cascading render.
-    const reveal = () => setVisible(true);
+    //
+    // Content already inside the viewport at mount is what the user is waiting
+    // on, so it appears at once: no fade, no stagger. `delay` and the fade are
+    // for content that scrolls in later, where the animation reads as motion
+    // rather than as latency.
+    const aboveFold = element.getBoundingClientRect().top < window.innerHeight;
+    const reveal = () => setPhase(aboveFold ? "immediate" : "staggered");
 
     if (typeof IntersectionObserver === "undefined") {
       // Nothing to observe: schedule the reveal on a microtask, which still
@@ -66,8 +75,13 @@ export function Reveal({
   return (
     <Tag
       ref={ref}
-      className={cn("reveal", visible && "is-visible", className)}
-      style={delay > 0 ? { transitionDelay: `${delay}ms` } : undefined}
+      className={cn(
+        "reveal",
+        phase !== "hidden" && "is-visible",
+        phase === "immediate" && "reveal-now",
+        className,
+      )}
+      style={phase === "staggered" && delay > 0 ? { transitionDelay: `${delay}ms` } : undefined}
     >
       {children}
     </Tag>

@@ -170,3 +170,16 @@ class SearchService:
             except ValueError:
                 pass
         return None
+
+    def health(self) -> bool:
+        """Cheap readiness probe for the search subsystem.
+
+        ``search()`` is a pure-Python filter over a storage snapshot, so the
+        only thing that can fail on its own is the store it reads from. Probing
+        with an unfiltered search expanded the whole history on every health
+        poll without telling the caller anything extra.
+        """
+        try:
+            return bool(self.storage.health())
+        except Exception:
+            return False

@@ -18,14 +18,23 @@ import {
   formatRelative,
   formatRuntime,
 } from "@/lib/format";
-import type { Problem, Submission, SubmissionStatus } from "@/lib/types";
+import type { Submission, SubmissionStatus } from "@/lib/types";
+import { mapLanguage } from "@/lib/api/mappers";
 
 type SortKey = "timestamp" | "runtime" | "memory";
 type SortState = { key: SortKey; dir: "asc" | "desc" };
 
-interface SubmissionRow {
+export interface SubmissionRow {
   submission: Submission;
-  problem: Problem;
+  problemTitle: string;
+  problemSlug: string | null;
+}
+
+/** Counts over the complete unfiltered set, served by the list endpoint. */
+export interface SubmissionFilterOptions {
+  total: number;
+  statusCounts: Record<string, number>;
+  languageCounts: Record<string, number>;
 }
 
 /**
@@ -58,14 +67,14 @@ export const QUERY_KEYS = {
 
 export function SubmissionsBrowser({
   rows,
-  problems,
+  filterOptions,
   filteredTotal,
   params,
 }: {
-  /** Submission/problem pairs, already filtered and ordered by the backend. */
+  /** Submission rows, already filtered and ordered by the backend. */
   rows: SubmissionRow[];
-  /** Problems backing the rows — the source of the language and status chips. */
-  problems: Problem[];
+  /** Chip counts over the complete unfiltered set, from the list endpoint. */
+  filterOptions: SubmissionFilterOptions;
   filteredTotal: number;
   params: { q: string; status: string; language: string };
 }) {
@@ -82,24 +91,37 @@ export function SubmissionsBrowser({
   const language: string = params.language || "All";
   const [sort, setSort] = React.useState<SortState>({ key: "timestamp", dir: "desc" });
 
-  // The chips are derived from the problems backing the page rather than from
-  // the rows alone, so the counts stay stable while a filter is narrowing the
-  // set the table shows.
-  const allSubmissions = React.useMemo(
-    () => problems.flatMap((problem) => problem.attempts.flatMap((attempt) => attempt.submissions)),
-    [problems],
-  );
+  // Chip counts come from the list endpoint, computed over the complete
+  // unfiltered set, so they stay stable while a filter narrows the table.
+  // If the endpoint omits them, fall back to the page the server returned.
+  const statusCounts = filterOptions.statusCounts;
+  const languageCounts = filterOptions.languageCounts;
+  const chipTotal = filterOptions.total || rows.length;
 
-  const availableStatuses = React.useMemo(
-    () => STATUS_ORDER.filter((value) => rows.some((row) => row.submission.status === value)),
-    [rows],
-  );
+  const availableStatuses = React.useMemo(() => {
+    const present = new Set<string>(Object.keys(statusCounts));
+    if (present.size === 0) for (const row of rows) present.add(row.submission.status);
+    return STATUS_ORDER.filter((value) => present.has(value));
+  }, [statusCounts, rows]);
 
+  // The endpoint counts raw language names ("python3"); the chips show the UI
+  // label ("Python 3"), so counts are folded onto the mapped label.
   const availableLanguages = React.useMemo(() => {
-    const set = new Set<string>();
-    for (const row of rows) set.add(row.submission.language);
-    return [...set].sort((a, b) => a.localeCompare(b));
-  }, [rows]);
+    const counts = new Map<string, number>();
+    for (const [raw, count] of Object.entries(languageCounts)) {
+      const label = mapLanguage(raw);
+      counts.set(label, (counts.get(label) ?? 0) + count);
+    }
+    if (counts.size === 0) {
+      for (const row of rows) {
+        const label = row.submission.language;
+        counts.set(label, (counts.get(label) ?? 0) + 1);
+      }
+    }
+    return [...counts.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([label, count]) => ({ label, count }));
+  }, [languageCounts, rows]);
 
   /**
    * Push one filter into the query string. The backend applies it — the
@@ -173,6 +195,7 @@ export function SubmissionsBrowser({
           value={query}
           onChange={(value) => setParam(QUERY_KEYS.q, value)}
           placeholder="Search problem title or slug…"
+          debounceMs={300}
           className="sm:max-w-sm"
           aria-label="Search by problem title or slug"
         />
@@ -181,7 +204,7 @@ export function SubmissionsBrowser({
           <FilterChip
             active={status === "All"}
             onClick={() => setParam(QUERY_KEYS.status, "")}
-            count={allSubmissions.length}
+            count={chipTotal}
           >
             All statuses
           </FilterChip>
@@ -190,7 +213,7 @@ export function SubmissionsBrowser({
               key={value}
               active={status === value}
               onClick={() => setParam(QUERY_KEYS.status, value)}
-              count={allSubmissions.filter((sub) => sub.status === value).length}
+              count={statusCounts[value] ?? 0}
             >
               {value}
             </FilterChip>
@@ -201,18 +224,18 @@ export function SubmissionsBrowser({
           <FilterChip
             active={language === "All"}
             onClick={() => setParam(QUERY_KEYS.language, "")}
-            count={allSubmissions.length}
+            count={chipTotal}
           >
             All languages
           </FilterChip>
-          {availableLanguages.map((value) => (
+          {availableLanguages.map(({ label, count }) => (
             <FilterChip
-              key={value}
-              active={language === value}
-              onClick={() => setParam(QUERY_KEYS.language, value)}
-              count={allSubmissions.filter((sub) => sub.language === value).length}
+              key={label}
+              active={language === label}
+              onClick={() => setParam(QUERY_KEYS.language, label)}
+              count={count}
             >
-              {value}
+              {label}
             </FilterChip>
           ))}
         </div>
@@ -269,10 +292,10 @@ export function SubmissionsBrowser({
             </Th>
           </TableHead>
           <Tbody>
-            {sorted.map(({ submission, problem }) => (
+            {sorted.map(({ submission, problemTitle, problemSlug }) => (
               <Tr key={submission.id}>
                 <Td mono className="max-w-[170px]">
-                  {problem.slug ? (
+                  {problemSlug ? (
                     <Link
                       href={`/submissions?id=${encodeURIComponent(submission.id)}`}
                       title={`Open submission ${submission.id}`}
@@ -289,17 +312,17 @@ export function SubmissionsBrowser({
                   )}
                 </Td>
                 <Td className="max-w-[260px]">
-                  {problem.slug ? (
+                  {problemSlug ? (
                     <Link
-                      href={`/problems?slug=${problem.slug}`}
-                      title={`Open ${problem.title}`}
+                      href={`/problems?slug=${problemSlug}`}
+                      title={`Open ${problemTitle}`}
                       className="press block truncate text-body-sm font-medium text-text-primary hover:text-accent"
                     >
-                      {problem.title}
+                      {problemTitle}
                     </Link>
                   ) : (
                     <span className="block truncate text-body-sm text-text-muted">
-                      {problem.title}
+                      {problemTitle}
                     </span>
                   )}
                 </Td>

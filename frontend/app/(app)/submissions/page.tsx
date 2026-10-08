@@ -4,17 +4,16 @@ import * as React from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
-import { getProblem, getSubmission, listProblems, listSubmissions, ApiError } from "@/lib/api";
+import { getProblem, getSubmission, listSubmissions, ApiError } from "@/lib/api";
 import { PageContainer, PageSection } from "@/components/app/page-container";
 import { PageHeader } from "@/components/app/page-header";
 import { StatStrip } from "@/components/app/stat-strip";
 import { Button } from "@/components/ui/button";
 import { Reveal } from "@/components/system/reveal";
-import { SubmissionsBrowser } from "@/components/app/submissions/submissions-browser";
+import { SubmissionsBrowser, type SubmissionRow } from "@/components/app/submissions/submissions-browser";
 import { SubmissionDetail } from "@/components/app/submissions/submission-detail";
 import { ErrorState, PageSkeleton } from "@/components/app/data-states";
 import { formatNumber, formatPercent } from "@/lib/format";
-import type { Problem, Submission } from "@/lib/types";
 
 /**
  * Filter values the browser owns, mirrored in the URL so the backend applies
@@ -50,38 +49,35 @@ function SubmissionsContent() {
       const id = raw.id;
       if (id) {
         const submission = await getSubmission(id);
-        const problems = await listProblems({ page: 1, pageSize: 100 });
-        const known = await Promise.all(problems.items.map((item) => getProblem(item.slug)));
-        const problem = known.find((item) => item.id === submission.problemId) ?? null;
+        // The submission already carries its problem id, so the detail view
+        // resolves that single problem directly instead of loading the index.
+        const problem = await getProblem(submission.problemId).catch(() => null);
         return { mode: "detail" as const, submission, problem };
       }
-      const [submissions, problems] = await Promise.all([
-        listSubmissions({
-          page: 1,
-          pageSize: 100,
-          // The endpoint's `problem` filter matches on slug or title, which is
-          // what the search box is for; the language and status filters map
-          // straight through.
-          problem: params.q.trim() || undefined,
-          status: params.status !== "All" ? params.status : undefined,
-          language: params.language !== "All" ? params.language : undefined,
-        }),
-        // The rows link back to a problem, and the page's stats count problems,
-        // so the problem index is needed alongside the submission page.
-        listProblems({ page: 1, pageSize: 100 }).then((list) =>
-          Promise.all(list.items.map((item) => getProblem(item.slug))),
-        ),
-      ]);
+      const submissions = await listSubmissions({
+        page: 1,
+        pageSize: 100,
+        // The endpoint's `problem` filter matches on slug or title, which is
+        // what the search box is for; the language and status filters map
+        // straight through.
+        problem: params.q.trim() || undefined,
+        status: params.status !== "All" ? params.status : undefined,
+        language: params.language !== "All" ? params.language : undefined,
+      });
 
-      // The table rows are paginated, but the API summary covers the complete
-      // filtered dataset and stays stable as the requested page changes.
-      const rows = pairSubmissions(submissions.items, problems);
+      // Each row now carries its problem title and slug from the list endpoint,
+      // so no per-problem detail request is needed to render the table.
+      const rows: SubmissionRow[] = submissions.items.map((submission) => ({
+        submission,
+        problemTitle: submission.problemTitle ?? "Unknown problem",
+        problemSlug: submission.problemSlug,
+      }));
 
       return {
         mode: "list" as const,
         rows,
-        problems,
         summary: submissions.summary,
+        filterOptions: submissions.filterOptions,
         filteredTotal: submissions.total,
       };
     })().then((data) => { if (!cancelled) setState({ status: "success", data }); })
@@ -139,7 +135,7 @@ function SubmissionsContent() {
             <Reveal>
                 <SubmissionsBrowser
                 rows={state.data.rows}
-                problems={state.data.problems}
+                filterOptions={state.data.filterOptions}
                 filteredTotal={state.data.filteredTotal}
                 params={params}
               />
@@ -168,41 +164,6 @@ function SubmissionsContent() {
       </PageSection>
     </PageContainer>
   );
-}
-
-/** Join each submission to the problem it belongs to, for the row's link. */
-function pairSubmissions(
-  submissions: Submission[],
-  problems: Problem[],
-): { submission: Submission; problem: Problem }[] {
-  const byId = new Map<string, Problem>();
-  for (const problem of problems) byId.set(problem.id, problem);
-
-  const rows: { submission: Submission; problem: Problem }[] = [];
-  for (const submission of submissions) {
-    // Fall back to a minimal placeholder so a submission whose problem is
-    // outside the loaded page still renders its row, with the link dropped.
-    const problem = byId.get(submission.problemId) ?? placeholderProblem(submission.problemId);
-    rows.push({ submission, problem });
-  }
-  return rows;
-}
-
-function placeholderProblem(problemId: string): Problem {
-  return {
-    id: problemId,
-    title: "Unknown problem",
-    slug: "",
-    difficulty: "Unknown",
-    platform: "Custom",
-    url: null,
-    topics: [],
-    statement: null,
-    createdAt: new Date(0).toISOString(),
-    updatedAt: new Date(0).toISOString(),
-    attempts: [],
-    notes: [],
-  };
 }
 
 function SubmissionsSurface({ children }: { children: React.ReactNode }) {

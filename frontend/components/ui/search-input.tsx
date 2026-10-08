@@ -10,13 +10,66 @@ export function SearchInput({
   placeholder = "Search…",
   className,
   autoFocus,
+  debounceMs = 0,
 }: {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
   autoFocus?: boolean;
+  /**
+   * Delay `onChange` until typing pauses. List filters use this so a keystroke
+   * does not immediately trigger a server round trip; the input still echoes
+   * every keystroke locally, and discrete dropdown changes are never debounced.
+   */
+  debounceMs?: number;
 }) {
+  const [draft, setDraft] = React.useState(value);
+  const timer = React.useRef<number | null>(null);
+  // The last value this input pushed up, so an echoed prop update cannot
+  // clobber characters typed after the push.
+  const pushed = React.useRef(value);
+
+  React.useEffect(() => {
+    if (value !== pushed.current) {
+      pushed.current = value;
+      setDraft(value);
+    }
+  }, [value]);
+
+  React.useEffect(
+    () => () => {
+      if (timer.current !== null) window.clearTimeout(timer.current);
+    },
+    [],
+  );
+
+  const shown = debounceMs > 0 ? draft : value;
+
+  const handleChange = (next: string) => {
+    if (debounceMs <= 0) {
+      onChange(next);
+      return;
+    }
+    setDraft(next);
+    if (timer.current !== null) window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => {
+      timer.current = null;
+      pushed.current = next;
+      onChange(next);
+    }, debounceMs);
+  };
+
+  const clear = () => {
+    if (timer.current !== null) {
+      window.clearTimeout(timer.current);
+      timer.current = null;
+    }
+    pushed.current = "";
+    setDraft("");
+    onChange("");
+  };
+
   return (
     <div className={cn("relative", className)}>
       <Search
@@ -25,9 +78,9 @@ export function SearchInput({
       />
       <input
         type="search"
-        value={value}
+        value={shown}
         autoFocus={autoFocus}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) => handleChange(event.target.value)}
         placeholder={placeholder}
         aria-label={placeholder}
         suppressHydrationWarning
@@ -39,10 +92,10 @@ export function SearchInput({
           "focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/40",
         )}
       />
-      {value ? (
+      {shown ? (
         <button
           type="button"
-          onClick={() => onChange("")}
+          onClick={clear}
           suppressHydrationWarning
           className="press absolute right-1.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded text-text-faint hover:bg-surface-hover hover:text-text-primary"
           aria-label="Clear search"

@@ -48,3 +48,9 @@ export {
   type SearchResult,
 } from "@/lib/api/resources";
 
+export {
+  type ProblemListItem,
+  type SolveStatus,
+  type SubmissionListItem,
+} from "@/lib/api/mappers";
+
