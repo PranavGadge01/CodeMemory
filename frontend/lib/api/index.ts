@@ -44,13 +44,31 @@ export {
   type AnalyticsGranularity,
   type KnowledgeData,
   type RevisionListParams,
-  type SolutionEvolutionData,
-  type SearchResult,
+  type KnowledgePatternsData,
+  type OptimizationExplanation,
+  type AttemptEvolutionAnalysis,
+  type SubmissionPatternInsights,
+  type ProblemRecommendation,
+  type RoadmapMilestone,
+  type PersonalizedRoadmap,
+  type CollectiveLearningInsight,
+  type SubmissionLearningAnalysis,
+  type NextProblems,
+  type KnowledgeCluster,
 } from "@/lib/api/resources";
 
-export {
-  type ProblemListItem,
-  type SolveStatus,
-  type SubmissionListItem,
+export type {
+  SubmissionListItem,
+  ProblemListItem,
+  SolveStatus,
 } from "@/lib/api/mappers";
+
+export type {
+  SolutionEvolutionData,
+  SearchResult,
+  KnowledgeGraph,
+  GraphNode,
+  GraphEdge,
+  GraphNodeDetail,
+} from "@/lib/types";
 

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { getNextRecommendations, ApiError } from "@/lib/api";
-import type { ProblemRecommendationDTO } from "@/lib/api/types";
+import type { ProblemRecommendation } from "@/lib/types";
 import { Surface, SurfaceHeader } from "@/components/ui/surface";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, AlertCircle, ExternalLink, ChevronDown, ChevronUp, CheckCircle2, ArrowRight, Zap, Target } from "lucide-react";
@@ -13,7 +13,7 @@ const DIFFICULTY_COLOR: Record<string, string> = {
   Hard: "error",
 };
 
-function SingleProblemCard({ rec }: { rec: ProblemRecommendationDTO }) {
+function SingleProblemCard({ rec }: { rec: ProblemRecommendation }) {
   const [expanded, setExpanded] = React.useState(false);
   const diffColor = DIFFICULTY_COLOR[rec.difficulty] ?? "neutral";
 
@@ -23,7 +23,7 @@ function SingleProblemCard({ rec }: { rec: ProblemRecommendationDTO }) {
       <div className="flex items-center gap-2 px-4 py-2.5 border-b border-accent/15 bg-accent/8">
         <Zap className="h-3.5 w-3.5 text-accent shrink-0" />
         <span className="text-caption font-semibold text-accent tracking-wide uppercase">
-          {rec.is_revision ? "Revision Pick" : "Optimize This Next"}
+          {rec.isRevision ? "Revision Pick" : "Optimize This Next"}
         </span>
       </div>
 
@@ -61,13 +61,13 @@ function SingleProblemCard({ rec }: { rec: ProblemRecommendationDTO }) {
             <Target className="h-3.5 w-3.5 text-accent" />
             Why this problem?
           </p>
-          <p className="text-body-sm text-text-secondary leading-relaxed">{rec.selection_rationale}</p>
+          <p className="text-body-sm text-text-secondary leading-relaxed">{rec.selectionRationale}</p>
         </div>
 
         {/* Optimization focus */}
         <div className="p-3 rounded-lg bg-surface-elevated border border-border-soft">
           <p className="text-caption font-semibold text-text-primary mb-1">Optimization focus</p>
-          <p className="text-body-sm text-text-secondary">{rec.solving_focus}</p>
+          <p className="text-body-sm text-text-secondary">{rec.solvingFocus}</p>
         </div>
 
         {/* Expand toggle */}
@@ -83,10 +83,10 @@ function SingleProblemCard({ rec }: { rec: ProblemRecommendationDTO }) {
       {/* Expanded section */}
       {expanded && (
         <div className="border-t border-border-soft p-5 space-y-4 bg-surface-elevated">
-          {rec.similarity_reasons && rec.similarity_reasons.length > 0 && (
+          {rec.similarityReasons && rec.similarityReasons.length > 0 && (
             <div className="space-y-2">
               <p className="text-caption font-semibold text-text-primary">Why it matches</p>
-              {rec.similarity_reasons.map((reason, i) => (
+              {rec.similarityReasons.map((reason, i) => (
                 <div key={i} className="flex items-start gap-2 text-body-sm text-text-secondary">
                   <Target className="h-3.5 w-3.5 mt-0.5 text-accent shrink-0" />
                   <span>{reason}</span>
@@ -94,10 +94,10 @@ function SingleProblemCard({ rec }: { rec: ProblemRecommendationDTO }) {
               ))}
             </div>
           )}
-          {rec.reflection_checklist.length > 0 && (
+          {rec.reflectionChecklist.length > 0 && (
             <div className="space-y-2">
               <p className="text-caption font-semibold text-text-primary">Before you submit — check these</p>
-              {rec.reflection_checklist.map((item, i) => (
+              {rec.reflectionChecklist.map((item, i) => (
                 <div key={i} className="flex items-start gap-2 text-body-sm text-text-secondary">
                   <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 text-success shrink-0" />
                   <span>{item}</span>
@@ -107,7 +107,7 @@ function SingleProblemCard({ rec }: { rec: ProblemRecommendationDTO }) {
           )}
           <div className="flex items-start gap-2 text-body-sm text-text-secondary">
             <ArrowRight className="h-3.5 w-3.5 mt-0.5 text-accent shrink-0" />
-            <span><span className="font-medium text-text-primary">After solving: </span>{rec.next_step_after}</span>
+            <span><span className="font-medium text-text-primary">After solving: </span>{rec.nextStepAfter}</span>
           </div>
         </div>
       )}
@@ -116,7 +116,7 @@ function SingleProblemCard({ rec }: { rec: ProblemRecommendationDTO }) {
 }
 
 export function NextProblemsCard({ className, limit = 1 }: { className?: string; limit?: number }) {
-  const [data, setData] = React.useState<ProblemRecommendationDTO[]>([]);
+  const [data, setData] = React.useState<ProblemRecommendation[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 

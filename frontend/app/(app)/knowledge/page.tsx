@@ -2,9 +2,9 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowUpRight, Network } from "lucide-react";
-import { getKnowledge, listProblems, ApiError } from "@/lib/api";
-import type { ProblemListItem } from "@/lib/api";
+import { ArrowUpRight, Network, BookOpen } from "lucide-react";
+import { getKnowledge, ApiError } from "@/lib/api";
+import type { KnowledgeData, GraphNodeDetail, GraphNode } from "@/lib/types";
 import { PageContainer, PageSection } from "@/components/app/page-container";
 import { PageHeader } from "@/components/app/page-header";
 import { Surface, SurfaceHeader } from "@/components/ui/surface";
@@ -13,47 +13,17 @@ import { Reveal } from "@/components/system/reveal";
 import { Button } from "@/components/ui/button";
 import { EmptyDataState, ErrorState, PageSkeleton } from "@/components/app/data-states";
 
-const TYPE_LEGEND = [
-  { label: "Problem", color: "var(--color-accent)" },
-  { label: "Topic", color: "rgba(255,255,255,0.55)" },
-  { label: "Concept", color: "var(--color-info)" },
-  { label: "Approach", color: "var(--color-medium)" },
-  { label: "Language", color: "var(--color-success)" },
-  { label: "Mistake", color: "var(--color-error)" },
-];
-
 export default function KnowledgePage() {
-  // The graph is keyed by node ids the backend assigns (`prob_<id>`), so the
-  // centre is chosen from the graph itself rather than derived from a slug.
   const [state, setState] = React.useState<
     | { status: "loading" }
-    | { status: "success"; data: { knowledge: Awaited<ReturnType<typeof getKnowledge>>; problems: { problem: ProblemListItem; degree: number }[] } }
+    | { status: "success"; data: KnowledgeData }
     | { status: "error"; error: ApiError }
   >({ status: "loading" });
 
   React.useEffect(() => {
     let cancelled = false;
-    (async () => {
-      // The two requests are independent, so they run together; awaiting them
-      // in sequence made the page pay both round trips one after the other.
-      const [knowledge, list] = await Promise.all([
-        getKnowledge(),
-        listProblems({ page: 1, pageSize: 100 }),
-      ]);
-      const edgeCounts = new Map<string, number>();
-      for (const edge of knowledge.graph.edges) {
-        edgeCounts.set(edge.sourceId, (edgeCounts.get(edge.sourceId) ?? 0) + 1);
-        edgeCounts.set(edge.targetId, (edgeCounts.get(edge.targetId) ?? 0) + 1);
-      }
-      // The list row already carries title, topics, status and submission
-      // count, so the table renders from it directly instead of fetching eight
-      // problem details purely to read summary fields.
-      const problems = list.items
-        .map((item) => ({ problem: item, degree: edgeCounts.get(`prob_${item.id}`) ?? 0 }))
-        .sort((a, b) => b.degree - a.degree)
-        .slice(0, 8);
-      return { knowledge, problems };
-    })().then((data) => { if (!cancelled) setState({ status: "success", data }); })
+    getKnowledge()
+      .then((data) => { if (!cancelled) setState({ status: "success", data }); })
       .catch((error: unknown) => { if (!cancelled) setState({ status: "error", error: error instanceof ApiError ? error : new ApiError("Could not load knowledge data.", "ERROR", 0) }); });
     return () => { cancelled = true; };
   }, []);
@@ -62,25 +32,28 @@ export default function KnowledgePage() {
     return <KnowledgePending state={state} />;
   }
 
-  const { graph, clusters } = state.data.knowledge;
-  const { problems } = state.data;
+  const { graph, entityCounts } = state.data;
 
-  const center = graph.nodes.find((node) => node.type === "Problem") ?? graph.nodes[0];
-  const centerTitle = center?.label ?? "Knowledge graph";
+  // Find a center node (prefer a Problem)
+  const centerNode = graph.nodes.find((n: GraphNode) => n.type === "Problem") as GraphNodeDetail | undefined;
+  const centerId = centerNode?.id ?? graph.nodes[0]?.id;
+  const centerTitle = centerNode?.label ?? "Your coding knowledge";
 
-  const topicNodes = graph.nodes.filter((node) => node.type === "Topic").length;
-  const approachNodes = graph.nodes.filter((node) => node.type === "Approach").length;
-  const mistakeNodes = graph.nodes.filter((node) => node.type === "Mistake").length;
-  const languageNodes = graph.nodes.filter((node) => node.type === "Language").length;
-  const problemNodes = graph.nodes.filter((node) => node.type === "Problem").length;
+  // Get connection statistics for the snapshot
+  const problemNodes = graph.nodes.filter((n: GraphNode) => n.type === "Problem") as GraphNodeDetail[];
+  const topicNodes = graph.nodes.filter((n: GraphNode) => n.type === "Topic");
+  const approachNodes = graph.nodes.filter((n: GraphNode) => n.type === "Approach");
+  const languageNodes = graph.nodes.filter((n: GraphNode) => n.type === "Language");
+  const mistakeNodes = graph.nodes.filter((n: GraphNode) => n.type === "Mistake");
+  const conceptNodes = graph.nodes.filter((n: GraphNode) => n.type === "Concept");
 
   return (
     <PageContainer>
       <PageSection className="gap-6">
         <PageHeader
           eyebrow="Knowledge"
-          title="Connected memory"
-          description="Problems link to the topics they use, the approaches you tried, the languages you reached for, and the mistakes you made along the way. Follow any thread."
+          title="Your coding memory"
+          description="Explore the problems, concepts, topics, approaches and techniques you've encountered — and how they connect."
           actions={
             <Button variant="outline" size="sm" asChild>
               <Link href="/dashboard">
@@ -91,127 +64,103 @@ export default function KnowledgePage() {
           }
         />
 
-        <div className="grid grid-cols-2 divide-x divide-border-soft rounded-lg border border-border bg-surface sm:grid-cols-4">
-          <Metric label="Problems" value={problemNodes} />
-          <Metric label="Topics" value={topicNodes} />
-          <Metric label="Approaches" value={approachNodes} accent />
-          <Metric label="Mistakes recorded" value={mistakeNodes} />
+        {/* Knowledge snapshot */}
+        <div className="grid grid-cols-2 divide-x divide-border-soft rounded-lg border border-border bg-surface sm:grid-cols-6">
+          <Metric label="Problems" value={entityCounts.Problem ?? problemNodes.length} />
+          <Metric label="Topics" value={entityCounts.Topic ?? topicNodes.length} />
+          <Metric label="Approaches" value={entityCounts.Approach ?? approachNodes.length} accent />
+          <Metric label="Concepts" value={entityCounts.Concept ?? conceptNodes.length} />
+          <Metric label="Languages" value={entityCounts.Language ?? languageNodes.length} />
+          <Metric label="Mistakes" value={entityCounts.Mistake ?? mistakeNodes.length} />
         </div>
 
+        {/* Graph */}
         <Reveal>
           <Surface className="overflow-hidden">
             <SurfaceHeader
-              eyebrow="Graph"
+              eyebrow="Knowledge graph"
               title={centerTitle}
-              description="Select any node to inspect its relationships. The graph is rendered from your own submission history."
+              description="Select any node to inspect its relationships. The graph shows how your coding history connects."
               action={
                 <span className="hidden items-center gap-1.5 font-technical-sm text-text-muted sm:flex">
                   <Network className="h-3.5 w-3.5 text-accent" aria-hidden="true" />
-                  {languageNodes} languages
+                  {languageNodes.length} languages
                 </span>
               }
             />
-            {center ? (
-              <KnowledgeGraphPanel graph={graph} centerId={center.id} height={480} />
+            {centerId ? (
+              <KnowledgeGraphPanel graph={graph} centerId={centerId} height={400} />
             ) : (
               <EmptyDataState
                 className="py-16"
-                title="The graph is empty"
+                title="The knowledge graph is empty"
                 description="Nodes appear once problems with topics and submissions are indexed."
               />
             )}
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-border-soft px-5 py-3">
-              <span className="eyebrow">Legend</span>
-              {TYPE_LEGEND.map((entry) => (
-                <span
-                  key={entry.label}
-                  className="inline-flex items-center gap-1.5 font-technical-sm text-text-muted"
-                >
-                  <span
-                    className="h-2 w-2 rounded-full"
-                    style={{ backgroundColor: entry.color }}
-                    aria-hidden="true"
-                  />
-                  {entry.label}
-                </span>
-              ))}
-            </div>
           </Surface>
         </Reveal>
 
+        {/* Related knowledge section */}
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
           <Reveal delay={60}>
             <Surface>
               <SurfaceHeader
-                eyebrow="Clusters"
-                title="Topic clusters"
-                description="Where your practice actually concentrates, and where it thins out."
+                eyebrow="Connected methods"
+                title="Topics and approaches"
+                description="The concepts your problems connect to."
               />
-              {clusters.length > 0 ? (
-                <div className="flex flex-col">
-                  {clusters.slice(0, 10).map((cluster) => (
-                    <div
-                      key={cluster.id}
-                      className="flex items-center gap-4 border-b border-border-soft px-5 py-4 last:border-0"
+              {topicNodes.length > 0 ? (
+                <div className="flex flex-wrap gap-2 p-5">
+                  {topicNodes.slice(0, 8).map((topic: GraphNode) => (
+                    <Link
+                      key={topic.id}
+                      href={`/problems`}
+                      className="press inline-flex items-center gap-2 rounded-full bg-surface-hover px-3 py-1.5 text-sm text-text-secondary hover:bg-surface-hover"
                     >
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-body-sm font-medium text-text-primary">
-                          {cluster.title}
-                        </div>
-                        <div className="mt-0.5 font-technical-sm text-text-faint">
-                          {cluster.description}
-                        </div>
-                        <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-surface-card">
-                          <span
-                            className="block h-full rounded-full bg-accent/80"
-                            style={{ width: `${cluster.masteryPct}%` }}
-                            aria-hidden="true"
-                          />
-                        </div>
-                      </div>
-                      <div className="shrink-0 text-right">
-                        <div className="font-technical text-text-primary tabular-nums">
-                          {cluster.masteryPct}%
-                        </div>
-                        <div className="font-technical-sm text-text-faint">mastery</div>
-                      </div>
-                    </div>
+                      <BookOpen className="h-3.5 w-3.5 text-accent" />
+                      {topic.label}
+                    </Link>
                   ))}
                 </div>
               ) : (
                 <EmptyDataState
                   className="py-12"
-                  title="No topic clusters"
-                  description="Clusters are computed from solved-problem concentration per topic. They appear once enough topics have solved problems behind them."
+                  title="No topics recorded"
+                  description="Topics appear once problems are tagged with them."
                 />
               )}
             </Surface>
           </Reveal>
 
           <Reveal delay={120}>
-            <Surface className="h-full">
-              <SurfaceHeader eyebrow="Weakest" title="Thinnest coverage" />
-              {clusters.length > 0 ? (
+            <Surface>
+              <SurfaceHeader
+                eyebrow="Most connected problems"
+                title="Linked problems"
+                description="Problems with many connections in your knowledge graph."
+              />
+              {problemNodes.length > 0 ? (
                 <div className="flex flex-col">
-                  {[...clusters]
-                    .sort((a, b) => a.masteryPct - b.masteryPct)
+                  {problemNodes
+                    .sort((a, b) => (b.connectionCount ?? 0) - (a.connectionCount ?? 0))
                     .slice(0, 6)
-                    .map((cluster) => (
+                    .map((problem) => (
                       <Link
-                        key={`weak-${cluster.id}`}
-                        href={`/problems`}
-                        className="press group flex items-center justify-between gap-3 border-b border-border-soft px-5 py-3.5 last:border-0 hover:bg-surface-hover"
+                        key={problem.id}
+                        href={`/problems?slug=${problem.id.replace(/^prob_/, "")}`}
+                        className="press group flex items-center gap-3 border-b border-border-soft px-5 py-3 last:border-0 hover:bg-surface-hover"
                       >
-                        <span className="min-w-0">
-                          <span className="block truncate text-body-sm text-text-secondary group-hover:text-text-primary">
-                            {cluster.title}
-                          </span>
-                          <span className="font-technical-sm text-text-faint">
-                            {cluster.problemIds.length} problems
-                          </span>
-                        </span>
-                        <span className="shrink-0 font-technical-sm text-warning tabular-nums">
-                          {cluster.masteryPct}%
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-body-sm font-medium text-text-primary">
+                            {problem.label}
+                          </div>
+                          <div className="mt-0.5 font-technical-sm text-text-faint">
+                            {problem.topics?.join(" · ") ?? "No topics"}
+                          </div>
+                        </div>
+                        <span className="flex shrink-0 items-center gap-2 font-technical-sm text-text-muted">
+                          <span className="tabular-nums">{problem.connectionCount ?? 0}</span>
+                          <span className="font-technical-sm text-text-faint">links</span>
                         </span>
                       </Link>
                     ))}
@@ -219,66 +168,13 @@ export default function KnowledgePage() {
               ) : (
                 <EmptyDataState
                   className="py-12"
-                  title="No coverage signal"
-                  description="Thinnest coverage ranks topic clusters by mastery once they exist."
+                  title="No connected problems"
+                  description="The most connected problems appear once the graph has edges to count."
                 />
               )}
             </Surface>
           </Reveal>
         </div>
-
-        <Reveal>
-          <Surface>
-            <SurfaceHeader
-              eyebrow="Problems"
-              title="Most connected problems"
-              description="The problems that touch the most topics and approaches — the ones worth keeping as reference."
-            />
-            {graph.nodes.length > 0 ? (
-              <div className="flex flex-col">
-                {problems.map(({ problem, degree }) => (
-                    <Link
-                      key={problem.id}
-                      href={`/problems?slug=${problem.slug}`}
-                      className="press group flex items-center gap-4 border-b border-border-soft px-5 py-3.5 last:border-0 hover:bg-surface-hover"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-body-sm font-medium text-text-primary">
-                          {problem.title}
-                        </div>
-                        <div className="mt-0.5 truncate font-technical-sm text-text-faint">
-                          {problem.topics.join(" · ")}
-                        </div>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-4">
-                        <span className="font-technical-sm text-text-muted">
-                          {problem.submissionCount} submissions
-                        </span>
-                        <span className="font-technical-sm text-accent tabular-nums">
-                          {degree} links
-                        </span>
-                        <span
-                          className={problem.status === "Solved" ? "text-success" : "text-warning"}
-                          title={problem.status === "Solved" ? "Solved" : "Unsolved"}
-                        >
-                          {problem.status === "Solved" ? "●" : "○"}
-                          <span className="sr-only">
-                            {problem.status === "Solved" ? "Solved" : "Unsolved"}
-                          </span>
-                        </span>
-                      </div>
-                    </Link>
-                  ))}
-              </div>
-            ) : (
-              <EmptyDataState
-                className="py-12"
-                title="No connected problems"
-                description="The most connected problems appear once the graph has edges to count."
-              />
-            )}
-          </Surface>
-        </Reveal>
       </PageSection>
     </PageContainer>
   );
@@ -294,8 +190,8 @@ function KnowledgePending({
       <PageSection className="gap-6">
         <PageHeader
           eyebrow="Knowledge"
-          title="Connected memory"
-          description="Problems link to the topics they use, the approaches you tried, the languages you reached for, and the mistakes you made along the way. Follow any thread."
+          title="Your coding memory"
+          description="Explore the problems, concepts, topics, approaches and techniques you've encountered — and how they connect."
         />
         {state.status === "error" ? (
           <Surface>
@@ -309,10 +205,10 @@ function KnowledgePending({
   );
 }
 
-function Metric({ label, value, accent }: { label: string; value: number; accent?: boolean }) {
+function Metric({ label, value, accent }: { label: string; value: number | string; accent?: boolean }) {
   return (
     <div className="px-4 py-3.5 sm:px-5">
-      <div className="eyebrow">{label}</div>
+      <div className="eyebrow text-xs uppercase tracking-wider">{label}</div>
       <div className={cnMetric(accent)}>{value}</div>
     </div>
   );
@@ -321,9 +217,10 @@ function Metric({ label, value, accent }: { label: string; value: number; accent
 function cnMetric(accent?: boolean): string {
   return [
     "mt-1.5",
-    "font-technical",
+    "font-mono",
     "text-text-primary",
     "tabular-nums",
+    "text-heading-sm",
     accent ? "text-accent" : "",
   ]
     .filter(Boolean)

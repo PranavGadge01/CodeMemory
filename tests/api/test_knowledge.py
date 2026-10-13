@@ -37,89 +37,34 @@ def cluster_client(cluster_service):
 
 
 def test_knowledge_empty_database(empty_client):
-    """Empty database should return empty clusters."""
+    """Empty database should return empty graph and entity counts."""
     response = empty_client.get("/api/v1/knowledge")
     assert response.status_code == 200
     data = response.json()
     assert "graph" in data
     assert "clusters" in data
+    assert "entityCounts" in data
+    assert data["graph"]["nodes"] == []
+    assert data["graph"]["edges"] == []
     assert data["clusters"] == []
 
 
-def test_knowledge_clusters_for_shared_topics(cluster_client):
-    """Problems with shared topics should form clusters."""
+def test_knowledge_entity_counts(cluster_client):
+    """Knowledge endpoint should return entity counts for the snapshot header."""
     response = cluster_client.get("/api/v1/knowledge")
     assert response.status_code == 200
     data = response.json()
 
-    clusters = data["clusters"]
-    assert len(clusters) > 0
-
-    # "Array" topic should have a cluster with both Two Sum and 3Sum
-    array_cluster = next((c for c in clusters if c["topicId"] == "Array"), None)
-    assert array_cluster is not None, "Expected an 'Array' cluster"
-    assert len(array_cluster["problemIds"]) == 2
-    assert array_cluster["masteryPct"] == 0  # No submissions, so 0% mastery
+    # Should have entity counts for each node type
+    entity_counts = data["entityCounts"]
+    assert "Problem" in entity_counts
+    assert "Topic" in entity_counts
+    # Since clusters are deprecated, they should be empty
+    assert data["clusters"] == []
 
 
-def test_knowledge_clusters_deterministic(cluster_client):
-    """Repeated calls should return the same cluster ordering."""
-    response1 = cluster_client.get("/api/v1/knowledge")
-    response2 = cluster_client.get("/api/v1/knowledge")
-
-    assert response1.status_code == 200
-    assert response2.status_code == 200
-
-    clusters1 = response1.json()["clusters"]
-    clusters2 = response2.json()["clusters"]
-
-    # Same number of clusters
-    assert len(clusters1) == len(clusters2)
-
-    # Same cluster IDs in same order
-    ids1 = [c["id"] for c in clusters1]
-    ids2 = [c["id"] for c in clusters2]
-    assert ids1 == ids2
-
-
-def test_knowledge_cluster_mastery(cluster_client):
-    """Clusters should report mastery percentage based on solved problems."""
-    response = cluster_client.get("/api/v1/knowledge")
-    assert response.status_code == 200
-    data = response.json()
-
-    design_cluster = next((c for c in data["clusters"] if c["topicId"] == "Design"), None)
-    assert design_cluster is not None
-    # One problem with "Design" topic, no submissions -> 0% mastery
-    assert design_cluster["masteryPct"] == 0
-    assert len(design_cluster["problemIds"]) == 1
-
-
-def test_knowledge_clusters_separate_topics(cluster_client):
-    """Different topics should produce separate clusters."""
-    response = cluster_client.get("/api/v1/knowledge")
-    assert response.status_code == 200
-    data = response.json()
-
-    cluster_topics = {c["topicId"] for c in data["clusters"]}
-    # We expect Array, Hash Table, Two Pointers, and Design clusters
-    # (no submissions, so all mastery is 0%)
-    assert "Array" in cluster_topics
-    assert "Hash Table" in cluster_topics
-    assert "Two Pointers" in cluster_topics
-    assert "Design" in cluster_topics
-
-    # Array should contain both Two Sum and 3Sum
-    array_cluster = next(c for c in data["clusters"] if c["topicId"] == "Array")
-    assert len(array_cluster["problemIds"]) == 2
-
-    # Design should contain only LRU Cache
-    design_cluster = next(c for c in data["clusters"] if c["topicId"] == "Design")
-    assert len(design_cluster["problemIds"]) == 1
-
-
-def test_knowledge_graph_still_present(cluster_client):
-    """The knowledge graph should still be returned alongside clusters."""
+def test_knowledge_graph_has_nodes_and_edges(cluster_client):
+    """The knowledge graph should have nodes and edges."""
     response = cluster_client.get("/api/v1/knowledge")
     assert response.status_code == 200
     data = response.json()
@@ -129,3 +74,158 @@ def test_knowledge_graph_still_present(cluster_client):
     assert "edges" in graph
     assert len(graph["nodes"]) > 0
     assert len(graph["edges"]) > 0
+
+
+def test_knowledge_nodes_have_required_fields(cluster_client):
+    """Each node should have id, label, and type."""
+    response = cluster_client.get("/api/v1/knowledge")
+    assert response.status_code == 200
+    data = response.json()
+
+    for node in data["graph"]["nodes"]:
+        assert "id" in node
+        assert "label" in node
+        assert "type" in node
+
+
+def test_knowledge_problem_nodes_have_extended_fields(cluster_client):
+    """Problem nodes should have difficulty, topics, and connectionCount."""
+    response = cluster_client.get("/api/v1/knowledge")
+    assert response.status_code == 200
+    data = response.json()
+
+    problem_nodes = [n for n in data["graph"]["nodes"] if n["type"] == "Problem"]
+    for node in problem_nodes:
+        # These fields should exist on Problem nodes
+        assert "difficulty" in node
+        assert "topics" in node
+
+
+def test_knowledge_clusters_deprecated(cluster_client):
+    """Clusters are deprecated and should be empty in Knowledge endpoint."""
+    response = cluster_client.get("/api/v1/knowledge")
+    assert response.status_code == 200
+    data = response.json()
+
+    # Clusters should be empty - this is now Analytics' responsibility
+    assert data["clusters"] == []
+
+
+def test_knowledge_graph_still_present(cluster_client):
+    """The knowledge graph should still be returned."""
+    response = cluster_client.get("/api/v1/knowledge")
+    assert response.status_code == 200
+    data = response.json()
+
+    graph = data["graph"]
+    assert "nodes" in graph
+    assert "edges" in graph
+    assert len(graph["nodes"]) > 0
+    assert len(graph["edges"]) > 0
+
+
+def test_knowledge_problem_has_extended_data_with_submissions():
+    """Problems with submissions should have language and approach info."""
+    service = CodeMemoryService(db_path=":memory:")
+
+    # Create problem with attempts and submissions
+    p1 = Problem(
+        title="Two Sum",
+        slug="two-sum-test",
+        difficulty=DifficultyLevel.EASY,
+        topics=["Array", "Hash Table"]
+    )
+    attempt = Attempt(
+        problem_id=p1.id,
+        attempt_number=1,
+        approach_summary="Hash Map Solution",
+        reasoning="Use a hash map for O(n) lookup",
+        mistakes=["Forgot to check for empty input"]
+    )
+    sub = Submission(
+        problem_id=p1.id,
+        code="def twoSum(nums, target): pass",
+        language="python",
+        status=SubmissionStatus.ACCEPTED,
+        attempt_id=attempt.id
+    )
+    attempt.submissions.append(sub)
+    attempt.problem_id = p1.id
+    p1.attempts.append(attempt)
+
+    service.storage.save(p1)
+
+    app = create_app(service=service)
+    app.dependency_overrides[get_service] = lambda: service
+    with TestClient(app) as client:
+        response = client.get("/api/v1/knowledge")
+        assert response.status_code == 200
+        data = response.json()
+
+        problem_nodes = [n for n in data["graph"]["nodes"] if n["type"] == "Problem"]
+        assert len(problem_nodes) >= 1, f"Expected at least 1 problem node, got {len(problem_nodes)}, nodes: {[n['id'] for n in problem_nodes]}"
+
+        # Find our problem by checking topics or title
+        our_problem = None
+        for node in problem_nodes:
+            if "Array" in (node.get("topics") or []):
+                our_problem = node
+                break
+            if node.get("label") == "Two Sum":
+                our_problem = node
+
+        assert our_problem is not None, f"Could not find Two Sum problem node. Available: {problem_nodes}"
+
+        assert our_problem["difficulty"] == "Easy"
+        assert "Array" in our_problem["topics"]
+        assert "Hash Table" in our_problem["topics"]
+        assert "Python" in our_problem["languages"]
+        assert "Hash Map Solution" in our_problem["approaches"]
+        assert "Forgot to check for empty input" in our_problem["mistakes"]
+
+    service.close_storage()
+
+
+def test_knowledge_multiple_problems_with_submissions():
+    """Multiple problems with submissions should show language diversity."""
+    service = CodeMemoryService(db_path=":memory:")
+
+    # Problem 1 - Python
+    p1 = Problem(title="Two Sum", slug="two-sum-multi", difficulty=DifficultyLevel.EASY, topics=["Array"])
+    sub1 = Submission(
+        problem_id=p1.id,
+        code="def twoSum(): pass",
+        language="python",
+        status=SubmissionStatus.ACCEPTED
+    )
+    attempt1 = Attempt(problem_id=p1.id, attempt_number=1, approach_summary="Hash Map")
+    attempt1.submissions.append(sub1)
+    p1.attempts.append(attempt1)
+    service.storage.save(p1)
+
+    # Problem 2 - Java
+    p2 = Problem(title="3Sum", slug="3sum", difficulty=DifficultyLevel.MEDIUM, topics=["Array", "Two Pointers"])
+    sub2 = Submission(
+        problem_id=p2.id,
+        code="class Solution {}",
+        language="java",
+        status=SubmissionStatus.ACCEPTED
+    )
+    attempt2 = Attempt(problem_id=p2.id, attempt_number=1, approach_summary="Two Pointers")
+    attempt2.submissions.append(sub2)
+    p2.attempts.append(attempt2)
+    service.storage.save(p2)
+
+    app = create_app(service=service)
+    app.dependency_overrides[get_service] = lambda: service
+    with TestClient(app) as client:
+        response = client.get("/api/v1/knowledge")
+        assert response.status_code == 200
+        data = response.json()
+
+        entity_counts = data["entityCounts"]
+        assert entity_counts["Problem"] == 2
+        assert entity_counts["Language"] >= 1  # At least Python and Java
+        assert entity_counts["Topic"] >= 1  # At least Array
+
+    service.close_storage()

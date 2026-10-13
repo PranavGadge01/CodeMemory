@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { getSubmissionPatterns, ApiError } from "@/lib/api";
-import type { SubmissionPatternInsightsDTO, SubmissionPatternFindingDTO } from "@/lib/api/types";
+import type { SubmissionPatternInsights, SubmissionPatternFinding } from "@/lib/types";
 import { Surface, SurfaceHeader } from "@/components/ui/surface";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, AlertCircle, TrendingUp, Target, AlertTriangle, Info } from "lucide-react";
@@ -15,7 +15,7 @@ const CATEGORY_STYLES: Record<string, { icon: React.ReactNode; badgeVariant: "ac
 };
 
 
-function FindingCard({ finding }: { finding: SubmissionPatternFindingDTO }) {
+function FindingCard({ finding }: { finding: SubmissionPatternFinding }) {
   const [expanded, setExpanded] = React.useState(false);
   const style = CATEGORY_STYLES[finding.category] ?? CATEGORY_STYLES.fact;
 
@@ -31,7 +31,7 @@ function FindingCard({ finding }: { finding: SubmissionPatternFindingDTO }) {
         </Badge>
       </div>
       <p className="text-body-sm text-text-secondary">{finding.observation}</p>
-      <p className="text-caption text-text-muted font-mono">{finding.metric_or_examples}</p>
+      <p className="text-caption text-text-muted font-mono">{finding.metricOrExamples}</p>
       <button
         onClick={() => setExpanded(!expanded)}
         className="text-caption text-accent hover:underline"
@@ -42,9 +42,9 @@ function FindingCard({ finding }: { finding: SubmissionPatternFindingDTO }) {
         <div className="pt-2 border-t border-border-soft space-y-2">
           <p className="text-body-sm text-text-secondary">
             <span className="font-medium text-text-primary">Why it matters: </span>
-            {finding.why_it_matters}
+            {finding.whyItMatters}
           </p>
-          <p className="text-body-sm text-accent font-medium">→ {finding.suggested_action}</p>
+          <p className="text-body-sm text-accent font-medium">→ {finding.suggestedAction}</p>
         </div>
       )}
     </div>
@@ -52,7 +52,7 @@ function FindingCard({ finding }: { finding: SubmissionPatternFindingDTO }) {
 }
 
 export function SubmissionPatternsCard({ className }: { className?: string }) {
-  const [data, setData] = React.useState<SubmissionPatternInsightsDTO | null>(null);
+  const [data, setData] = React.useState<SubmissionPatternInsights | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -95,10 +95,10 @@ export function SubmissionPatternsCard({ className }: { className?: string }) {
         ) : data ? (
           <>
             <p className="text-body-sm text-text-secondary leading-relaxed">{data.summary}</p>
-            {data.most_important_gap && (
+            {data.mostImportantGap && (
               <div className="p-3 rounded-lg bg-accent/8 border border-accent/20">
                 <p className="text-body-sm text-accent font-medium">
-                  Priority gap: {data.most_important_gap}
+                  Priority gap: {data.mostImportantGap}
                 </p>
               </div>
             )}

@@ -65,10 +65,11 @@ def _seed_service(service: CodeMemoryService) -> None:
 
 
 def test_collective_insight_reuses_one_history_expansion(tmp_path, monkeypatch):
-    """The collective insight expands history once for the snapshot and once
-    more for the local problem catalogue used by recommendations (2 total).
+    """The collective insight expands history exactly once.
+
     It previously rebuilt history ~11 times across evidence + analytics +
-    recommendations."""
+    recommendations; the recommendation pool now reuses the same snapshot
+    instead of re-reading the catalogue from storage."""
     service = CodeMemoryService(
         base_dir=tmp_path / "data",
         knowledge_dir=tmp_path / "knowledge",
@@ -79,7 +80,7 @@ def test_collective_insight_reuses_one_history_expansion(tmp_path, monkeypatch):
     calls = _count_expansions(service, monkeypatch)
     insight = service.get_collective_learning_insight()
     assert insight is not None
-    assert calls["n"] == 2
+    assert calls["n"] == 1
     service.close_storage()
 
 
@@ -95,6 +96,7 @@ def test_recommendations_reuse_snapshot(tmp_path, monkeypatch):
     snapshot = service.history_snapshot()
     assert calls["n"] == 1
     service.get_next_problem_recommendations(limit=2, snapshot=snapshot)
-    # snapshot (1) + local catalogue (1) — the profile itself adds none.
-    assert calls["n"] == 2
+    # The snapshot is the only expansion: the profile and the local catalogue
+    # both read it rather than going back to storage.
+    assert calls["n"] == 1
     service.close_storage()

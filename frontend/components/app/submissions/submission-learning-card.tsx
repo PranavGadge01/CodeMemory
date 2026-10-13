@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { getSubmissionLearningAnalysis, ApiError } from "@/lib/api";
-import type { SubmissionLearningAnalysisDTO } from "@/lib/api/types";
+import type { SubmissionLearningAnalysis } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import {
   RefreshCw,
@@ -46,7 +46,7 @@ export function SubmissionLearningCard({
   submissionId: string;
   className?: string;
 }) {
-  const [data, setData] = React.useState<SubmissionLearningAnalysisDTO | null>(null);
+  const [data, setData] = React.useState<SubmissionLearningAnalysis | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -211,13 +211,13 @@ export function SubmissionLearningCard({
             </Collapsible>
           )}
 
-          {data.limitations.length > 0 && (
+          {(data.limitations?.length ?? 0) > 0 && (
             <div className="flex items-start gap-2 p-2.5 rounded-lg bg-surface-elevated border border-border-soft">
               <Info className="h-3.5 w-3.5 mt-0.5 text-text-faint shrink-0" />
               <div className="space-y-0.5">
-                {data.limitations.map((lim, i) => (
+                {(data.limitations?.map((lim, i) => (
                   <p key={i} className="text-caption text-text-muted">{lim}</p>
-                ))}
+                ))) ?? []}
               </div>
             </div>
           )}

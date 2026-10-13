@@ -270,6 +270,7 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
                 status VARCHAR NOT NULL,
                 time_complexity VARCHAR,
                 space_complexity VARCHAR,
+                mistakes VARCHAR,
                 created_at TIMESTAMP NOT NULL,
                 updated_at TIMESTAMP NOT NULL
             );
@@ -301,6 +302,9 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
         # column already exists, so this is safe to run on every connection.
         self.conn.execute("ALTER TABLE submissions ADD COLUMN IF NOT EXISTS source_provider VARCHAR;")
         self.conn.execute("ALTER TABLE submissions ADD COLUMN IF NOT EXISTS source_account VARCHAR;")
+
+        # Migration: add mistakes column to attempts table
+        self.conn.execute("ALTER TABLE attempts ADD COLUMN IF NOT EXISTS mistakes VARCHAR;")
 
         self.conn.execute(
             """
@@ -376,11 +380,13 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
             tc = attempt.analysis.time_complexity if attempt.analysis else None
             sc = attempt.analysis.space_complexity if attempt.analysis else None
             att_status = attempt.status.value if hasattr(attempt.status, "value") else str(attempt.status)
+            # Serialize mistakes as comma-separated string
+            mistakes_str = ",".join(attempt.mistakes) if attempt.mistakes else None
 
             self.conn.execute(
                 """
-                INSERT INTO attempts (id, problem_id, attempt_number, approach_summary, reasoning, status, time_complexity, space_complexity, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO attempts (id, problem_id, attempt_number, approach_summary, reasoning, status, time_complexity, space_complexity, mistakes, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (id) DO UPDATE SET
                     attempt_number = excluded.attempt_number,
                     approach_summary = excluded.approach_summary,
@@ -388,6 +394,7 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
                     status = excluded.status,
                     time_complexity = excluded.time_complexity,
                     space_complexity = excluded.space_complexity,
+                    mistakes = excluded.mistakes,
                     updated_at = excluded.updated_at;
             """,
                 [
@@ -399,6 +406,7 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
                     att_status,
                     tc,
                     sc,
+                    mistakes_str,
                     _to_naive_utc(attempt.created_at),
                     _to_naive_utc(attempt.updated_at),
                 ],
@@ -492,7 +500,7 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
     _PROBLEM_COLUMNS = "id, title, slug, difficulty, platform, url, topics, statement, created_at, updated_at"
     _ATTEMPT_COLUMNS = (
         "id, problem_id, attempt_number, approach_summary, reasoning, status, "
-        "time_complexity, space_complexity, created_at, updated_at"
+        "time_complexity, space_complexity, mistakes, created_at, updated_at"
     )
     _SUBMISSION_COLUMNS = (
         "id, problem_id, attempt_id, code, language, status, runtime_ms, memory_mb, "
@@ -543,7 +551,7 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
 
         attempts: list[Attempt] = []
         for a_row in attempt_rows:
-            aid, _, att_num, app_sum, reasoning, att_status, tc, sc, a_created, a_updated = a_row
+            aid, _, att_num, app_sum, reasoning, att_status, tc, sc, mistakes_str, a_created, a_updated = a_row
 
             submissions = [
                 self._build_submission_from_row(s_row)
@@ -557,6 +565,9 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
             except (ValueError, TypeError):
                 clean_att_num = 1
 
+            # Parse mistakes from comma-separated string
+            mistakes = [m.strip() for m in mistakes_str.split(",") if m.strip()] if mistakes_str else []
+
             att = Attempt(
                 id=aid,
                 problem_id=pid,
@@ -565,6 +576,7 @@ class DuckDBStorage(ProblemRepository, SubmissionRepository, AttemptRepository):
                 reasoning=reasoning,
                 analysis=analysis,
                 status=SubmissionStatus.parse(att_status),
+                mistakes=mistakes,
                 created_at=a_created,
                 updated_at=a_updated,
                 submissions=submissions,

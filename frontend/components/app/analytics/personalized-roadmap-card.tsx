@@ -1,12 +1,12 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import { getPersonalizedRoadmap, ApiError } from "@/lib/api";
 import type {
-  PersonalizedRoadmapDTO,
-  RoadmapMilestoneDTO,
-  ProblemRecommendationDTO,
-} from "@/lib/api/types";
+  PersonalizedRoadmap,
+  RoadmapMilestone,
+  ProblemRecommendation,
+} from "@/lib/types";
 import { Surface, SurfaceHeader } from "@/components/ui/surface";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -40,12 +40,12 @@ const DIFFICULTY_VARIANT = {
 
 type BadgeVariant = "success" | "warning" | "error" | "neutral";
 
-function ProblemRow({ prob }: { prob: ProblemRecommendationDTO }) {
+function ProblemRow({ prob }: { prob: ProblemRecommendation }) {
   const [showWhy, setShowWhy] = React.useState(false);
   const reasons =
-    prob.similarity_reasons && prob.similarity_reasons.length > 0
-      ? prob.similarity_reasons
-      : [prob.selection_rationale];
+    prob.similarityReasons && prob.similarityReasons.length > 0
+      ? prob.similarityReasons
+      : [prob.selectionRationale];
 
   return (
     <div className="rounded-lg bg-surface-elevated border border-border-soft">
@@ -93,7 +93,7 @@ function ProblemRow({ prob }: { prob: ProblemRecommendationDTO }) {
           )}
           <p className="text-caption text-text-secondary">
             <span className="font-medium text-text-primary">Skill: </span>
-            {prob.target_skill}
+            {prob.targetSkill}
           </p>
           <ul className="space-y-1">
             {reasons.map((reason, i) => (
@@ -109,13 +109,13 @@ function ProblemRow({ prob }: { prob: ProblemRecommendationDTO }) {
   );
 }
 
-function PhaseCard({ milestone, index }: { milestone: RoadmapMilestoneDTO; index: number }) {
+function PhaseCard({ milestone, index }: { milestone: RoadmapMilestone; index: number }) {
   const [expanded, setExpanded] = React.useState(index === 0);
   const [showWhy, setShowWhy] = React.useState(false);
   const status = STATUS_CONFIG[milestone.status] ?? STATUS_CONFIG.locked;
-  const objective = milestone.objective || milestone.learning_objective;
+  const objective = milestone.objective || milestone.learningObjective;
   const rationale = milestone.rationale || milestone.relevance;
-  const skills = milestone.target_skills?.length ? milestone.target_skills : milestone.concepts_to_study;
+  const skills = milestone.targetSkills?.length ? milestone.targetSkills : milestone.conceptsToStudy;
 
   return (
     <div
@@ -137,7 +137,7 @@ function PhaseCard({ milestone, index }: { milestone: RoadmapMilestoneDTO; index
             {status.icon}
             <p className="text-body-sm font-semibold text-text-primary truncate">{milestone.title}</p>
             <Badge variant="neutral" className="text-caption shrink-0">
-              {milestone.recommended_problems.length} problems
+              {milestone.recommendedProblems.length} problems
             </Badge>
           </div>
           <p className="text-caption text-text-muted mt-0.5 line-clamp-2">{objective}</p>
@@ -189,15 +189,15 @@ function PhaseCard({ milestone, index }: { milestone: RoadmapMilestoneDTO; index
             </div>
           )}
 
-          {milestone.recommended_problems.length > 0 && (
+          {milestone.recommendedProblems.length > 0 && (
             <div>
               <div className="flex items-center gap-1.5 mb-2">
                 <Target className="h-3.5 w-3.5 text-accent" />
                 <p className="text-caption font-medium text-text-primary">Practice these</p>
               </div>
               <div className="space-y-2">
-                {milestone.recommended_problems.map((prob) => (
-                  <ProblemRow key={prob.problem_slug} prob={prob} />
+                {milestone.recommendedProblems.map((prob) => (
+                  <ProblemRow key={prob.problemSlug} prob={prob} />
                 ))}
               </div>
             </div>
@@ -205,12 +205,12 @@ function PhaseCard({ milestone, index }: { milestone: RoadmapMilestoneDTO; index
 
           <div className="space-y-1.5">
             <p className="text-caption font-medium text-text-primary">Done when</p>
-            <p className="text-body-sm text-text-secondary">{milestone.completion_criteria}</p>
+            <p className="text-body-sm text-text-secondary">{milestone.completionCriteria}</p>
           </div>
 
-          {milestone.reflection_question && (
+          {milestone.reflectionQuestion && (
             <div className="p-3 rounded-lg bg-accent/8 border border-accent/20">
-              <p className="text-body-sm text-accent italic">{milestone.reflection_question}</p>
+              <p className="text-body-sm text-accent italic">{milestone.reflectionQuestion}</p>
             </div>
           )}
 
@@ -224,7 +224,7 @@ function PhaseCard({ milestone, index }: { milestone: RoadmapMilestoneDTO; index
 }
 
 export function PersonalizedRoadmapCard({ className }: { className?: string }) {
-  const [data, setData] = React.useState<PersonalizedRoadmapDTO | null>(null);
+  const [data, setData] = React.useState<PersonalizedRoadmap | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -277,29 +277,29 @@ export function PersonalizedRoadmapCard({ className }: { className?: string }) {
           </div>
         ) : data && data.milestones.length > 0 ? (
           <>
-            {(data.learning_profile_summary || data.overall_rationale) && (
+            {(data.learningProfileSummary || data.overallRationale) && (
               <div className="p-3 rounded-lg bg-surface-elevated border border-border-soft space-y-1.5">
                 <div className="flex items-center gap-2">
                   <Sparkles className="h-3.5 w-3.5 text-accent" />
                   <p className="text-caption font-semibold text-text-primary">Personalized from your history</p>
-                  {data.is_early_stage && (
+                  {data.isEarlyStage && (
                     <Badge variant="neutral" className="text-caption">Early stage</Badge>
                   )}
                 </div>
-                {data.learning_profile_summary && (
-                  <p className="text-body-sm text-text-secondary">{data.learning_profile_summary}</p>
+                {data.learningProfileSummary && (
+                  <p className="text-body-sm text-text-secondary">{data.learningProfileSummary}</p>
                 )}
-                {data.overall_rationale && (
-                  <p className="text-caption text-text-muted">{data.overall_rationale}</p>
+                {data.overallRationale && (
+                  <p className="text-caption text-text-muted">{data.overallRationale}</p>
                 )}
               </div>
             )}
 
-            {data.limitations.length > 0 && (
+            {(data.limitations?.length ?? 0) > 0 && (
               <div className="flex items-start gap-2 p-2.5 rounded-lg bg-surface-elevated border border-border-soft">
                 <Info className="h-3.5 w-3.5 mt-0.5 text-text-faint shrink-0" />
                 <div className="space-y-0.5">
-                  {data.limitations.slice(0, 3).map((lim, i) => (
+                  {(data.limitations?.slice(0, 3) ?? []).map((lim, i) => (
                     <p key={i} className="text-caption text-text-muted">{lim}</p>
                   ))}
                 </div>
@@ -331,7 +331,7 @@ export function PersonalizedRoadmapCard({ className }: { className?: string }) {
             </div>
 
             <p className="text-caption text-text-faint text-right">
-              Generated {new Date(data.generated_at).toLocaleDateString()}
+              Generated {new Date(data.generatedAt).toLocaleDateString()}
             </p>
           </>
         ) : (
@@ -344,5 +344,33 @@ export function PersonalizedRoadmapCard({ className }: { className?: string }) {
         )}
       </div>
     </Surface>
+  );
+}
+
+function DifficultyBadge({ difficulty }: { difficulty: string }) {
+  const variant = {
+    Easy: "success",
+    Medium: "warning",
+    Hard: "error",
+  } as Record<string, "success" | "warning" | "error" | "neutral">;
+
+  return (
+    <Badge variant={variant[difficulty] ?? "neutral"} className="text-caption">
+      {difficulty}
+    </Badge>
+  );
+}
+
+function SortSelect({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="h-9 rounded-md border border-border bg-surface pl-3 pr-3 text-body-sm text-text-primary"
+    >
+      <option value="phase">Phase order</option>
+      <option value="problems">Most problems</option>
+      <option value="difficulty">Difficulty</option>
+    </select>
   );
 }

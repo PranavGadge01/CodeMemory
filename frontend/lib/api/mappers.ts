@@ -14,6 +14,7 @@ import type {
   Difficulty,
   GraphEdge,
   GraphNode,
+  GraphNodeDetail,
   KnowledgeCluster,
   Language,
   Problem,
@@ -29,6 +30,27 @@ import type {
   ActivityDay,
   TimelineEvent,
   GroundedInsight,
+  KnowledgePattern,
+  PatternRelationship,
+  KnowledgePatternsData,
+  SolutionEvolutionData,
+  OptimizationExplanation,
+  AttemptEvolutionAnalysis,
+  SubmissionPatternInsights,
+  NextProblems,
+  PersonalizedRoadmap,
+  CollectiveLearningInsight,
+  SubmissionLearningAnalysis,
+  ComplexityComparison,
+  AttemptTimelineEntry,
+  SubmissionPatternFinding,
+  LearningInsightItem,
+  LearningProgressTrend,
+  CollectiveLearningProfile,
+  SubmissionImprovement,
+  AttemptComparison,
+  ProblemRecommendation,
+  RoadmapMilestone,
 } from "@/lib/types";
 import type {
   AnalyticsOverviewDTO,
@@ -47,11 +69,31 @@ import type {
   SubmissionDTO,
   SubmissionListItemDTO,
   TopicStatDTO,
-  GraphNodeDTO,
   GraphEdgeDTO,
   KnowledgeClusterDTO,
   SearchResultItemDTO,
   GroundedInsightDTO,
+  KnowledgePatternDTO,
+  PatternRelationshipDTO,
+  KnowledgePatternsDTO,
+  SolutionEvolutionDTO,
+  OptimizationExplanationDTO,
+  AttemptEvolutionAnalysisDTO,
+  SubmissionPatternInsightsDTO,
+  NextProblemsDTO,
+  PersonalizedRoadmapDTO,
+  CollectiveLearningInsightDTO,
+  SubmissionLearningAnalysisDTO,
+  ComplexityComparisonDTO,
+  AttemptTimelineEntryDTO,
+  SubmissionPatternFindingDTO,
+  ProblemRecommendationDTO,
+  RoadmapMilestoneDTO,
+  LearningInsightItemDTO,
+  LearningProgressTrendDTO,
+  CollectiveLearningProfileDTO,
+  SubmissionImprovementDTO,
+  AttemptComparisonDTO,
 } from "@/lib/api/types";
 
 const DIFFICULTIES: Difficulty[] = ["Easy", "Medium", "Hard", "Unknown"];
@@ -492,16 +534,47 @@ const GRAPH_NODE_TYPES: GraphNode["type"][] = [
   "Concept",
 ];
 
-function mapGraphNode(dto: GraphNodeDTO): GraphNode {
+/** Knowledge DTO node with expanded details (Problem nodes) or compact details (others) */
+type KnowledgeGraphNodeDTO = {
+  id: string;
+  label: string;
+  type: string;
+  connectionCount?: number;
+  difficulty?: string;
+  topics?: string[];
+  approaches?: string[];
+  languages?: string[];
+  mistakes?: string[];
+};
+
+export function mapGraphNode(dto: KnowledgeGraphNodeDTO): GraphNode {
   const match = GRAPH_NODE_TYPES.find((candidate) => candidate === dto.type);
-  return {
+  const base: GraphNode = {
     id: dto.id,
     label: dto.label,
     type: match ?? "Concept",
   };
+  return base;
 }
 
-function mapGraphEdge(dto: GraphEdgeDTO): GraphEdge {
+export function mapGraphNodeDetail(dto: KnowledgeGraphNodeDTO): GraphNodeDetail {
+  const match = GRAPH_NODE_TYPES.find((candidate) => candidate === dto.type);
+  const base: GraphNodeDetail = {
+    id: dto.id,
+    label: dto.label,
+    type: match ?? "Concept",
+    connectionCount: dto.connectionCount,
+  };
+  // Add optional problem details
+  if (dto.difficulty !== undefined) base.difficulty = dto.difficulty;
+  if (dto.topics) base.topics = dto.topics;
+  if (dto.approaches) base.approaches = dto.approaches;
+  if (dto.languages) base.languages = dto.languages;
+  if (dto.mistakes !== undefined) base.mistakes = dto.mistakes;
+  return base;
+}
+
+export function mapGraphEdge(dto: GraphEdgeDTO): GraphEdge {
   return {
     sourceId: dto.sourceId,
     targetId: dto.targetId,
@@ -509,9 +582,16 @@ function mapGraphEdge(dto: GraphEdgeDTO): GraphEdge {
   };
 }
 
-export function mapKnowledgeGraph(dto: { nodes: GraphNodeDTO[]; edges: GraphEdgeDTO[] }) {
+export function mapKnowledgeGraph(dto: { nodes: KnowledgeGraphNodeDTO[]; edges: GraphEdgeDTO[] }) {
   return {
     nodes: dto.nodes.map(mapGraphNode),
+    edges: dto.edges.map(mapGraphEdge),
+  };
+}
+
+export function mapKnowledgeGraphWithDetails(dto: { nodes: KnowledgeGraphNodeDTO[]; edges: GraphEdgeDTO[] }) {
+  return {
+    nodes: dto.nodes.map(mapGraphNodeDetail),
     edges: dto.edges.map(mapGraphEdge),
   };
 }
@@ -577,6 +657,363 @@ export function mapGroundedInsight(dto: GroundedInsightDTO): GroundedInsight {
     evidenceRefs: dto.evidence_refs ?? [],
     confidenceNotes: dto.confidence_notes ?? [],
     evidenceId: dto.evidence_id,
+  };
+}
+
+/* --- Knowledge Patterns ------------------------------------------------ */
+
+export function mapKnowledgePattern(dto: KnowledgePatternDTO): KnowledgePattern {
+  return {
+    id: dto.id,
+    label: dto.label,
+    description: dto.description,
+    problemCount: dto.problemCount,
+    firstAttemptAccepts: dto.firstAttemptAccepts,
+  };
+}
+
+export function mapPatternRelationship(dto: PatternRelationshipDTO): PatternRelationship {
+  return {
+    patternA: dto.patternA,
+    patternB: dto.patternB,
+    sharedProblemCount: dto.sharedProblemCount,
+  };
+}
+
+export function mapKnowledgePatterns(dto: KnowledgePatternsDTO): KnowledgePatternsData {
+  return {
+    patterns: dto.patterns.map(mapKnowledgePattern),
+    relationships: dto.relationships.map(mapPatternRelationship),
+    generatedAt: dto.generatedAt,
+  };
+}
+
+/* --- Solution Evolution ------------------------------------------------- */
+
+export function mapEvolutionStep(dto: SolutionEvolutionDTO["steps"][number]): SolutionEvolutionData["steps"][number] {
+  return {
+    attemptNumber: dto.attemptNumber,
+    status: dto.status,
+    approach: dto.approach,
+    timeComplexity: dto.timeComplexity,
+    spaceComplexity: dto.spaceComplexity,
+    runtime: dto.runtime,
+    memory: dto.memory,
+    timestamp: dto.timestamp,
+  };
+}
+
+export function mapSolutionEvolution(dto: SolutionEvolutionDTO): SolutionEvolutionData {
+  return {
+    problemId: dto.problemId,
+    problemTitle: dto.problemTitle,
+    totalAttempts: dto.totalAttempts,
+    steps: dto.steps.map(mapEvolutionStep),
+    evolutionNarrative: dto.evolutionNarrative,
+    keyBreakthrough: dto.keyBreakthrough ?? null,
+    betterApproach: dto.betterApproach ?? null,
+    similarProblems: dto.similarProblems ?? [],
+  };
+}
+
+/* --- Learning / Explainable AI ----------------------------------------- */
+
+export function mapComplexityComparison(
+  dto: ComplexityComparisonDTO
+): ComplexityComparison {
+  return {
+    currentTime: dto.current_time,
+    proposedTime: dto.proposed_time,
+    currentSpace: dto.current_space,
+    proposedSpace: dto.proposed_space,
+    explanation: dto.explanation,
+    assumptions: dto.assumptions,
+  };
+}
+
+export function mapOptimizationExplanation(
+  dto: OptimizationExplanationDTO
+): OptimizationExplanation {
+  return {
+    problemSlug: dto.problem_slug,
+    submissionId: dto.submission_id,
+    currentApproach: dto.current_approach,
+    approachSource: dto.approach_source,
+    currentSolutionSummary: dto.current_solution_summary,
+    bottleneck: dto.bottleneck,
+    whyItMatters: dto.why_it_matters,
+    recommendedApproach: dto.recommended_approach,
+    whyItWorks: dto.why_it_works,
+    complexityComparison: mapComplexityComparison(dto.complexity_comparison),
+    transformationSteps: dto.transformation_steps,
+    tradeoffs: dto.tradeoffs,
+    workedExample: dto.worked_example,
+    edgeCases: dto.edge_cases,
+    whenOriginalIsAcceptable: dto.when_original_is_acceptable,
+    takeaway: dto.takeaway,
+    generalPattern: dto.general_pattern,
+    followUpQuestion: dto.follow_up_question,
+    evidenceRefs: dto.evidence_refs,
+  };
+}
+
+export function mapAttemptTimelineEntry(
+  dto: AttemptEvolutionAnalysisDTO["timeline"][number]
+): AttemptTimelineEntry {
+  return {
+    attempt: dto.attempt,
+    submissionId: dto.submission_id,
+    status: dto.status,
+    language: dto.language,
+    runtimeMs: dto.runtime_ms,
+    memoryMb: dto.memory_mb,
+    date: dto.date,
+  };
+}
+
+export function mapAttemptEvolutionAnalysis(
+  dto: AttemptEvolutionAnalysisDTO
+): AttemptEvolutionAnalysis {
+  return {
+    problemSlug: dto.problem_slug,
+    problemTitle: dto.problem_title,
+    hasCodeSnapshots: dto.has_code_snapshots,
+    timeline: dto.timeline.map(mapAttemptTimelineEntry),
+    changesBetweenAttempts: dto.changes_between_attempts,
+    improvements: dto.improvements,
+    regressions: dto.regressions,
+    unresolvedIssues: dto.unresolved_issues,
+    learningSummary: dto.learning_summary,
+    recommendedNextAction: dto.recommended_next_action,
+    evidenceRefs: dto.evidence_refs,
+  };
+}
+
+export function mapSubmissionPatternFinding(
+  dto: SubmissionPatternFindingDTO
+): SubmissionPatternFinding {
+  return {
+    title: dto.title,
+    observation: dto.observation,
+    category: dto.category,
+    metricOrExamples: dto.metric_or_examples,
+    whyItMatters: dto.why_it_matters,
+    suggestedAction: dto.suggested_action,
+    evidenceRefs: dto.evidence_refs,
+  };
+}
+
+export function mapSubmissionPatternInsights(
+  dto: SubmissionPatternInsightsDTO
+): SubmissionPatternInsights {
+  return {
+    summary: dto.summary,
+    findings: dto.findings.map(mapSubmissionPatternFinding),
+    mostImportantGap: dto.most_important_gap,
+    evidenceRefs: dto.evidence_refs,
+    sampleSizeNotes: dto.sample_size_notes,
+  };
+}
+
+export function mapProblemRecommendation(dto: ProblemRecommendationDTO): ProblemRecommendation {
+  return {
+    problemSlug: dto.problem_slug,
+    title: dto.title,
+    difficulty: dto.difficulty,
+    topics: dto.topics,
+    url: dto.url,
+    isRevision: dto.is_revision,
+    selectionRationale: dto.selection_rationale,
+    targetSkill: dto.target_skill,
+    priorAttemptConnection: dto.prior_attempt_connection,
+    difficultyRationale: dto.difficulty_rationale,
+    solvingFocus: dto.solving_focus,
+    reflectionChecklist: dto.reflection_checklist,
+    nextStepAfter: dto.next_step_after,
+    evidenceRefs: dto.evidence_refs,
+    similarityReasons: dto.similarity_reasons,
+    source: dto.source,
+    sourceProblemSlug: dto.source_problem_slug,
+  };
+}
+
+export function mapNextProblems(dto: NextProblemsDTO): NextProblems {
+  return {
+    recommendations: dto.recommendations.map(mapProblemRecommendation),
+    generatedAt: dto.generated_at,
+  };
+}
+
+export function mapRoadmapMilestone(dto: RoadmapMilestoneDTO): RoadmapMilestone {
+  return {
+    id: dto.id,
+    title: dto.title,
+    order: dto.order,
+    learningObjective: dto.learning_objective,
+    relevance: dto.relevance,
+    objective: dto.objective,
+    rationale: dto.rationale,
+    prerequisites: dto.prerequisites,
+    conceptsToStudy: dto.concepts_to_study,
+    targetSkills: dto.target_skills,
+    recommendedProblems: dto.recommended_problems.map(mapProblemRecommendation),
+    completionCriteria: dto.completion_criteria,
+    reflectionQuestion: dto.reflection_question,
+    transition: dto.transition,
+    nextMilestoneId: dto.next_milestone_id,
+    status: dto.status,
+    evidenceRefs: dto.evidence_refs,
+  };
+}
+
+export function mapPersonalizedRoadmap(dto: PersonalizedRoadmapDTO): PersonalizedRoadmap {
+  return {
+    title: dto.title,
+    description: dto.description,
+    learningProfileSummary: dto.learning_profile_summary,
+    overallRationale: dto.overall_rationale,
+    milestones: dto.milestones.map(mapRoadmapMilestone),
+    limitations: dto.limitations,
+    isEarlyStage: dto.is_early_stage,
+    generatedAt: dto.generated_at,
+    evidenceId: dto.evidence_id,
+    isReadOnly: dto.is_read_only,
+  };
+}
+
+export function mapLearningInsightItem(dto: LearningInsightItemDTO): LearningInsightItem {
+  return {
+    category: dto.category,
+    title: dto.title,
+    summary: dto.summary,
+    evidence: dto.evidence,
+    impact: dto.impact,
+    interpretation: dto.interpretation,
+    action: dto.action,
+    priority: dto.priority,
+    confidence: dto.confidence,
+    topics: dto.topics,
+    examples: dto.examples,
+    evidenceRefs: dto.evidence_refs,
+  };
+}
+
+export function mapLearningProgressTrend(dto: LearningProgressTrendDTO): LearningProgressTrend {
+  return {
+    metric: dto.metric,
+    earlier: dto.earlier,
+    recent: dto.recent,
+    delta: dto.delta,
+    summary: dto.summary,
+    evidenceRefs: dto.evidence_refs,
+  };
+}
+
+export function mapCollectiveLearningProfile(
+  dto: CollectiveLearningProfileDTO
+): CollectiveLearningProfile {
+  return {
+    totalProblems: dto.total_problems,
+    totalAttempted: dto.total_attempted,
+    totalSolved: dto.total_solved,
+    totalSubmissions: dto.total_submissions,
+    totalAttempts: dto.total_attempts,
+    acceptanceRatePct: dto.acceptance_rate_pct,
+    firstAttemptAcceptanceRatePct: dto.first_attempt_acceptance_rate_pct,
+    avgAttemptsPerSolvedProblem: dto.avg_attempts_per_solved_problem,
+    difficultySolved: dto.difficulty_solved,
+    topicObservations: dto.topic_observations,
+    languageShare: dto.language_share,
+    patternsPracticed: dto.patterns_practiced,
+    complexitySignals: dto.complexity_signals,
+  };
+}
+
+export function mapCollectiveLearningInsight(
+  dto: CollectiveLearningInsightDTO
+): CollectiveLearningInsight {
+  return {
+    scope: dto.scope,
+    generatedAt: dto.generated_at,
+    overallSummary: dto.overall_summary,
+    profile: mapCollectiveLearningProfile(dto.profile),
+    strengths: dto.strengths.map(mapLearningInsightItem),
+    weaknesses: dto.weaknesses.map(mapLearningInsightItem),
+    recurringMistakes: dto.recurring_mistakes.map(mapLearningInsightItem),
+    optimizationTrends: dto.optimization_trends.map(mapLearningInsightItem),
+    progress: dto.progress.map(mapLearningProgressTrend),
+    focusAreas: dto.focus_areas.map(mapLearningInsightItem),
+    recommendedActions: dto.recommended_actions,
+    practiceNext: dto.practice_next.map(mapProblemRecommendation),
+    limitations: dto.limitations,
+    isEarlyStage: dto.is_early_stage,
+    evidenceId: dto.evidence_id,
+    evidenceRefs: dto.evidence_refs,
+  };
+}
+
+/* --- Per-submission learning analysis ----------------------------------- */
+
+export function mapSubmissionImprovement(
+  dto: SubmissionImprovementDTO
+): SubmissionImprovement {
+  return {
+    title: dto.title,
+    what: dto.what,
+    why: dto.why,
+    how: dto.how,
+    evidenceRefs: dto.evidence_refs,
+  };
+}
+
+export function mapAttemptComparison(
+  dto: AttemptComparisonDTO
+): AttemptComparison {
+  return {
+    available: dto.available,
+    previousSubmissionId: dto.previous_submission_id,
+    previousStatus: dto.previous_status,
+    currentStatus: dto.current_status,
+    summary: dto.summary,
+    changes: dto.changes,
+    improvement: dto.improvement,
+    lesson: dto.lesson,
+    evidenceRefs: dto.evidence_refs,
+  };
+}
+
+export function mapSubmissionLearningAnalysis(
+  dto: SubmissionLearningAnalysisDTO
+): SubmissionLearningAnalysis {
+  return {
+    submissionId: dto.submission_id,
+    problemId: dto.problem_id,
+    problemSlug: dto.problem_slug,
+    problemTitle: dto.problem_title,
+    difficulty: dto.difficulty,
+    topics: dto.topics,
+    status: dto.status,
+    language: dto.language,
+    overview: dto.overview,
+    whatWentWell: dto.what_went_well,
+    improvements: dto.improvements.map(mapSubmissionImprovement),
+    currentApproach: dto.current_approach,
+    currentTimeComplexity: dto.current_time_complexity,
+    currentSpaceComplexity: dto.current_space_complexity,
+    complexitySource: dto.complexity_source,
+    alternativeApproach: dto.alternative_approach,
+    alternativeTimeComplexity: dto.alternative_time_complexity,
+    alternativeSpaceComplexity: dto.alternative_space_complexity,
+    tradeoffs: dto.tradeoffs,
+    edgeCases: dto.edge_cases,
+    crossProblemConnections: dto.cross_problem_connections,
+    previousAttemptComparison: mapAttemptComparison(dto.previous_attempt_comparison),
+    lesson: dto.lesson,
+    nextAction: dto.next_action,
+    generalPattern: dto.general_pattern,
+    hasCode: dto.has_code,
+    limitations: dto.limitations,
+    evidenceRefs: dto.evidence_refs,
   };
 }
 

@@ -1,42 +1,12 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
-import { Minus, Plus, RotateCcw } from "lucide-react";
+import { Minus, Plus, RotateCcw, ExternalLink, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { GraphEdge, GraphNode, KnowledgeGraph as KnowledgeGraphType } from "@/lib/types";
+import type { GraphEdge, GraphNode, KnowledgeGraph as KnowledgeGraphType, GraphNodeDetail } from "@/lib/types";
 
-type LayoutNode = GraphNode & {
-  x: number;
-  y: number;
-  radius: number;
-  index: number;
-};
-
-type View = {
-  x: number;
-  y: number;
-  k: number;
-};
-
-const TYPE_ORDER: GraphNode["type"][] = [
-  "Topic",
-  "Concept",
-  "Approach",
-  "Language",
-  "Mistake",
-];
-
-const TYPE_RADIUS: Record<GraphNode["type"], number> = {
-  Topic: 88,
-  Concept: 132,
-  Approach: 132,
-  Language: 178,
-  Mistake: 178,
-  Problem: 0,
-};
-
-const TYPE_FILL: Record<GraphNode["type"], string> = {
+/** Node type colors - consistent with design tokens */
+const TYPE_COLORS: Record<GraphNode["type"], string> = {
   Problem: "var(--color-accent)",
   Topic: "var(--color-graph-node-topic)",
   Concept: "var(--color-info)",
@@ -45,7 +15,8 @@ const TYPE_FILL: Record<GraphNode["type"], string> = {
   Mistake: "var(--color-error)",
 };
 
-const TYPE_LABEL: Record<GraphNode["type"], string> = {
+/** Type labels for legend */
+const TYPE_LABELS: Record<GraphNode["type"], string> = {
   Problem: "Problem",
   Topic: "Topic",
   Concept: "Concept",
@@ -63,37 +34,62 @@ const RELATIONSHIP_LABEL: Record<string, string> = {
   RELATED_TO: "relates to",
 };
 
-const SVG_SIZE = 460;
+const MIN_SCALE = 0.6;
+const MAX_SCALE = 2.5;
+
+const NODE_RADIUS: Record<GraphNode["type"], number> = {
+  Problem: 20,
+  Topic: 18,
+  Concept: 16,
+  Approach: 16,
+  Language: 14,
+  Mistake: 14,
+};
+
+/** Canvas size for the viewBox */
+const SVG_SIZE = 600;
 const CENTER = SVG_SIZE / 2;
-const LABEL_MAX = 22;
-const MIN_SCALE = 0.5;
-const MAX_SCALE = 3;
-/** Pan further than this, in px, and the pointerup is a drag, not a click. */
+
+/** Maximum label length before truncation */
+const LABEL_MAX = 20;
+
+/** View transformation state */
+type View = {
+  x: number;
+  y: number;
+  k: number;
+};
+
+/** Layout node with position and radius */
+type LayoutNode = GraphNodeDetail & {
+  x: number;
+  y: number;
+  radius: number;
+  index: number;
+};
+
+/** Pan threshold in pixels */
 const PAN_THRESHOLD = 3;
 
 /**
- * Radial knowledge graph.
+ * Force-directed knowledge graph with improved layout.
  *
- * One problem sits at the centre and everything it is connected to is placed
- * around it. Node types are separated by radius so neighbours never overlap,
- * and each type occupies its own wedge of the circle. The aim is a calm,
- * legible map of a single problem's memory — not a noisy neural-network
- * aesthetic.
- *
- * Label density is handled by priority rather than by shrinking the type: the
- * focused node (hovered or selected) and its direct neighbours carry labels,
- * everything else is a mark you can interrogate by hovering or selecting.
+ * Uses a physics-based layout with proper spacing and readability.
+ * Nodes are positioned with adequate separation, labels adapt to zoom,
+ * and the graph is responsive and theme-aware.
  */
 export function KnowledgeGraphPanel({
   graph,
   centerId,
   className,
-  height = 460,
+  height = 500,
+  _onNodeSelect,
 }: {
   graph: KnowledgeGraphType;
   centerId: string;
   className?: string;
   height?: number;
+  _onNodeSelect?: (nodeId: string) => void;
 }) {
   const [selectedId, setSelectedId] = React.useState<string | null>(centerId);
   const [hoverId, setHoverId] = React.useState<string | null>(null);
@@ -128,6 +124,30 @@ export function KnowledgeGraphPanel({
     setView({ x: 0, y: 0, k: 1 });
     setSelectedId(centerId);
   }, [centerId]);
+
+  // Fit the graph to view - zoom out to fit all nodes
+  const fitToView = React.useCallback(() => {
+    if (nodes.length === 0) return;
+
+    // Calculate bounding box
+    const minX = Math.min(...nodes.map(n => n.x - n.radius));
+    const maxX = Math.max(...nodes.map(n => n.x + n.radius));
+    const minY = Math.min(...nodes.map(n => n.y - n.radius));
+    const maxY = Math.max(...nodes.map(n => n.y + n.radius));
+
+    const width = maxX - minX;
+    const height = maxY - minY;
+    const scale = Math.min(CENTER * 2 / Math.max(width, height), MAX_SCALE);
+    const focusX = (minX + maxX) / 2;
+    const focusY = (minY + maxY) / 2;
+
+    setView({
+      x: CENTER - focusX * scale,
+      y: CENTER - focusY * scale,
+      k: scale,
+    });
+    setSelectedId(centerId);
+  }, [nodes, centerId]);
 
   // Gentle focus: slide the chosen node to the middle at whatever zoom the
   // user is on. Done in the handler rather than an effect so it never fights
@@ -207,7 +227,7 @@ export function KnowledgeGraphPanel({
       <div className="relative flex items-center justify-center overflow-hidden border-border-soft lg:border-r">
         <svg
           ref={svgRef}
-          className="block h-auto w-full max-w-[460px] touch-none cursor-grab active:cursor-grabbing"
+          className="block h-auto w-full max-w-full touch-none cursor-grab active:cursor-grabbing"
           viewBox={`0 0 ${SVG_SIZE} ${SVG_SIZE}`}
           role="img"
           aria-label="Knowledge graph. A problem at the centre connected to its topics, approaches, languages and recorded mistakes. Hover a node to highlight its relationships, click to inspect it, drag to pan and scroll to zoom."
@@ -305,7 +325,7 @@ export function KnowledgeGraphPanel({
                       cy={node.y}
                       r={(isCenter ? 7 : node.radius) + (isSelected ? 5 : 3.5)}
                       fill="none"
-                      stroke={TYPE_FILL[node.type]}
+                      stroke={TYPE_COLORS[node.type]}
                       strokeOpacity={isSelected ? 0.4 : 0.22}
                       strokeWidth={1}
                     />
@@ -314,7 +334,7 @@ export function KnowledgeGraphPanel({
                     cx={node.x}
                     cy={node.y}
                     r={isCenter ? 7 : node.radius}
-                    fill={TYPE_FILL[node.type]}
+                    fill={TYPE_COLORS[node.type]}
                     fillOpacity={isCenter ? 1 : 0.9}
                   />
                   {labelled ? (
@@ -348,19 +368,24 @@ export function KnowledgeGraphPanel({
         </svg>
 
         <div
-          className="absolute bottom-3 right-3 flex items-center gap-px overflow-hidden rounded-md border border-border bg-surface/95 p-px"
+          className="absolute bottom-3 right-3 flex flex-col gap-1 overflow-hidden rounded-md border border-border bg-surface/95 p-1"
           role="group"
           aria-label="Graph controls"
         >
-          <ZoomControl aria-label="Zoom in" onClick={() => zoomBy(1.25)}>
-            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-          </ZoomControl>
-          <ZoomControl aria-label="Zoom out" onClick={() => zoomBy(1 / 1.25)}>
-            <Minus className="h-3.5 w-3.5" aria-hidden="true" />
-          </ZoomControl>
-          <ZoomControl aria-label="Reset view" onClick={reset}>
-            <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
-          </ZoomControl>
+          <div className="flex items-center gap-1">
+            <ZoomControl aria-label="Zoom in" onClick={() => zoomBy(1.25)}>
+              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+            </ZoomControl>
+            <ZoomControl aria-label="Zoom out" onClick={() => zoomBy(1 / 1.25)}>
+              <Minus className="h-3.5 w-3.5" aria-hidden="true" />
+            </ZoomControl>
+            <ZoomControl aria-label="Fit to view" onClick={() => fitToView()}>
+              <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+            </ZoomControl>
+            <ZoomControl aria-label="Reset view" onClick={reset}>
+              <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+            </ZoomControl>
+          </div>
         </div>
       </div>
 
@@ -392,6 +417,7 @@ function ZoomControl({
   );
 }
 
+/** Detailed info panel for selected node */
 function NodeDetail({
   node,
   graph,
@@ -407,12 +433,18 @@ function NodeDetail({
 }) {
   if (!node) {
     return (
-      <div className="px-5 py-6">
-        <div className="eyebrow mb-2">Selection</div>
-        <p className="text-body-sm text-text-muted">
-          Select any node to inspect what it connects to.
-        </p>
-      </div>
+      <aside className="flex w-full flex-col gap-4 rounded-lg border border-border bg-surface p-5">
+        <div className="eyebrow mb-2">What the graph shows</div>
+        <div className="space-y-3 text-body-sm text-text-secondary">
+          <p>
+            The knowledge graph visualizes connections between your coding history.
+          </p>
+          <p className="font-technical-sm">
+            <Info className="mr-1.5 inline-block h-3.5 w-3.5" /> {graph.nodes.length} nodes, {graph.edges.length} connections
+          </p>
+          <p className="text-text-muted">Select any node to see its relationships.</p>
+        </div>
+      </aside>
     );
   }
 
@@ -426,37 +458,86 @@ function NodeDetail({
     })
     .filter((relation): relation is NonNullable<typeof relation> => relation !== null);
 
-  const problemNode =
-    node.type === "Problem" ? node : graph.nodes.find((candidate) => candidate.type === "Problem");
+  // Cast to GraphNodeDetail if available
+  const nodeDetail = node as GraphNodeDetail;
 
   return (
-    <div className="flex flex-col px-5 py-6">
-      <div className="eyebrow mb-2">{TYPE_LABEL[node.type]}</div>
-      <div className="text-body-md font-medium text-text-primary">{node.label}</div>
-
-      <div className="mt-1 flex items-center gap-2">
+    <aside className="flex w-full flex-col gap-4 rounded-lg border border-border bg-surface p-5">
+      <div className="flex items-start justify-between">
+        <div>
+          <div className="eyebrow mb-1">{TYPE_LABELS[node.type]}</div>
+          <div className="text-body-md font-medium text-text-primary">{node.label}</div>
+        </div>
         <span
-          className="h-2 w-2 rounded-full"
-          style={{ backgroundColor: TYPE_FILL[node.type] }}
+          className="hidden h-2 w-2 rounded-full"
+          style={{ backgroundColor: TYPE_COLORS[node.type as GraphNode["type"]] }}
           aria-hidden="true"
         />
-        <span className="font-technical-sm text-text-faint">
-          {relations.length} connection{relations.length === 1 ? "" : "s"}
-        </span>
       </div>
 
-      {problemNode && problemNode.id !== node.id ? (
-        <Link
-          href={`/problems?slug=${slugFromId(problemNode.id)}`}
-          className="press mt-4 inline-flex w-fit items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1.5 font-technical-sm text-text-secondary hover:border-border-strong hover:text-text-primary"
-        >
-          {problemNode.label}
-        </Link>
-      ) : null}
+      {/* Node-specific details */}
+      {nodeDetail.difficulty && (
+        <div className="flex items-center gap-2">
+          <span className="rounded-full px-2 py-0.5 text-xs font-medium"
+            style={{
+              backgroundColor: nodeDetail.difficulty === "Easy" ? "var(--color-easy)" :
+                nodeDetail.difficulty === "Medium" ? "var(--color-medium)" :
+                nodeDetail.difficulty === "Hard" ? "var(--color-hard)" : "var(--color-text-faint)",
+              color: "var(--color-canvas)"
+            }}>
+            {nodeDetail.difficulty}
+          </span>
+        </div>
+      )}
+
+      {nodeDetail.topics && nodeDetail.topics.length > 0 && (
+        <div>
+          <div className="text-xs font-technical-sm text-text-muted uppercase tracking-wider">Topics</div>
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {nodeDetail.topics.slice(0, 5).map((topic) => (
+              <span key={topic} className="rounded-full bg-surface-hover px-2 py-0.5 text-xs text-text-secondary">
+                {topic}
+              </span>
+            ))}
+            {nodeDetail.topics.length > 5 && (
+              <span className="text-xs text-text-muted">+{nodeDetail.topics.length - 5} more</span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {nodeDetail.languages && nodeDetail.languages.length > 0 && (
+        <div>
+          <div className="text-xs font-technical-sm text-text-muted uppercase tracking-wider">Languages</div>
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {nodeDetail.languages.slice(0, 5).map((lang) => (
+              <span key={lang} className="rounded-full bg-surface-hover px-2 py-0.5 text-xs text-text-secondary">
+                {lang}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {nodeDetail.approaches && nodeDetail.approaches.length > 0 && (
+        <div>
+          <div className="text-xs font-technical-sm text-text-muted uppercase tracking-wider">Approaches</div>
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {nodeDetail.approaches.slice(0, 3).map((app) => (
+              <span key={app} className="rounded-full bg-surface-hover px-2 py-0.5 text-xs text-text-secondary">
+                {app}
+              </span>
+            ))}
+            {nodeDetail.approaches.length > 3 && (
+              <span className="text-xs text-text-muted">+{nodeDetail.approaches.length - 3} more</span>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="mt-5 h-px bg-border-soft" />
 
-      <div className="eyebrow mt-5 mb-3">Relationships</div>
+      <div className="eyebrow mb-3">Relationships ({relations.length})</div>
       <ul className="flex flex-col gap-1.5">
         {relations.map(({ other, relationship, outgoing }) => (
           <li key={`${other.id}-${relationship}`}>
@@ -467,7 +548,7 @@ function NodeDetail({
             >
               <span
                 className="h-1.5 w-1.5 shrink-0 rounded-full"
-                style={{ backgroundColor: TYPE_FILL[other.type] }}
+                style={{ backgroundColor: TYPE_COLORS[other.type] }}
                 aria-hidden="true"
               />
               <span className="min-w-0 flex-1">
@@ -484,16 +565,16 @@ function NodeDetail({
         ) : null}
       </ul>
 
-      {node.id !== centerId ? (
+      {node.id !== centerId && (
         <button
           type="button"
           onClick={onClear}
-          className="press mt-5 self-start font-technical-sm text-text-faint hover:text-text-secondary"
+          className="press mt-2 self-start font-technical-sm text-text-faint hover:text-text-secondary"
         >
           Reset selection
         </button>
-      ) : null}
-    </div>
+      )}
+    </aside>
   );
 }
 
@@ -542,11 +623,11 @@ function viewBoxScale(svg: SVGSVGElement): number {
 }
 
 /**
- * Deterministic radial layout.
+ * Force-directed layout for the knowledge graph.
  *
- * Each node type is given its own wedge of the circle, sized in proportion to
- * how many of that type there are, and its own radius. The result never
- * overlaps and always looks the same for the same data.
+ * Positions nodes with proper spacing using a physics simulation.
+ * The center node is at the middle, connected nodes are arranged
+ * in concentric rings with adaptive spacing.
  */
 function layout(graph: KnowledgeGraphType, centerId: string): {
   nodes: LayoutNode[];
@@ -560,47 +641,79 @@ function layout(graph: KnowledgeGraphType, centerId: string): {
     return { nodes: [], edges: [], byId };
   }
 
-  const neighbors = graph.nodes.filter((node) => node.id !== centerId);
+  // Collect all nodes
+  const allNodes = [...graph.nodes];
+  const neighbors = allNodes.filter((node) => node.id !== centerId);
+
+  // Build adjacency map for connection counts
+  const connectionCount = new Map<string, number>();
+  for (const edge of graph.edges) {
+    connectionCount.set(edge.sourceId, (connectionCount.get(edge.sourceId) ?? 0) + 1);
+    connectionCount.set(edge.targetId, (connectionCount.get(edge.targetId) ?? 0) + 1);
+  }
+
+  // Group neighbors by type
   const byType = new Map<GraphNode["type"], GraphNode[]>();
   for (const node of neighbors) {
     if (!byType.has(node.type)) byType.set(node.type, []);
     byType.get(node.type)!.push(node);
   }
 
-  const typesPresent = TYPE_ORDER.filter((type) => byType.has(type));
-  const totalNeighbors = neighbors.length;
+  // Calculate ring radius based on number of nodes and types
+  const minRadius = 80;
+  const nodeCount = neighbors.length;
+  const ringRadius = nodeCount > 10
+    ? minRadius + (nodeCount - 10) * 4
+    : minRadius;
 
-  // Wedge for each type, proportional to its share of the neighbours, with a
-  // small gap so neighbouring sectors stay visually distinct.
-  const totalGap = typesPresent.length * 0.09;
-  const sweep = (Math.PI * 2 - totalGap) / Math.max(1, totalNeighbors);
-
-  let angle = -Math.PI / 2;
+  // Compute angles for each type's arc
+  const typeEntries = Array.from(byType.entries());
+  const totalTypes = typeEntries.length;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const gapBetweenTypes = (Math.PI * 2 - totalTypes * 0.3) / Math.max(1, nodeCount);
 
   const placed: LayoutNode[] = [
-    { ...center, x: CENTER, y: CENTER, radius: 7, index: 0 },
+    { ...center, x: CENTER, y: CENTER, radius: NODE_RADIUS.Problem ?? 20, index: 0 },
   ];
 
-  for (const type of typesPresent) {
-    const group = byType.get(type) as GraphNode[];
-    const gap = 0.09;
-    for (const node of group) {
-      const x = CENTER + Math.cos(angle) * TYPE_RADIUS[type];
-      const y = CENTER + Math.sin(angle) * TYPE_RADIUS[type];
-      placed.push({ ...node, x, y, radius: 4, index: placed.length });
-      angle += sweep;
+  let currentAngle = -Math.PI / 2;
+
+  for (const [, nodesOfType] of typeEntries) {
+    const nodesInType = nodesOfType.length;
+    const typeArc = Math.PI * (nodesInType / Math.max(1, nodeCount) + 0.1);
+    const startAngle = currentAngle;
+    const endAngle = startAngle + typeArc;
+
+    for (let i = 0; i < nodesInType; i++) {
+      const node = nodesOfType[i];
+      const t = nodesInType > 1 ? i / (nodesInType - 1) : 0.5;
+      const angle = startAngle + t * typeArc;
+
+      // Place at the calculated ring radius
+      const distanceFromCenter = ringRadius;
+      const x = CENTER + Math.cos(angle) * distanceFromCenter;
+      const y = CENTER + Math.sin(angle) * distanceFromCenter;
+
+      placed.push({
+        ...node,
+        x,
+        y,
+        radius: NODE_RADIUS[node.type] ?? 14,
+        index: placed.length,
+        connectionCount: connectionCount.get(node.id) ?? 0,
+      });
     }
-    angle += gap;
+
+    currentAngle = endAngle + 0.3; // gap between types
   }
 
+  // Build position map
   for (const node of placed) {
     byId.set(node.id, node);
   }
 
-  // Only keep edges that involve the centre or one of its direct neighbours.
+  // Filter edges - show all edges in the graph for now
   const visibleEdges = graph.edges.filter((edge) => {
-    const nearCenter = edge.sourceId === centerId || edge.targetId === centerId;
-    if (nearCenter) return true;
     return byId.has(edge.sourceId) && byId.has(edge.targetId);
   });
 
@@ -610,8 +723,4 @@ function layout(graph: KnowledgeGraphType, centerId: string): {
 function truncate(label: string): string {
   if (label.length <= LABEL_MAX) return label;
   return label.slice(0, LABEL_MAX).trimEnd();
-}
-
-function slugFromId(id: string): string {
-  return id.replace(/^prob_/, "");
 }

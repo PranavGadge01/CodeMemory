@@ -24,6 +24,40 @@ def test_list_problems_large_page_size(client):
     data = response.json()
     assert data["pageSize"] == 1000
 
+
+def test_list_problems_carries_table_summary_fields(client):
+    """The list payload carries what the table renders.
+
+    The Problems page used to fan out one ``GET /problems/{slug}`` per row to
+    derive attempt counts, languages and best runtime. Those fields now come
+    from the list response itself.
+    """
+    data = client.get("/api/v1/problems").json()
+    item = data["items"][0]
+    assert item["slug"] == "two-sum"
+    assert item["attemptCount"] == 1
+    assert item["acceptedCount"] == 1
+    assert item["submissionCount"] == 1
+    assert item["languages"] == ["python"]
+    assert item["status"] == "Solved"
+    assert item["bestRuntime"] is None
+    assert item["bestMemory"] is None
+    assert item["lastActivityAt"] is not None
+
+
+def test_list_problems_omits_source_code(client):
+    """Full submission source lives in the detail endpoint only.
+
+    The list endpoint is the one the table calls once; it must not carry code
+    (or nested attempts), which is what made the old per-row fetch expensive.
+    """
+    item = client.get("/api/v1/problems").json()["items"][0]
+    assert "code" not in item
+    assert "attempts" not in item
+
+    detail = client.get("/api/v1/problems/two-sum").json()
+    assert detail["attempts"][0]["submissions"][0]["code"] == "print('hello')"
+
 def test_get_problem(client):
     response = client.get("/api/v1/problems/two-sum")
     assert response.status_code == 200

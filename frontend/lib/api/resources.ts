@@ -1,10 +1,7 @@
 /**
  * Typed API resources.
  *
- * One function per backend endpoint. Pages and components import these rather
- * than touching `client.ts`, so the URL surface and the response typing live in
- * one place. Each function returns the UI domain type — the DTO → domain
- * conversion happens through `mappers.ts`.
+ * One function per backend endpoint. Pages and components import these rather than touching `client.ts`, so the URL surface and the response typing live in one place. Each function returns the UI domain type — the DTO → domain conversion happens through `mappers.ts`.
  *
  * No business logic here: these are fetch + map, nothing else.
  */
@@ -25,13 +22,20 @@ import type {
   SolutionEvolutionDTO,
   SearchResponseDTO,
   GroundedInsightDTO,
+  KnowledgePatternsDTO,
+  OptimizationExplanationDTO,
+  AttemptEvolutionAnalysisDTO,
+  SubmissionPatternInsightsDTO,
+  CollectiveLearningInsightDTO,
+  SubmissionLearningAnalysisDTO,
+  NextProblemsDTO,
+  PersonalizedRoadmapDTO,
 } from "@/lib/api/types";
 import type {
   ActivityDay,
   AnalyticsOverview,
   DifficultyStat,
-  KnowledgeCluster,
-  KnowledgeGraph,
+  KnowledgeData,
   LanguageStat,
   Problem,
   ProgressOverTime,
@@ -42,13 +46,21 @@ import type {
   TimelineEvent,
   TopicStat,
   GroundedInsight,
+  KnowledgePatternsData,
+  SolutionEvolutionData,
+  OptimizationExplanation,
+  AttemptEvolutionAnalysis,
+  SubmissionPatternInsights,
+  NextProblems,
+  PersonalizedRoadmap,
+  CollectiveLearningInsight,
+  SubmissionLearningAnalysis,
 } from "@/lib/types";
 import {
   mapActivityDay,
   mapAnalyticsOverview,
   mapDifficultyStat,
-  mapKnowledgeCluster,
-  mapKnowledgeGraph,
+  mapKnowledgeGraphWithDetails,
   mapLanguageStat,
   mapProblem,
   mapProblemListItem,
@@ -62,6 +74,15 @@ import {
   mapGroundedInsight,
   mapSubmissionListItem,
   type SubmissionListItem,
+  mapKnowledgePatterns,
+  mapSolutionEvolution,
+  mapOptimizationExplanation,
+  mapAttemptEvolutionAnalysis,
+  mapSubmissionPatternInsights,
+  mapNextProblems,
+  mapPersonalizedRoadmap,
+  mapCollectiveLearningInsight,
+  mapSubmissionLearningAnalysis,
 } from "@/lib/api/mappers";
 
 /* --- Health ------------------------------------------------------------- */
@@ -148,30 +169,8 @@ export function getProblem(slug: string): Promise<Problem> {
   return apiGet<ProblemDTO>(`/problems/${encodeURIComponent(slug)}`).then(mapProblem);
 }
 
-export interface SolutionEvolutionData {
-  problemId: string;
-  problemTitle: string;
-  totalAttempts: number;
-  steps: SolutionEvolutionStep[];
-  evolutionNarrative: string;
-  keyBreakthrough: string | null;
-  betterApproach?: string | null;
-  similarProblems?: string[];
-}
-
-export interface SolutionEvolutionStep {
-  attemptNumber: number;
-  status: string;
-  approach: string;
-  timeComplexity: string;
-  spaceComplexity: string;
-  runtime: string | null;
-  memory: string | null;
-  timestamp: string;
-}
-
 export function getProblemEvolution(slug: string): Promise<SolutionEvolutionData> {
-  return apiGet<SolutionEvolutionDTO>(`/problems/${encodeURIComponent(slug)}/evolution`);
+  return apiGet<SolutionEvolutionDTO>(`/problems/${encodeURIComponent(slug)}/evolution`).then(mapSolutionEvolution);
 }
 
 /* --- Submissions ------------------------------------------------------- */
@@ -253,18 +252,23 @@ export async function getAnalytics(
 
 /* --- Knowledge --------------------------------------------------------- */
 
-export interface KnowledgeData {
-  graph: KnowledgeGraph;
-  clusters: KnowledgeCluster[];
-}
-
 export async function getKnowledge(): Promise<KnowledgeData> {
   const dto = await apiGet<KnowledgeDTO>("/knowledge");
 
   return {
-    graph: mapKnowledgeGraph(dto.graph),
-    clusters: dto.clusters.map(mapKnowledgeCluster),
+    graph: mapKnowledgeGraphWithDetails(dto.graph),
+    clusters: [],  // Deprecated - clusters belong to Analytics
+    entityCounts: dto.entityCounts ?? {},
   };
+}
+
+/**
+ * Get pattern summaries and relationships for the Knowledge page.
+ * Returns reusable techniques encountered in practice, along with their
+ * connections to other patterns.
+ */
+export function getKnowledgePatterns(): Promise<KnowledgePatternsData> {
+  return apiGet<KnowledgePatternsDTO>("/knowledge/patterns").then(mapKnowledgePatterns);
 }
 
 /* --- Revision ---------------------------------------------------------- */
@@ -302,11 +306,6 @@ export function updateSettings(patch: Partial<SettingsDTO>): Promise<SettingsDTO
 
 /* --- Search ----------------------------------------------------------- */
 
-export type { SearchResult } from "@/lib/types";
-export type { SearchResultItemDTO } from "@/lib/api/types";
-
-/* --- Search ----------------------------------------------------------- */
-
 export function search(query: string, limit?: number): Promise<SearchResult[]> {
   const params: Record<string, unknown> = { q: query };
   if (limit !== undefined) params.limit = limit;
@@ -329,51 +328,60 @@ export function getProblemInsight(slug: string): Promise<GroundedInsight> {
 
 /* --- Learning / Explainable AI --------------------------------------- */
 
-import type {
-  OptimizationExplanationDTO,
-  AttemptEvolutionAnalysisDTO,
-  SubmissionPatternInsightsDTO,
-  NextProblemsDTO,
-  PersonalizedRoadmapDTO,
-  CollectiveLearningInsightDTO,
-  SubmissionLearningAnalysisDTO,
-} from "@/lib/api/types";
-
 export function getOptimizationExplanation(
   slug: string,
   submissionId?: string
-): Promise<OptimizationExplanationDTO> {
+): Promise<OptimizationExplanation> {
   const qs = submissionId ? `?submission_id=${encodeURIComponent(submissionId)}` : "";
-  return apiGet<OptimizationExplanationDTO>(`/problems/${encodeURIComponent(slug)}/optimization${qs}`);
+  return apiGet<OptimizationExplanationDTO>(`/problems/${encodeURIComponent(slug)}/optimization${qs}`).then(mapOptimizationExplanation);
 }
 
-export function getLearningAnalysis(slug: string): Promise<AttemptEvolutionAnalysisDTO> {
-  return apiGet<AttemptEvolutionAnalysisDTO>(`/problems/${encodeURIComponent(slug)}/learning-analysis`);
+export function getLearningAnalysis(slug: string): Promise<AttemptEvolutionAnalysis> {
+  return apiGet<AttemptEvolutionAnalysisDTO>(`/problems/${encodeURIComponent(slug)}/learning-analysis`).then(mapAttemptEvolutionAnalysis);
 }
 
-export function getSubmissionPatterns(): Promise<SubmissionPatternInsightsDTO> {
-  return apiGet<SubmissionPatternInsightsDTO>("/learning/patterns");
+export function getSubmissionPatterns(): Promise<SubmissionPatternInsights> {
+  return apiGet<SubmissionPatternInsightsDTO>("/learning/patterns").then(mapSubmissionPatternInsights);
 }
 
-export function getCollectiveLearningProfile(): Promise<CollectiveLearningInsightDTO> {
-  return apiGet<CollectiveLearningInsightDTO>("/learning/profile");
+export function getCollectiveLearningProfile(): Promise<CollectiveLearningInsight> {
+  return apiGet<CollectiveLearningInsightDTO>("/learning/profile").then(mapCollectiveLearningInsight);
 }
 
 export function getSubmissionLearningAnalysis(
   submissionId: string
-): Promise<SubmissionLearningAnalysisDTO> {
+): Promise<SubmissionLearningAnalysis> {
   return apiGet<SubmissionLearningAnalysisDTO>(
     `/learning/submissions/${encodeURIComponent(submissionId)}`
-  );
+  ).then(mapSubmissionLearningAnalysis);
 }
 
-export function getNextRecommendations(limit = 3): Promise<NextProblemsDTO> {
-  return apiGet<NextProblemsDTO>(`/learning/recommendations?limit=${limit}`);
+export function getNextRecommendations(limit = 3): Promise<NextProblems> {
+  return apiGet<NextProblemsDTO>(`/learning/recommendations?limit=${limit}`).then(mapNextProblems);
 }
 
-export function getPersonalizedRoadmap(): Promise<PersonalizedRoadmapDTO> {
-  return apiGet<PersonalizedRoadmapDTO>("/learning/roadmap");
+export function getPersonalizedRoadmap(): Promise<PersonalizedRoadmap> {
+  return apiGet<PersonalizedRoadmapDTO>("/learning/roadmap").then(mapPersonalizedRoadmap);
 }
+
+/* --- Type exports for components --------------------------------------- */
+
+export type {
+  KnowledgeData,
+  KnowledgePatternsData,
+  OptimizationExplanation,
+  AttemptEvolutionAnalysis,
+  SubmissionPatternInsights,
+  ProblemRecommendation,
+  RoadmapMilestone,
+  PersonalizedRoadmap,
+  CollectiveLearningInsight,
+  SubmissionLearningAnalysis,
+  NextProblems,
+  KnowledgeCluster,
+  SolutionEvolutionData,
+  SubmissionListItem,
+} from "@/lib/types";
 
 /* --- LeetCode ---------------------------------------------------------- */
 

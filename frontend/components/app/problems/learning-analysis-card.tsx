@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { getLearningAnalysis, ApiError } from "@/lib/api";
-import type { AttemptEvolutionAnalysisDTO, AttemptTimelineEntryDTO } from "@/lib/api/types";
+import type { AttemptEvolutionAnalysis, AttemptTimelineEntry } from "@/lib/types";
 import { Surface, SurfaceHeader } from "@/components/ui/surface";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, AlertCircle, TrendingUp, TrendingDown, Minus, CheckCircle2 } from "lucide-react";
@@ -16,7 +16,7 @@ const STATUS_STYLE: Record<string, string> = {
   "Runtime Error": "bg-error/10 text-error border-error/30",
 };
 
-function TimelineEntry({ entry, total }: { entry: AttemptTimelineEntryDTO; total: number }) {
+function TimelineEntry({ entry, total }: { entry: AttemptTimelineEntry; total: number }) {
   const isLast = entry.attempt === total;
   const statusClass = STATUS_STYLE[entry.status] ?? "bg-surface-card text-text-secondary border-border-soft";
 
@@ -73,7 +73,7 @@ function List({ title, items, icon, color }: { title: string; items: string[]; i
 }
 
 export function LearningAnalysisCard({ slug, className }: { slug: string; className?: string }) {
-  const [data, setData] = React.useState<AttemptEvolutionAnalysisDTO | null>(null);
+  const [data, setData] = React.useState<AttemptEvolutionAnalysis | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 

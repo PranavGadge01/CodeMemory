@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { getOptimizationExplanation, ApiError } from "@/lib/api";
-import type { OptimizationExplanationDTO } from "@/lib/api/types";
+import type { OptimizationExplanation } from "@/lib/types";
 import { Surface, SurfaceHeader } from "@/components/ui/surface";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, AlertCircle, Zap, ArrowRight, Info } from "lucide-react";
@@ -33,7 +33,7 @@ function Section({ title, children, accent }: { title: string; children: React.R
 }
 
 export function OptimizationExplanationCard({ slug, className }: { slug: string; className?: string }) {
-  const [data, setData] = React.useState<OptimizationExplanationDTO | null>(null);
+  const [data, setData] = React.useState<OptimizationExplanation | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -51,10 +51,10 @@ export function OptimizationExplanationCard({ slug, className }: { slug: string;
   React.useEffect(() => { fetchData(); }, [fetchData]);
 
   const timeImproved = data
-    ? data.complexity_comparison.current_time !== data.complexity_comparison.proposed_time
+    ? data.complexityComparison.currentTime !== data.complexityComparison.proposedTime
     : false;
   const spaceImproved = data
-    ? data.complexity_comparison.current_space !== data.complexity_comparison.proposed_space
+    ? data.complexityComparison.currentSpace !== data.complexityComparison.proposedSpace
     : false;
 
   return (
@@ -84,44 +84,44 @@ export function OptimizationExplanationCard({ slug, className }: { slug: string;
           <>
             {/* Current approach */}
             <Section title="Current approach">
-              <p className="text-body-sm text-text-secondary leading-relaxed">{data.current_approach}</p>
+              <p className="text-body-sm text-text-secondary leading-relaxed">{data.currentApproach}</p>
               <div className="flex items-center gap-1.5 mt-1">
-                <Badge variant="neutral" className="text-caption">{data.approach_source}</Badge>
+                <Badge variant="neutral" className="text-caption">{data.approachSource}</Badge>
               </div>
             </Section>
 
             {/* Bottleneck */}
             <Section title="Bottleneck" accent>
               <p className="text-body-sm text-text-secondary">{data.bottleneck}</p>
-              <p className="text-caption text-text-muted">{data.why_it_matters}</p>
+              <p className="text-caption text-text-muted">{data.whyItMatters}</p>
             </Section>
 
             {/* Complexity comparison */}
             <Section title="Complexity change">
               <div className="space-y-1.5">
-                <ComplexityRow label="Time" before={data.complexity_comparison.current_time} after={data.complexity_comparison.proposed_time} better={timeImproved} />
-                <ComplexityRow label="Space" before={data.complexity_comparison.current_space} after={data.complexity_comparison.proposed_space} better={spaceImproved} />
+                <ComplexityRow label="Time" before={data.complexityComparison.currentTime} after={data.complexityComparison.proposedTime} better={timeImproved} />
+                <ComplexityRow label="Space" before={data.complexityComparison.currentSpace} after={data.complexityComparison.proposedSpace} better={spaceImproved} />
               </div>
-              <p className="text-caption text-text-muted mt-1">{data.complexity_comparison.explanation}</p>
-              {data.complexity_comparison.assumptions && (
+              <p className="text-caption text-text-muted mt-1">{data.complexityComparison.explanation}</p>
+              {data.complexityComparison.assumptions && (
                 <p className="text-caption text-text-faint flex items-start gap-1">
                   <Info className="h-3 w-3 mt-0.5 shrink-0" />
-                  {data.complexity_comparison.assumptions}
+                  {data.complexityComparison.assumptions}
                 </p>
               )}
             </Section>
 
             {/* Recommended approach */}
             <Section title="Recommended approach">
-              <p className="text-body-sm text-text-secondary leading-relaxed">{data.recommended_approach}</p>
-              <p className="text-caption text-text-muted">{data.why_it_works}</p>
+              <p className="text-body-sm text-text-secondary leading-relaxed">{data.recommendedApproach}</p>
+              <p className="text-caption text-text-muted">{data.whyItWorks}</p>
             </Section>
 
             {/* Step-by-step transformation */}
-            {data.transformation_steps && data.transformation_steps.length > 0 && (
+            {data.transformationSteps && data.transformationSteps.length > 0 && (
               <Section title="How to get there">
                 <ol className="space-y-1.5">
-                  {data.transformation_steps.map((step, i) => (
+                  {data.transformationSteps.map((step, i) => (
                     <li key={i} className="text-body-sm text-text-secondary flex items-start gap-2">
                       <span className="shrink-0 w-5 h-5 rounded-full bg-accent/15 text-accent text-caption font-bold flex items-center justify-center">
                         {i + 1}
@@ -142,10 +142,10 @@ export function OptimizationExplanationCard({ slug, className }: { slug: string;
             )}
 
             {/* Edge cases */}
-            {data.edge_cases.length > 0 && (
+            {data.edgeCases.length > 0 && (
               <Section title="Edge cases to test">
                 <ul className="space-y-1">
-                  {data.edge_cases.map((e, i) => (
+                  {data.edgeCases.map((e, i) => (
                     <li key={i} className="text-body-sm text-text-secondary flex items-start gap-1.5">
                       <span className="text-accent shrink-0">•</span>{e}
                     </li>
@@ -158,17 +158,17 @@ export function OptimizationExplanationCard({ slug, className }: { slug: string;
             <div className="p-3 rounded-lg bg-success/8 border border-success/20">
               <p className="text-caption font-semibold text-success mb-1">Key takeaway</p>
               <p className="text-body-sm text-text-secondary">{data.takeaway}</p>
-              {data.general_pattern && (
+              {data.generalPattern && (
                 <p className="text-caption text-text-muted mt-2">
                   <span className="font-medium text-text-primary">General pattern: </span>
-                  {data.general_pattern}
+                  {data.generalPattern}
                 </p>
               )}
-              {data.when_original_is_acceptable && (
-                <p className="text-caption text-text-muted mt-1">{data.when_original_is_acceptable}</p>
+              {data.whenOriginalIsAcceptable && (
+                <p className="text-caption text-text-muted mt-1">{data.whenOriginalIsAcceptable}</p>
               )}
-              {data.follow_up_question && (
-                <p className="text-caption text-text-muted mt-2 italic">💭 {data.follow_up_question}</p>
+              {data.followUpQuestion && (
+                <p className="text-caption text-text-muted mt-2 italic">💭 {data.followUpQuestion}</p>
               )}
             </div>
           </>

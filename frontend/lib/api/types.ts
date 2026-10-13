@@ -343,6 +343,7 @@ export interface KnowledgeClusterDTO {
 export interface KnowledgeDTO {
   graph: KnowledgeGraphDTO;
   clusters: KnowledgeClusterDTO[];
+  entityCounts?: Record<string, number>;
 }
 
 /* --- Settings ---------------------------------------------------------- */
@@ -429,6 +430,28 @@ export interface HealthDTO {
     tiers: string;
   };
   timestamp: string;
+}
+
+/* --- Knowledge Patterns ------------------------------------------------ */
+
+export interface KnowledgePatternDTO {
+  id: string;
+  label: string;
+  description: string;
+  problemCount: number;
+  firstAttemptAccepts: number;
+}
+
+export interface PatternRelationshipDTO {
+  patternA: string;
+  patternB: string;
+  sharedProblemCount: number;
+}
+
+export interface KnowledgePatternsDTO {
+  patterns: KnowledgePatternDTO[];
+  relationships: PatternRelationshipDTO[];
+  generatedAt: string;
 }
 
 /* --- Grounded Insights ------------------------------------------------ */
@@ -692,3 +715,4 @@ export interface SubmissionLearningAnalysisDTO {
   limitations: string[];
   evidence_refs: string[];
 }
+

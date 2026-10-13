@@ -3,10 +3,10 @@
 import * as React from "react";
 import { getCollectiveLearningProfile, ApiError } from "@/lib/api";
 import type {
-  CollectiveLearningInsightDTO,
-  LearningInsightItemDTO,
-  ProblemRecommendationDTO,
-} from "@/lib/api/types";
+  CollectiveLearningInsight,
+  LearningInsightItem,
+  ProblemRecommendation,
+} from "@/lib/types";
 import { Surface, SurfaceHeader } from "@/components/ui/surface";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -36,7 +36,7 @@ const CONFIDENCE_LABEL: Record<string, string> = {
   early_signal: "Early signal",
 };
 
-function InsightRow({ item, accent }: { item: LearningInsightItemDTO; accent: string }) {
+function InsightRow({ item, accent }: { item: LearningInsightItem; accent: string }) {
   const [expanded, setExpanded] = React.useState(false);
   const hasDetail = Boolean(item.impact || item.interpretation || item.action || item.evidence);
 
@@ -119,17 +119,17 @@ function SectionTitle({ icon, label, count }: { icon: React.ReactNode; label: st
   );
 }
 
-function PracticeNext({ recs }: { recs: ProblemRecommendationDTO[] }) {
+function PracticeNext({ recs }: { recs: ProblemRecommendation[] }) {
   if (recs.length === 0) return null;
   return (
     <div className="space-y-2">
       <SectionTitle icon={<Target className="h-3.5 w-3.5 text-accent" />} label="Practice next" count={recs.length} />
       <div className="space-y-2">
-        {recs.map((rec) => (
-          <div key={rec.problem_slug} className="flex items-center justify-between gap-2 rounded-lg bg-surface-elevated border border-border-soft p-2.5">
+        {recs.map((rec, i) => (
+          <div key={rec.problemSlug} className="flex items-center justify-between gap-2 rounded-lg bg-surface-elevated border border-border-soft p-2.5">
             <div className="min-w-0">
               <p className="text-body-sm text-text-primary truncate">{rec.title}</p>
-              <p className="text-caption text-text-muted truncate">{rec.target_skill || rec.selection_rationale}</p>
+              <p className="text-caption text-text-muted truncate">{rec.targetSkill || rec.selectionRationale}</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <Badge variant="neutral" className="text-caption">{rec.difficulty}</Badge>
@@ -152,7 +152,7 @@ function PracticeNext({ recs }: { recs: ProblemRecommendationDTO[] }) {
 }
 
 export function CollectiveInsightsCard({ className }: { className?: string }) {
-  const [data, setData] = React.useState<CollectiveLearningInsightDTO | null>(null);
+  const [data, setData] = React.useState<CollectiveLearningInsight | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -208,51 +208,51 @@ export function CollectiveInsightsCard({ className }: { className?: string }) {
         ) : data && profile ? (
           <>
             <div className="flex items-start justify-between gap-2">
-              <p className="text-body-sm text-text-secondary leading-relaxed">{data.overall_summary}</p>
-              {data.is_early_stage && (
+              <p className="text-body-sm text-text-secondary leading-relaxed">{data.overallSummary}</p>
+              {data.isEarlyStage && (
                 <Badge variant="neutral" className="text-caption shrink-0">Early stage</Badge>
               )}
             </div>
 
-            {profile.total_problems > 0 && (
+            {profile.totalProblems > 0 && (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <Stat label="Problems" value={String(profile.total_problems)} />
-                <Stat label="Solved" value={String(profile.total_solved)} />
-                <Stat label="Acceptance" value={`${profile.acceptance_rate_pct.toFixed(0)}%`} />
-                <Stat label="First-try" value={`${profile.first_attempt_acceptance_rate_pct.toFixed(0)}%`} />
+                <Stat label="Problems" value={String(profile.totalProblems)} />
+                <Stat label="Solved" value={String(profile.totalSolved)} />
+                <Stat label="Acceptance" value={`${profile.acceptanceRatePct.toFixed(0)}%`} />
+                <Stat label="First-try" value={`${profile.firstAttemptAcceptanceRatePct.toFixed(0)}%`} />
               </div>
             )}
 
-            {data.strengths.length > 0 && (
+            {(data.strengths?.length ?? 0) > 0 && (
               <div className="space-y-2">
-                <SectionTitle icon={<Award className="h-3.5 w-3.5 text-success" />} label="Your strengths" count={data.strengths.length} />
-                {data.strengths.map((s, i) => (
+                <SectionTitle icon={<Award className="h-3.5 w-3.5 text-success" />} label="Your strengths" count={data.strengths?.length ?? 0} />
+                {data.strengths?.map((s, i) => (
                   <InsightRow key={i} item={s} accent="bg-success" />
-                ))}
+                )) ?? []}
               </div>
             )}
 
-            {data.weaknesses.length > 0 && (
+            {(data.weaknesses?.length ?? 0) > 0 && (
               <div className="space-y-2">
-                <SectionTitle icon={<TrendingDown className="h-3.5 w-3.5 text-warning" />} label="Top improvement areas" count={data.weaknesses.length} />
-                {data.weaknesses.map((w, i) => (
+                <SectionTitle icon={<TrendingDown className="h-3.5 w-3.5 text-warning" />} label="Top improvement areas" count={data.weaknesses?.length ?? 0} />
+                {data.weaknesses?.map((w, i) => (
                   <InsightRow key={i} item={w} accent="bg-warning" />
-                ))}
+                )) ?? []}
               </div>
             )}
 
-            {data.recurring_mistakes.length > 0 && (
+            {(data.recurringMistakes?.length ?? 0) > 0 && (
               <div className="space-y-2">
-                <SectionTitle icon={<AlertCircle className="h-3.5 w-3.5 text-error" />} label="Recurring mistakes" count={data.recurring_mistakes.length} />
-                {data.recurring_mistakes.map((m, i) => (
+                <SectionTitle icon={<AlertCircle className="h-3.5 w-3.5 text-error" />} label="Recurring mistakes" count={data.recurringMistakes?.length ?? 0} />
+                {data.recurringMistakes?.map((m, i) => (
                   <InsightRow key={i} item={m} accent="bg-error" />
-                ))}
+                )) ?? []}
               </div>
             )}
 
-            {data.progress.length > 0 && (
+            {(data.progress?.length ?? 0) > 0 && (
               <div className="space-y-2">
-                <SectionTitle icon={<TrendingUp className="h-3.5 w-3.5 text-accent" />} label="Your progress" count={data.progress.length} />
+                <SectionTitle icon={<TrendingUp className="h-3.5 w-3.5 text-accent" />} label="Your progress" count={data.progress?.length ?? 0} />
                 <div className="rounded-lg border border-border-soft overflow-hidden">
                   <div className="grid grid-cols-4 gap-2 px-3 py-1.5 bg-surface-elevated text-caption text-text-faint">
                     <span>Metric</span>
@@ -260,59 +260,59 @@ export function CollectiveInsightsCard({ className }: { className?: string }) {
                     <span>Recent</span>
                     <span>Change</span>
                   </div>
-                  {data.progress.map((p, i) => (
+                  {data.progress?.map((p, i) => (
                     <div key={i} className="grid grid-cols-4 gap-2 px-3 py-2 border-t border-border-soft text-caption">
                       <span className="text-text-primary">{p.metric}</span>
                       <span className="text-text-muted">{p.earlier}</span>
                       <span className="text-text-muted">{p.recent}</span>
                       <span className="text-accent">{p.delta || "—"}</span>
                     </div>
-                  ))}
+                  )) ?? []}
                 </div>
               </div>
             )}
 
-            {data.optimization_trends.length > 0 && (
+            {(data.optimizationTrends?.length ?? 0) > 0 && (
               <div className="space-y-2">
-                <SectionTitle icon={<TrendingUp className="h-3.5 w-3.5 text-accent" />} label="How your solutions are evolving" count={data.optimization_trends.length} />
-                {data.optimization_trends.map((t, i) => (
+                <SectionTitle icon={<TrendingUp className="h-3.5 w-3.5 text-accent" />} label="How your solutions are evolving" count={data.optimizationTrends?.length ?? 0} />
+                {data.optimizationTrends?.map((t, i) => (
                   <InsightRow key={i} item={t} accent="bg-accent" />
-                ))}
+                )) ?? []}
               </div>
             )}
 
-            {data.focus_areas.length > 0 && (
+            {(data.focusAreas?.length ?? 0) > 0 && (
               <div className="space-y-2">
-                <SectionTitle icon={<Target className="h-3.5 w-3.5 text-accent" />} label="What to focus on next" count={data.focus_areas.length} />
-                {data.focus_areas.map((f, i) => (
+                <SectionTitle icon={<Target className="h-3.5 w-3.5 text-accent" />} label="What to focus on next" count={data.focusAreas?.length ?? 0} />
+                {data.focusAreas?.map((f, i) => (
                   <InsightRow key={i} item={f} accent="bg-accent" />
-                ))}
+                )) ?? []}
               </div>
             )}
 
-            {data.recommended_actions.length > 0 && (
+            {(data.recommendedActions?.length ?? 0) > 0 && (
               <div className="space-y-2">
-                <SectionTitle icon={<Lightbulb className="h-3.5 w-3.5 text-warning" />} label="Recommended actions" count={data.recommended_actions.length} />
+                <SectionTitle icon={<Lightbulb className="h-3.5 w-3.5 text-warning" />} label="Recommended actions" count={data.recommendedActions?.length ?? 0} />
                 <ul className="space-y-1.5">
-                  {data.recommended_actions.map((action, i) => (
+                  {data.recommendedActions?.map((action, i) => (
                     <li key={i} className="flex items-start gap-2 text-body-sm text-text-secondary">
                       <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 text-accent shrink-0" />
                       <span>{action}</span>
                     </li>
-                  ))}
+                  )) ?? []}
                 </ul>
               </div>
             )}
 
-            <PracticeNext recs={data.practice_next} />
+            <PracticeNext recs={data.practiceNext ?? []} />
 
-            {data.limitations.length > 0 && (
+            {(data.limitations?.length ?? 0) > 0 && (
               <div className="flex items-start gap-2 p-2.5 rounded-lg bg-surface-elevated border border-border-soft">
                 <Info className="h-3.5 w-3.5 mt-0.5 text-text-faint shrink-0" />
                 <div className="space-y-0.5">
-                  {data.limitations.slice(0, 3).map((lim, i) => (
+                  {data.limitations?.slice(0, 3).map((lim, i) => (
                     <p key={i} className="text-caption text-text-muted">{lim}</p>
-                  ))}
+                  )) ?? []}
                 </div>
               </div>
             )}
