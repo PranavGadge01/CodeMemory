@@ -14,6 +14,7 @@ from codememory.connectors.leetcode.errors import LeetCodeError
 from codememory.connectors.leetcode.mapper import LeetCodeMapper
 from codememory.connectors.leetcode.vault import CredentialVault
 from codememory.domain.enums import SubmissionStatus
+from codememory.domain.import_schema import normalize_leetcode_memory
 from codememory.domain.models import generate_slug
 
 logger = logging.getLogger(__name__)
@@ -221,6 +222,7 @@ class AuthenticatedSyncOrchestrator:
 
                         # Check if this is an accepted submission to fetch code
                         code_data = None
+                        code_data_memory_mb = None
                         if normalized_record.status == SubmissionStatus.ACCEPTED:
                             self.stats["code_fetch_attempted"] += 1
                             code_data = client.fetch_submission_code(raw_submission.id)
@@ -231,8 +233,9 @@ class AuthenticatedSyncOrchestrator:
                                     normalized_record.language = code_data["language"]
                                 if code_data.get("runtime"):
                                     normalized_record.runtime_ms = code_data["runtime"]
-                                if code_data.get("memory"):
-                                    normalized_record.memory_mb = code_data["memory"]
+                                code_data_memory_mb = normalize_leetcode_memory(code_data.get("memory"))
+                                if code_data_memory_mb is not None:
+                                    normalized_record.memory_mb = code_data_memory_mb
                                 self.stats["code_fetched"] += 1
                                 logger.debug(f"Fetched code for submission {raw_submission.id}")
                             else:
@@ -328,8 +331,8 @@ class AuthenticatedSyncOrchestrator:
                                                         sub_in_tree.language = code_data.get("language") or sub_in_tree.language
                                                         if code_data.get("runtime"):
                                                             sub_in_tree.runtime_ms = code_data["runtime"]
-                                                        if code_data.get("memory"):
-                                                            sub_in_tree.memory_mb = code_data["memory"]
+                                                        if code_data_memory_mb is not None:
+                                                            sub_in_tree.memory_mb = code_data_memory_mb
                                                         # Recompute hash with new code
                                                         from codememory.domain.models import compute_submission_hash as _compute_hash
                                                         sub_in_tree.submission_hash = _compute_hash(

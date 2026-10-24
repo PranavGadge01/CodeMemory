@@ -1,0 +1,127 @@
+{
+  "id": "ebe7daa2-1ca1-4efb-9e3f-418078e5281d",
+  "title": "Two Sum",
+  "slug": "two-sum",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/two-sum/",
+  "topics": [
+    "Array",
+    "Hash Table"
+  ],
+  "statement": "Given an array of integers `nums` and an integer `target`, return indices of two numbers such that they add up to `target`.",
+  "created_at": "2026-10-15T19:06:28.820657Z",
+  "updated_at": "2026-10-15T19:06:28.820657Z",
+  "attempts": [
+    {
+      "id": "f222a722-1f8b-4d74-8a18-f8fb5f5968b2",
+      "problem_id": "ebe7daa2-1ca1-4efb-9e3f-418078e5281d",
+      "attempt_number": 1,
+      "approach_summary": "Brute Force Double Loop",
+      "reasoning": "Check all pairs of elements to find two numbers summing to target.",
+      "mistakes": [
+        "O(N^2) time complexity causes TLE on large arrays."
+      ],
+      "analysis": {
+        "approach_name": "Standard Approach",
+        "time_complexity": "O(N^2)",
+        "space_complexity": "O(1)",
+        "key_insights": [],
+        "trade_offs": null,
+        "bottleneck": null
+      },
+      "status": "Unknown",
+      "created_at": "2026-10-15T19:06:28.837811Z",
+      "updated_at": "2026-10-15T19:06:28.837811Z",
+      "submissions": []
+    },
+    {
+      "id": "64245537-e827-47ee-85d0-9f89c74097c3",
+      "problem_id": "ebe7daa2-1ca1-4efb-9e3f-418078e5281d",
+      "attempt_number": 2,
+      "approach_summary": "One-pass Hash Map Lookups",
+      "reasoning": "Store complement target - num in hash map while iterating over nums array.",
+      "mistakes": [],
+      "analysis": {
+        "approach_name": "Standard Approach",
+        "time_complexity": "O(N)",
+        "space_complexity": "O(N)",
+        "key_insights": [],
+        "trade_offs": null,
+        "bottleneck": null
+      },
+      "status": "Unknown",
+      "created_at": "2026-10-15T19:06:28.903907Z",
+      "updated_at": "2026-10-15T19:06:28.903907Z",
+      "submissions": []
+    },
+    {
+      "id": "6405ea24-4f7e-4bea-ba74-e5dc3ef58f22",
+      "problem_id": "ebe7daa2-1ca1-4efb-9e3f-418078e5281d",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Time Limit Exceeded",
+      "created_at": "2026-10-15T19:06:28.870990Z",
+      "updated_at": "2026-10-15T19:06:28.870990Z",
+      "submissions": [
+        {
+          "id": "834a58c0-49d2-49a9-8d7f-8b67065a16ca",
+          "problem_id": "ebe7daa2-1ca1-4efb-9e3f-418078e5281d",
+          "attempt_id": "6405ea24-4f7e-4bea-ba74-e5dc3ef58f22",
+          "code": "def twoSum(nums, target):\n    for i in range(len(nums)):\n        for j in range(i+1, len(nums)):\n            if nums[i] + nums[j] == target: return [i, j]\n    return []",
+          "language": "python",
+          "status": "Time Limit Exceeded",
+          "runtime_ms": null,
+          "memory_mb": 16.2,
+          "submitted_at": "2026-10-15T19:06:28.870990Z",
+          "error_message": "Time Limit Exceeded",
+          "submission_hash": "198795a06017309110a51acbabab2a768579d310e1880e1e6dd9b03ae3455b10",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    },
+    {
+      "id": "1f076444-29b1-460f-83ef-911770ed535f",
+      "problem_id": "ebe7daa2-1ca1-4efb-9e3f-418078e5281d",
+      "attempt_number": 4,
+      "approach_summary": "Attempt 4",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:28.956224Z",
+      "updated_at": "2026-10-15T19:06:28.956224Z",
+      "submissions": [
+        {
+          "id": "6c533e46-5ee7-4332-b61a-0b45ba06ab78",
+          "problem_id": "ebe7daa2-1ca1-4efb-9e3f-418078e5281d",
+          "attempt_id": "1f076444-29b1-460f-83ef-911770ed535f",
+          "code": "def twoSum(nums, target):\n    seen = {}\n    for i, num in enumerate(nums):\n        if target - num in seen: return [seen[target - num], i]\n        seen[num] = i\n    return []",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": 45.0,
+          "memory_mb": 16.4,
+          "submitted_at": "2026-10-15T19:06:28.956224Z",
+          "error_message": null,
+          "submission_hash": "68d0c18622cd5caad92b9654eb59287d3eb85dffc1e7c1d5be28ace4b42e6803",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": [
+    {
+      "id": "f56809bd-194b-42fe-954c-cad2aa624215",
+      "problem_id": "ebe7daa2-1ca1-4efb-9e3f-418078e5281d",
+      "attempt_id": null,
+      "content": "Hash map provides O(1) average lookup time.",
+      "note_type": "General",
+      "created_at": "2026-10-15T19:06:29.035211Z"
+    }
+  ]
+}

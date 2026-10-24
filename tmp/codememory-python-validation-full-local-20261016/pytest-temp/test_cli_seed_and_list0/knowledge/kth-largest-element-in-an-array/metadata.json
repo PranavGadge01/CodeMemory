@@ -1,0 +1,70 @@
+{
+  "id": "f7df64b4-3754-4dc1-945e-d0d42f2b0860",
+  "title": "Kth Largest Element in an Array",
+  "slug": "kth-largest-element-in-an-array",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/kth-largest-element-in-an-array/",
+  "topics": [
+    "Array",
+    "Divide and Conquer",
+    "Sorting",
+    "Heap (Priority Queue)",
+    "Quickselect"
+  ],
+  "statement": "Given an integer array nums and an integer k, return the kth largest element in the array.",
+  "created_at": "2026-10-15T19:06:30.172178Z",
+  "updated_at": "2026-10-15T19:06:30.172178Z",
+  "attempts": [
+    {
+      "id": "c4f71ab2-b55d-4d4c-b282-fd73bba44258",
+      "problem_id": "f7df64b4-3754-4dc1-945e-d0d42f2b0860",
+      "attempt_number": 1,
+      "approach_summary": "Min Heap of Size K",
+      "reasoning": "Maintain min heap of size k; top element will be kth largest.",
+      "mistakes": [],
+      "analysis": {
+        "approach_name": "Standard Approach",
+        "time_complexity": "O(N log K)",
+        "space_complexity": "O(K)",
+        "key_insights": [],
+        "trade_offs": null,
+        "bottleneck": null
+      },
+      "status": "Unknown",
+      "created_at": "2026-10-15T19:06:30.192462Z",
+      "updated_at": "2026-10-15T19:06:30.192462Z",
+      "submissions": []
+    },
+    {
+      "id": "7a0fbf86-3ac1-40c0-86a4-3816ee289c19",
+      "problem_id": "f7df64b4-3754-4dc1-945e-d0d42f2b0860",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:30.218666Z",
+      "updated_at": "2026-10-15T19:06:30.218666Z",
+      "submissions": [
+        {
+          "id": "6841f1eb-92ee-49da-980e-5791530955ad",
+          "problem_id": "f7df64b4-3754-4dc1-945e-d0d42f2b0860",
+          "attempt_id": "7a0fbf86-3ac1-40c0-86a4-3816ee289c19",
+          "code": "import heapq\ndef findKthLargest(nums: list[int], k: int) -> int:\n    heap = []\n    for num in nums:\n        heapq.heappush(heap, num)\n        if len(heap) > k:\n            heapq.heappop(heap)\n    return heap[0]",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": 450.0,
+          "memory_mb": 27.0,
+          "submitted_at": "2026-10-15T19:06:30.218143Z",
+          "error_message": null,
+          "submission_hash": "f966a29a5bc884a0ce62d95890d888d746e97443ab055d2e037e93f3e5e07172",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

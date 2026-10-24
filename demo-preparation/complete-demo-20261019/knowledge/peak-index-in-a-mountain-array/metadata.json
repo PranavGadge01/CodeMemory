@@ -1,0 +1,48 @@
+{
+  "id": "4d7d5c55-37be-43f1-a9d4-e0e03eaf0711",
+  "title": "Peak Index in a Mountain Array",
+  "slug": "peak-index-in-a-mountain-array",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/peak-index-in-a-mountain-array/",
+  "topics": [
+    "Array",
+    "Binary Search",
+    "Ternary Search"
+  ],
+  "statement": "<p>You are given an integer <strong>mountain</strong> array <code>arr</code> of length <code>n</code> where the values increase to a <strong>peak element</strong> and then decrease.</p>\n\n<p>Return the index of the peak element.</p>\n\n<p>Your task is to solve it in <code>O(log(n))</code> time complexity.</p>\n\n<p>&nbsp;</p>\n<p><strong class=\"example\">Example 1:</strong></p>\n\n<div class=\"example-block\">\n<p><strong>Input:</strong> <span class=\"example-io\">arr = [0,1,0]</span></p>\n\n<p><strong>Output:</strong> <span class=\"example-io\">1</span></p>\n</div>\n\n<p><strong class=\"example\">Example 2:</strong></p>\n\n<div class=\"example-block\">\n<p><strong>Input:</strong> <span class=\"example-io\">arr = [0,2,1,0]</span></p>\n\n<p><strong>Output:</strong> <span class=\"example-io\">1</span></p>\n</div>\n\n<p><strong class=\"example\">Example 3:</strong></p>\n\n<div class=\"example-block\">\n<p><strong>Input:</strong> <span class=\"example-io\">arr = [0,10,5,2]</span></p>\n\n<p><strong>Output:</strong> <span class=\"example-io\">1</span></p>\n</div>\n\n<p>&nbsp;</p>\n<p><strong>Constraints:</strong></p>\n\n<ul>\n\t<li><code>3 &lt;= arr.length &lt;= 10<sup>5</sup></code></li>\n\t<li><code>0 &lt;= arr[i] &lt;= 10<sup>6</sup></code></li>\n\t<li><code>arr</code> is <strong>guaranteed</strong> to be a mountain array.</li>\n</ul>\n",
+  "created_at": "2026-10-19T17:52:09.908725Z",
+  "updated_at": "2026-10-19T17:52:09.908725Z",
+  "attempts": [
+    {
+      "id": "1ada69eb-0bbf-461d-b130-78eb213d27d9",
+      "problem_id": "4d7d5c55-37be-43f1-a9d4-e0e03eaf0711",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-19T17:52:10.091845Z",
+      "updated_at": "2026-10-19T17:52:10.091845Z",
+      "submissions": [
+        {
+          "id": "leetcode_2148442555",
+          "problem_id": "4d7d5c55-37be-43f1-a9d4-e0e03eaf0711",
+          "attempt_id": "1ada69eb-0bbf-461d-b130-78eb213d27d9",
+          "code": "",
+          "language": "Java",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-09-21T08:36:09Z",
+          "error_message": null,
+          "submission_hash": "928b97d9122c0821d0a1b73b90610d47c0e65420f047448b98547dea156b1dff",
+          "source_provider": "leetcode",
+          "source_account": "jaypatil1229"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

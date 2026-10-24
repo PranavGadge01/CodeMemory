@@ -1,0 +1,131 @@
+{
+  "id": "c6d9e3c0-e8d9-4cf1-b862-cf487e16136f",
+  "title": "Two Sum",
+  "slug": "two-sum",
+  "difficulty": "Unknown",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/two-sum/",
+  "topics": [],
+  "statement": null,
+  "created_at": "2026-10-15T19:17:00.912490Z",
+  "updated_at": "2026-10-15T19:17:00.912490Z",
+  "attempts": [
+    {
+      "id": "24a160c9-bff4-4928-9806-45a24562bf3e",
+      "problem_id": "c6d9e3c0-e8d9-4cf1-b862-cf487e16136f",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:17:00.987551Z",
+      "updated_at": "2026-10-15T19:17:00.987551Z",
+      "submissions": [
+        {
+          "id": "leetcode_1003",
+          "problem_id": "c6d9e3c0-e8d9-4cf1-b862-cf487e16136f",
+          "attempt_id": "24a160c9-bff4-4928-9806-45a24562bf3e",
+          "code": "",
+          "language": "Python",
+          "status": "Accepted",
+          "runtime_ms": 45.0,
+          "memory_mb": 17.2,
+          "submitted_at": "2023-11-15T00:13:20Z",
+          "error_message": null,
+          "submission_hash": "454dea5d66692b8bc3c107854c4d9d1b83f33c91f15af4d7f120f959013f1611",
+          "source_provider": "leetcode",
+          "source_account": "syncuser"
+        }
+      ]
+    },
+    {
+      "id": "82c3c9f7-5fd7-4b3d-b2fe-d585b9efb0ae",
+      "problem_id": "c6d9e3c0-e8d9-4cf1-b862-cf487e16136f",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Wrong Answer",
+      "created_at": "2023-11-14T22:13:20Z",
+      "updated_at": "2023-11-14T22:13:20Z",
+      "submissions": [
+        {
+          "id": "leetcode_1001",
+          "problem_id": "c6d9e3c0-e8d9-4cf1-b862-cf487e16136f",
+          "attempt_id": "82c3c9f7-5fd7-4b3d-b2fe-d585b9efb0ae",
+          "code": "class Solution:\n    def twoSum(self, nums: list[int], target: int) -> list[int]:\n        return [0, 1]",
+          "language": "Python",
+          "status": "Wrong Answer",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2023-11-14T22:13:20Z",
+          "error_message": null,
+          "submission_hash": "d6e2a8a0af80a7d5c54fa390192cb0fc5b3f080769e927e18a7b693784fc7702",
+          "source_provider": "leetcode",
+          "source_account": "syncuser"
+        }
+      ]
+    },
+    {
+      "id": "ac53c174-4eff-47ec-9806-7a424e551595",
+      "problem_id": "c6d9e3c0-e8d9-4cf1-b862-cf487e16136f",
+      "attempt_number": 3,
+      "approach_summary": "Attempt 3",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Time Limit Exceeded",
+      "created_at": "2023-11-14T23:13:20Z",
+      "updated_at": "2023-11-14T23:13:20Z",
+      "submissions": [
+        {
+          "id": "leetcode_1002",
+          "problem_id": "c6d9e3c0-e8d9-4cf1-b862-cf487e16136f",
+          "attempt_id": "ac53c174-4eff-47ec-9806-7a424e551595",
+          "code": "class Solution:\n    def twoSum(self, nums: list[int], target: int) -> list[int]:\n        for i in range(len(nums)):\n            for j in range(len(nums)):\n                if i != j and nums[i] + nums[j] == target:\n                    return [i, j]",
+          "language": "Python",
+          "status": "Time Limit Exceeded",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2023-11-14T23:13:20Z",
+          "error_message": null,
+          "submission_hash": "7ef06a8794b191cc502a994b7487a5649ab5d3f0bd846b2eb9812652c14e7390",
+          "source_provider": "leetcode",
+          "source_account": "syncuser"
+        }
+      ]
+    },
+    {
+      "id": "b16656ae-4817-49e9-9067-599d6dfdd34a",
+      "problem_id": "c6d9e3c0-e8d9-4cf1-b862-cf487e16136f",
+      "attempt_number": 4,
+      "approach_summary": "Attempt 4",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2023-11-15T00:13:20Z",
+      "updated_at": "2023-11-15T00:13:20Z",
+      "submissions": [
+        {
+          "id": "leetcode_1003",
+          "problem_id": "c6d9e3c0-e8d9-4cf1-b862-cf487e16136f",
+          "attempt_id": "b16656ae-4817-49e9-9067-599d6dfdd34a",
+          "code": "class Solution:\n    def twoSum(self, nums: list[int], target: int) -> list[int]:\n        seen = {}\n        for i, n in enumerate(nums):\n            diff = target - n\n            if diff in seen:\n                return [seen[diff], i]\n            seen[n] = i",
+          "language": "Python",
+          "status": "Accepted",
+          "runtime_ms": 45.0,
+          "memory_mb": 17.2,
+          "submitted_at": "2023-11-15T00:13:20Z",
+          "error_message": null,
+          "submission_hash": "047439229750b478b77c0fa8bab1bc20471a51cde984098442d34edc80c44076",
+          "source_provider": "leetcode",
+          "source_account": "syncuser"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

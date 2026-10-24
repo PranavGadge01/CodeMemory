@@ -1,0 +1,75 @@
+{
+  "id": "7dd1852f-a5ad-4a26-a621-e59f65c064e3",
+  "title": "Zigzag Conversion",
+  "slug": "zigzag-conversion",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/zigzag-conversion/",
+  "topics": [
+    "String"
+  ],
+  "statement": "<p>The string <code>&quot;PAYPALISHIRING&quot;</code> is written in a zigzag pattern on a given number of rows like this: (you may want to display this pattern in a fixed font for better legibility)</p>\n\n<pre>\nP   A   H   N\nA P L S I I G\nY   I   R\n</pre>\n\n<p>And then read line by line: <code>&quot;PAHNAPLSIIGYIR&quot;</code></p>\n\n<p>Write the code that will take a string and make this conversion given a number of rows:</p>\n\n<pre>\nstring convert(string s, int numRows);\n</pre>\n\n<p>&nbsp;</p>\n<p><strong class=\"example\">Example 1:</strong></p>\n\n<pre>\n<strong>Input:</strong> s = &quot;PAYPALISHIRING&quot;, numRows = 3\n<strong>Output:</strong> &quot;PAHNAPLSIIGYIR&quot;\n</pre>\n\n<p><strong class=\"example\">Example 2:</strong></p>\n\n<pre>\n<strong>Input:</strong> s = &quot;PAYPALISHIRING&quot;, numRows = 4\n<strong>Output:</strong> &quot;PINALSIGYAHRPI&quot;\n<strong>Explanation:</strong>\nP     I    N\nA   L S  I G\nY A   H R\nP     I\n</pre>\n\n<p><strong class=\"example\">Example 3:</strong></p>\n\n<pre>\n<strong>Input:</strong> s = &quot;A&quot;, numRows = 1\n<strong>Output:</strong> &quot;A&quot;\n</pre>\n\n<p>&nbsp;</p>\n<p><strong>Constraints:</strong></p>\n\n<ul>\n\t<li><code>1 &lt;= s.length &lt;= 1000</code></li>\n\t<li><code>s</code> consists of English letters (lower-case and upper-case), <code>&#39;,&#39;</code> and <code>&#39;.&#39;</code>.</li>\n\t<li><code>1 &lt;= numRows &lt;= 1000</code></li>\n</ul>\n",
+  "created_at": "2026-10-19T12:56:50.453940Z",
+  "updated_at": "2026-10-19T12:56:50.453940Z",
+  "attempts": [
+    {
+      "id": "4808482e-878b-4f8d-a15e-8d8cafd66956",
+      "problem_id": "7dd1852f-a5ad-4a26-a621-e59f65c064e3",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-19T12:56:50.492942Z",
+      "updated_at": "2026-10-19T12:56:50.492942Z",
+      "submissions": [
+        {
+          "id": "leetcode_1961206268",
+          "problem_id": "7dd1852f-a5ad-4a26-a621-e59f65c064e3",
+          "attempt_id": "4808482e-878b-4f8d-a15e-8d8cafd66956",
+          "code": "class Solution {\n    public String convert(String s, int numRows) {\n        if (numRows == 1 || s.length() <= numRows) return s;\n\n        StringBuilder[] rows = new StringBuilder[numRows];\n        for (int i = 0; i < numRows; i++) {\n            rows[i] = new StringBuilder();\n        }\n\n        int currRow = 0;\n        boolean goingDown = false;\n\n        for (char c : s.toCharArray()) {\n            rows[currRow].append(c);\n\n            if (currRow == 0 || currRow == numRows - 1) {\n                goingDown = !goingDown;\n            }\n\n            currRow += goingDown ? 1 : -1;\n        }\n\n        StringBuilder result = new StringBuilder();\n        for (StringBuilder row : rows) {\n            result.append(row);\n        }\n\n        return result.toString();\n    }\n}",
+          "language": "Java",
+          "status": "Accepted",
+          "runtime_ms": 4.0,
+          "memory_mb": 46.524,
+          "submitted_at": "2026-03-27T18:59:19Z",
+          "error_message": null,
+          "submission_hash": "7d2f0f5f6dbd0864ea2b313e66297e62b23dee55b45c8d74879baff193d7832b",
+          "source_provider": "leetcode",
+          "source_account": "jaypatil1229"
+        }
+      ]
+    },
+    {
+      "id": "957fdac9-fff0-48d0-86cb-cb99b965a7d7",
+      "problem_id": "7dd1852f-a5ad-4a26-a621-e59f65c064e3",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Runtime Error",
+      "created_at": "2026-10-19T12:56:50.557462Z",
+      "updated_at": "2026-10-19T12:56:50.557462Z",
+      "submissions": [
+        {
+          "id": "leetcode_1961203735",
+          "problem_id": "7dd1852f-a5ad-4a26-a621-e59f65c064e3",
+          "attempt_id": "957fdac9-fff0-48d0-86cb-cb99b965a7d7",
+          "code": "",
+          "language": "Java",
+          "status": "Runtime Error",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-03-27T18:55:52Z",
+          "error_message": null,
+          "submission_hash": "d85e6f17de2b5b3de6a8fab4f053cb30d31a4772eb7ce1f5fd97c5c010d0c570",
+          "source_provider": "leetcode",
+          "source_account": "jaypatil1229"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

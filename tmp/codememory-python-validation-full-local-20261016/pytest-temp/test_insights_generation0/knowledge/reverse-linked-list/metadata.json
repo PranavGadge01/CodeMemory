@@ -1,0 +1,67 @@
+{
+  "id": "4dbeeb19-58e3-42f8-ba2f-f1c8c19d67d5",
+  "title": "Reverse Linked List",
+  "slug": "reverse-linked-list",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/reverse-linked-list/",
+  "topics": [
+    "Linked List",
+    "Recursion"
+  ],
+  "statement": "Given the head of a singly linked list, reverse the list, and return the reversed list.",
+  "created_at": "2026-10-15T19:06:36.135326Z",
+  "updated_at": "2026-10-15T19:06:36.135326Z",
+  "attempts": [
+    {
+      "id": "5ded982b-cf1f-4844-be81-8235f7108030",
+      "problem_id": "4dbeeb19-58e3-42f8-ba2f-f1c8c19d67d5",
+      "attempt_number": 1,
+      "approach_summary": "Iterative Three Pointers",
+      "reasoning": "Maintain prev, curr, and nxt pointers to re-link nodes in place.",
+      "mistakes": [],
+      "analysis": {
+        "approach_name": "Standard Approach",
+        "time_complexity": "O(N)",
+        "space_complexity": "O(1)",
+        "key_insights": [],
+        "trade_offs": null,
+        "bottleneck": null
+      },
+      "status": "Unknown",
+      "created_at": "2026-10-15T19:06:36.153391Z",
+      "updated_at": "2026-10-15T19:06:36.153391Z",
+      "submissions": []
+    },
+    {
+      "id": "e4bfef87-de6c-4260-9188-1e1c09285c02",
+      "problem_id": "4dbeeb19-58e3-42f8-ba2f-f1c8c19d67d5",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:36.177119Z",
+      "updated_at": "2026-10-15T19:06:36.177119Z",
+      "submissions": [
+        {
+          "id": "ab2811a3-46d4-42ee-8cd1-ae86c414c5f3",
+          "problem_id": "4dbeeb19-58e3-42f8-ba2f-f1c8c19d67d5",
+          "attempt_id": "e4bfef87-de6c-4260-9188-1e1c09285c02",
+          "code": "def reverseList(head):\n    prev, curr = None, head\n    while curr:\n        nxt = curr.next\n        curr.next = prev\n        prev = curr\n        curr = nxt\n    return prev",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": 32.0,
+          "memory_mb": 15.2,
+          "submitted_at": "2026-10-15T19:06:36.177119Z",
+          "error_message": null,
+          "submission_hash": "0f443a2ca295d00b680dc954286461e07ecdd8d36d21bb1f26399d6798106e70",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

@@ -1,0 +1,18 @@
+{
+  "id": "daily-temperatures",
+  "title": "Daily Temperatures",
+  "slug": "daily-temperatures",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array",
+    "Stack",
+    "Monotonic Stack"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:45.996933Z",
+  "updated_at": "2026-10-15T19:06:45.996933Z",
+  "attempts": [],
+  "notes": []
+}

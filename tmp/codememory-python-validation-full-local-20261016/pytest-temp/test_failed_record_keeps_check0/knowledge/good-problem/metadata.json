@@ -1,0 +1,44 @@
+{
+  "id": "41ad1a34-6e30-4178-a752-5e0f15f1ffb0",
+  "title": "Good Problem",
+  "slug": "good-problem",
+  "difficulty": "Unknown",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [],
+  "statement": null,
+  "created_at": "2026-10-15T19:16:43.397483Z",
+  "updated_at": "2026-10-15T19:16:43.397483Z",
+  "attempts": [
+    {
+      "id": "c63e82a6-d26b-41e4-852e-f62cc6381c0d",
+      "problem_id": "41ad1a34-6e30-4178-a752-5e0f15f1ffb0",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Wrong Answer",
+      "created_at": "2026-10-15T19:16:43.559645Z",
+      "updated_at": "2026-10-15T19:16:43.559645Z",
+      "submissions": [
+        {
+          "id": "leetcode_201",
+          "problem_id": "41ad1a34-6e30-4178-a752-5e0f15f1ffb0",
+          "attempt_id": "c63e82a6-d26b-41e4-852e-f62cc6381c0d",
+          "code": "",
+          "language": "Python",
+          "status": "Wrong Answer",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2023-11-14T22:13:20Z",
+          "error_message": null,
+          "submission_hash": "a556a277198827c69b2db26e68ba6fe2826e4b4372646c92a5b8120c2d01314a",
+          "source_provider": "leetcode",
+          "source_account": "alice"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

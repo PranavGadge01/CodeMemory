@@ -1,0 +1,44 @@
+{
+  "id": "38422ec4-5782-4905-8a20-4aaf54e39553",
+  "title": "Problem 83",
+  "slug": "problem-83",
+  "difficulty": "Unknown",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/problem-83/",
+  "topics": [],
+  "statement": null,
+  "created_at": "2026-10-15T19:17:35.951624Z",
+  "updated_at": "2026-10-15T19:17:35.951624Z",
+  "attempts": [
+    {
+      "id": "31c7406b-182b-46e3-a45f-bf5732e300c1",
+      "problem_id": "38422ec4-5782-4905-8a20-4aaf54e39553",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:17:36.034116Z",
+      "updated_at": "2026-10-15T19:17:36.034116Z",
+      "submissions": [
+        {
+          "id": "leetcode_83",
+          "problem_id": "38422ec4-5782-4905-8a20-4aaf54e39553",
+          "attempt_id": "31c7406b-182b-46e3-a45f-bf5732e300c1",
+          "code": "",
+          "language": "Python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2023-11-14T22:14:43Z",
+          "error_message": null,
+          "submission_hash": "692fedde8658aacc08a32cbeddf6655bdb26253f5d88a3bde3baf5ee6c82616f",
+          "source_provider": "leetcode",
+          "source_account": "syncuser"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

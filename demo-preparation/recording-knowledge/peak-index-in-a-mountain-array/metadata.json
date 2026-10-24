@@ -1,0 +1,48 @@
+{
+  "id": "2f46282c-82cd-4cee-91f6-7c531dc31b05",
+  "title": "Peak Index in a Mountain Array",
+  "slug": "peak-index-in-a-mountain-array",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/peak-index-in-a-mountain-array/",
+  "topics": [
+    "Array",
+    "Binary Search",
+    "Ternary Search"
+  ],
+  "statement": "<p>You are given an integer <strong>mountain</strong> array <code>arr</code> of length <code>n</code> where the values increase to a <strong>peak element</strong> and then decrease.</p>\n\n<p>Return the index of the peak element.</p>\n\n<p>Your task is to solve it in <code>O(log(n))</code> time complexity.</p>\n\n<p>&nbsp;</p>\n<p><strong class=\"example\">Example 1:</strong></p>\n\n<div class=\"example-block\">\n<p><strong>Input:</strong> <span class=\"example-io\">arr = [0,1,0]</span></p>\n\n<p><strong>Output:</strong> <span class=\"example-io\">1</span></p>\n</div>\n\n<p><strong class=\"example\">Example 2:</strong></p>\n\n<div class=\"example-block\">\n<p><strong>Input:</strong> <span class=\"example-io\">arr = [0,2,1,0]</span></p>\n\n<p><strong>Output:</strong> <span class=\"example-io\">1</span></p>\n</div>\n\n<p><strong class=\"example\">Example 3:</strong></p>\n\n<div class=\"example-block\">\n<p><strong>Input:</strong> <span class=\"example-io\">arr = [0,10,5,2]</span></p>\n\n<p><strong>Output:</strong> <span class=\"example-io\">1</span></p>\n</div>\n\n<p>&nbsp;</p>\n<p><strong>Constraints:</strong></p>\n\n<ul>\n\t<li><code>3 &lt;= arr.length &lt;= 10<sup>5</sup></code></li>\n\t<li><code>0 &lt;= arr[i] &lt;= 10<sup>6</sup></code></li>\n\t<li><code>arr</code> is <strong>guaranteed</strong> to be a mountain array.</li>\n</ul>\n",
+  "created_at": "2026-10-19T12:56:10.071382Z",
+  "updated_at": "2026-10-19T12:56:10.071382Z",
+  "attempts": [
+    {
+      "id": "5344f1bb-83ab-41e7-b4a6-a2811e79a3c9",
+      "problem_id": "2f46282c-82cd-4cee-91f6-7c531dc31b05",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-19T12:56:10.273383Z",
+      "updated_at": "2026-10-19T12:56:10.273383Z",
+      "submissions": [
+        {
+          "id": "leetcode_2148442555",
+          "problem_id": "2f46282c-82cd-4cee-91f6-7c531dc31b05",
+          "attempt_id": "5344f1bb-83ab-41e7-b4a6-a2811e79a3c9",
+          "code": "class Solution {\n    public int peakIndexInMountainArray(int[] nums) {\n        int l = 0;\n        int h = nums.length - 1;\n\n        while (l < h) {\n            int mid = l + (h - l) / 2;\n\n            if (nums[mid] < nums[mid + 1]) {\n                l = mid + 1;\n            } else {\n                h = mid;\n            }\n        }\n        return h;\n    }\n}",
+          "language": "Java",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": 78.64,
+          "submitted_at": "2026-09-21T08:36:09Z",
+          "error_message": null,
+          "submission_hash": "f414adf91376d6a515030fdca731f26cb9b98c7a40f9eb83dbcc7bbfef702603",
+          "source_provider": "leetcode",
+          "source_account": "jaypatil1229"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

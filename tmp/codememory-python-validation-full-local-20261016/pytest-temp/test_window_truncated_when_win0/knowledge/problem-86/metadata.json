@@ -1,0 +1,44 @@
+{
+  "id": "fbf0527b-465e-4363-a05d-4c9cfc7f803b",
+  "title": "Problem 86",
+  "slug": "problem-86",
+  "difficulty": "Unknown",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/problem-86/",
+  "topics": [],
+  "statement": null,
+  "created_at": "2026-10-15T19:17:36.603600Z",
+  "updated_at": "2026-10-15T19:17:36.603600Z",
+  "attempts": [
+    {
+      "id": "1d258a81-1292-4e9e-bf93-1ce1bd270fa8",
+      "problem_id": "fbf0527b-465e-4363-a05d-4c9cfc7f803b",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:17:36.680960Z",
+      "updated_at": "2026-10-15T19:17:36.680960Z",
+      "submissions": [
+        {
+          "id": "leetcode_86",
+          "problem_id": "fbf0527b-465e-4363-a05d-4c9cfc7f803b",
+          "attempt_id": "1d258a81-1292-4e9e-bf93-1ce1bd270fa8",
+          "code": "",
+          "language": "Python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2023-11-14T22:14:46Z",
+          "error_message": null,
+          "submission_hash": "ea62bab6d54a4a3f41fb621a4a152d62abaa2bbb09e11e9473d99e01fd9b5318",
+          "source_provider": "leetcode",
+          "source_account": "syncuser"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

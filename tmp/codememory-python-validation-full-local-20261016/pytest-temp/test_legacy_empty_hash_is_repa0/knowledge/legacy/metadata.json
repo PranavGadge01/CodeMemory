@@ -1,0 +1,44 @@
+{
+  "id": "5948a283-16ce-4c05-92de-c7dc0e252ee7",
+  "title": "Legacy",
+  "slug": "legacy",
+  "difficulty": "Unknown",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [],
+  "statement": null,
+  "created_at": "2026-10-15T19:16:58.641043Z",
+  "updated_at": "2026-10-15T19:16:58.641043Z",
+  "attempts": [
+    {
+      "id": "64d65f85-d162-481b-ae57-98e3c7baee83",
+      "problem_id": "5948a283-16ce-4c05-92de-c7dc0e252ee7",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:16:58.684579Z",
+      "updated_at": "2026-10-15T19:16:58.684579Z",
+      "submissions": [
+        {
+          "id": "67421eb6-70d9-4240-b413-f091f5c186ea",
+          "problem_id": "5948a283-16ce-4c05-92de-c7dc0e252ee7",
+          "attempt_id": "64d65f85-d162-481b-ae57-98e3c7baee83",
+          "code": "def solve(): pass",
+          "language": "Python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2023-11-01T10:00:00Z",
+          "error_message": null,
+          "submission_hash": "38b36fc0bc215b44008ee151dc702d7fec50c590eae98c5a085fc8a041d173e9",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

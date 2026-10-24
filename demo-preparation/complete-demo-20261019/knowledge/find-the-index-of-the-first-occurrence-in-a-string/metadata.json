@@ -1,0 +1,51 @@
+{
+  "id": "9907afb9-1129-4a0b-8ef6-4af8c27b75ee",
+  "title": "Find the Index of the First Occurrence in a String",
+  "slug": "find-the-index-of-the-first-occurrence-in-a-string",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/find-the-index-of-the-first-occurrence-in-a-string/",
+  "topics": [
+    "Two Pointers",
+    "String",
+    "String Matching",
+    "Z Algorithm",
+    "Knuth\u2013Morris\u2013Pratt Algorithm",
+    "Boyer\u2013Moore String-Search Algorithm"
+  ],
+  "statement": "<p>Given two strings <code>needle</code> and <code>haystack</code>, return the index of the first occurrence of <code>needle</code> in <code>haystack</code>, or <code>-1</code> if <code>needle</code> is not part of <code>haystack</code>.</p>\n\n<p>&nbsp;</p>\n<p><strong class=\"example\">Example 1:</strong></p>\n\n<pre>\n<strong>Input:</strong> haystack = &quot;sadbutsad&quot;, needle = &quot;sad&quot;\n<strong>Output:</strong> 0\n<strong>Explanation:</strong> &quot;sad&quot; occurs at index 0 and 6.\nThe first occurrence is at index 0, so we return 0.\n</pre>\n\n<p><strong class=\"example\">Example 2:</strong></p>\n\n<pre>\n<strong>Input:</strong> haystack = &quot;leetcode&quot;, needle = &quot;leeto&quot;\n<strong>Output:</strong> -1\n<strong>Explanation:</strong> &quot;leeto&quot; did not occur in &quot;leetcode&quot;, so we return -1.\n</pre>\n\n<p>&nbsp;</p>\n<p><strong>Constraints:</strong></p>\n\n<ul>\n\t<li><code>1 &lt;= haystack.length, needle.length &lt;= 10<sup>4</sup></code></li>\n\t<li><code>haystack</code> and <code>needle</code> consist of only lowercase English characters.</li>\n</ul>\n",
+  "created_at": "2026-10-19T17:52:25.678635Z",
+  "updated_at": "2026-10-19T17:52:25.678635Z",
+  "attempts": [
+    {
+      "id": "a2204f38-95af-40f7-821c-c558a13552fd",
+      "problem_id": "9907afb9-1129-4a0b-8ef6-4af8c27b75ee",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-19T17:52:25.715988Z",
+      "updated_at": "2026-10-19T17:52:25.715988Z",
+      "submissions": [
+        {
+          "id": "leetcode_1965335313",
+          "problem_id": "9907afb9-1129-4a0b-8ef6-4af8c27b75ee",
+          "attempt_id": "a2204f38-95af-40f7-821c-c558a13552fd",
+          "code": "",
+          "language": "Java",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-03-31T23:04:43Z",
+          "error_message": null,
+          "submission_hash": "0549b5ac6534d3cb3a3542285607e81292bdb067a136e5a822dff4f11168c856",
+          "source_provider": "leetcode",
+          "source_account": "jaypatil1229"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

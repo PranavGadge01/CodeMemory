@@ -1,0 +1,11 @@
+{
+   "extensiondescription": {
+      "message": "तपाईंको कम्प्युटरमा इन्स्टल गरिएका मिल्दा एपहरूमा तपाईंको ब्राउजरबाट Drive का फाइलहरू सीधै खोल्नुहोस्।"
+   },
+   "extensionname": {
+      "message": "Drive को एप लन्चर (Google ले उपलब्ध गराएको)"
+   },
+   "extensionshortname": {
+      "message": "Google Drive को एप लन्चर"
+   }
+}

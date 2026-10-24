@@ -1,0 +1,24 @@
+{
+  "leetcode": {
+    "provider": "LeetCode",
+    "username": "jaypatil1229",
+    "display_name": "Jay Patil",
+    "user_avatar": null,
+    "status": "Connected",
+    "connected_at": "2026-10-15T19:06:09.009559Z",
+    "last_sync_at": null,
+    "last_sync_status": null,
+    "last_sync_error": null,
+    "capabilities": {
+      "sync": true,
+      "profile": true
+    },
+    "metadata": {
+      "solved_all": 1,
+      "solved_easy": 1,
+      "solved_medium": 0,
+      "solved_hard": 0,
+      "ranking": 9999
+    }
+  }
+}

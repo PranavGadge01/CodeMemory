@@ -1,0 +1,18 @@
+{
+  "id": "longest-consecutive-sequence",
+  "title": "Longest Consecutive Sequence",
+  "slug": "longest-consecutive-sequence",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array",
+    "Hash Table",
+    "Union Find"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:46.155135Z",
+  "updated_at": "2026-10-15T19:06:46.155135Z",
+  "attempts": [],
+  "notes": []
+}

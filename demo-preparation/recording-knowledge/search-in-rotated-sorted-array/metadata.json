@@ -1,0 +1,47 @@
+{
+  "id": "83431a55-5c57-4f3e-8d0c-d0c4c68dea2b",
+  "title": "Search in Rotated Sorted Array",
+  "slug": "search-in-rotated-sorted-array",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/search-in-rotated-sorted-array/",
+  "topics": [
+    "Array",
+    "Binary Search"
+  ],
+  "statement": "<p>There is an integer array <code>nums</code> sorted in ascending order (with <strong>distinct</strong> values).</p>\n\n<p>Prior to being passed to your function, <code>nums</code> is <strong>possibly left rotated</strong> at an unknown index <code>k</code> (<code>1 &lt;= k &lt; nums.length</code>) such that the resulting array is <code>[nums[k], nums[k+1], ..., nums[n-1], nums[0], nums[1], ..., nums[k-1]]</code> (<strong>0-indexed</strong>). For example, <code>[0,1,2,4,5,6,7]</code> might be left rotated by&nbsp;<code>3</code>&nbsp;indices and become <code>[4,5,6,7,0,1,2]</code>.</p>\n\n<p>Given the array <code>nums</code> <strong>after</strong> the possible rotation and an integer <code>target</code>, return <em>the index of </em><code>target</code><em> if it is in </em><code>nums</code><em>, or </em><code>-1</code><em> if it is not in </em><code>nums</code>.</p>\n\n<p>You must write an algorithm with <code>O(log n)</code> runtime complexity.</p>\n\n<p>&nbsp;</p>\n<p><strong class=\"example\">Example 1:</strong></p>\n<pre><strong>Input:</strong> nums = [4,5,6,7,0,1,2], target = 0\n<strong>Output:</strong> 4\n</pre><p><strong class=\"example\">Example 2:</strong></p>\n<pre><strong>Input:</strong> nums = [4,5,6,7,0,1,2], target = 3\n<strong>Output:</strong> -1\n</pre><p><strong class=\"example\">Example 3:</strong></p>\n<pre><strong>Input:</strong> nums = [1], target = 0\n<strong>Output:</strong> -1\n</pre>\n<p>&nbsp;</p>\n<p><strong>Constraints:</strong></p>\n\n<ul>\n\t<li><code>1 &lt;= nums.length &lt;= 5000</code></li>\n\t<li><code>-10<sup>4</sup> &lt;= nums[i] &lt;= 10<sup>4</sup></code></li>\n\t<li>All values of <code>nums</code> are <strong>unique</strong>.</li>\n\t<li><code>nums</code> is an ascending array that is possibly rotated.</li>\n\t<li><code>-10<sup>4</sup> &lt;= target &lt;= 10<sup>4</sup></code></li>\n</ul>\n",
+  "created_at": "2026-10-19T12:56:16.872571Z",
+  "updated_at": "2026-10-19T12:56:16.872571Z",
+  "attempts": [
+    {
+      "id": "06066078-f3b3-4edf-a963-e1693c9696b9",
+      "problem_id": "83431a55-5c57-4f3e-8d0c-d0c4c68dea2b",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-19T12:56:16.909104Z",
+      "updated_at": "2026-10-19T12:56:16.909104Z",
+      "submissions": [
+        {
+          "id": "leetcode_2132989968",
+          "problem_id": "83431a55-5c57-4f3e-8d0c-d0c4c68dea2b",
+          "attempt_id": "06066078-f3b3-4edf-a963-e1693c9696b9",
+          "code": "class Solution {\n    public int search(int[] nums, int target) {\n        int left = 0;\n        int right = nums.length - 1;\n\n        while (left <= right) {\n            int mid = left + (right - left) / 2;\n\n            if (nums[mid] == target) {\n                return mid;\n            }\n\n            if (nums[left] <= nums[mid]) {\n\n                if (nums[left] <= target && target < nums[mid]) {\n                    right = mid - 1;\n                }else {\n                    left = mid + 1;\n                }\n\n            }else {\n                if (nums[mid] < target && target <= nums[right]) {\n                    left = mid + 1;\n                }else {\n                    right = mid - 1;\n                }\n            }\n        }\n\n        return -1;\n    }\n}",
+          "language": "Java",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": 43.864,
+          "submitted_at": "2026-09-06T15:20:44Z",
+          "error_message": null,
+          "submission_hash": "2770436caede536206ae2de147c440fd8cc4b5641cf00d963721667fe9466798",
+          "source_provider": "leetcode",
+          "source_account": "jaypatil1229"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

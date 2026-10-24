@@ -1,0 +1,46 @@
+{
+  "id": "ok-one",
+  "title": "Ok One",
+  "slug": "ok-one",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:32.556924Z",
+  "updated_at": "2026-10-15T19:06:32.556924Z",
+  "attempts": [
+    {
+      "id": "f5ff7f0a-e369-467f-85eb-0fa2966ad4a6",
+      "problem_id": "ok-one",
+      "attempt_number": 1,
+      "approach_summary": "Attempt",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:32.556924Z",
+      "updated_at": "2026-10-15T19:06:32.556924Z",
+      "submissions": [
+        {
+          "id": "69b68eaa-0c44-4fa5-b693-b4b45df3e9bc",
+          "problem_id": "ok-one",
+          "attempt_id": null,
+          "code": "seen = {}\nfor i, n in enumerate(nums):\n    if target - n in seen:\n        return [seen[target - n], i]\n    seen[n] = i\nreturn []",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-01-02T00:00:00Z",
+          "error_message": null,
+          "submission_hash": "10b1032c75d55cd32dd8b82465fb8fb36194437023ac135b56063a32cc65a4ff",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

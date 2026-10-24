@@ -1,0 +1,48 @@
+{
+  "id": "524cb0a8-80ab-4a6d-a60c-641eaf8ba5fd",
+  "title": "Integer to Roman",
+  "slug": "integer-to-roman",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/integer-to-roman/",
+  "topics": [
+    "Hash Table",
+    "Math",
+    "String"
+  ],
+  "statement": "<p>Seven different symbols represent Roman numerals with the following values:</p>\n\n<table>\n\t<thead>\n\t\t<tr>\n\t\t\t<th>Symbol</th>\n\t\t\t<th>Value</th>\n\t\t</tr>\n\t</thead>\n\t<tbody>\n\t\t<tr>\n\t\t\t<td>I</td>\n\t\t\t<td>1</td>\n\t\t</tr>\n\t\t<tr>\n\t\t\t<td>V</td>\n\t\t\t<td>5</td>\n\t\t</tr>\n\t\t<tr>\n\t\t\t<td>X</td>\n\t\t\t<td>10</td>\n\t\t</tr>\n\t\t<tr>\n\t\t\t<td>L</td>\n\t\t\t<td>50</td>\n\t\t</tr>\n\t\t<tr>\n\t\t\t<td>C</td>\n\t\t\t<td>100</td>\n\t\t</tr>\n\t\t<tr>\n\t\t\t<td>D</td>\n\t\t\t<td>500</td>\n\t\t</tr>\n\t\t<tr>\n\t\t\t<td>M</td>\n\t\t\t<td>1000</td>\n\t\t</tr>\n\t</tbody>\n</table>\n\n<p>Roman numerals are formed by appending&nbsp;the conversions of&nbsp;decimal place values&nbsp;from highest to lowest. Converting a decimal place value into a Roman numeral has the following rules:</p>\n\n<ul>\n\t<li>If the value does not start with 4 or&nbsp;9, select the symbol of the maximal value that can be subtracted from the input, append that symbol to the result, subtract its value, and convert the remainder to a Roman numeral.</li>\n\t<li>If the value starts with 4 or 9 use the&nbsp;<strong>subtractive form</strong>&nbsp;representing&nbsp;one symbol subtracted from the following symbol, for example,&nbsp;4 is 1 (<code>I</code>) less than 5 (<code>V</code>): <code>IV</code>&nbsp;and 9 is 1 (<code>I</code>) less than 10 (<code>X</code>): <code>IX</code>.&nbsp;Only the following subtractive forms are used: 4 (<code>IV</code>), 9 (<code>IX</code>),&nbsp;40 (<code>XL</code>), 90 (<code>XC</code>), 400 (<code>CD</code>) and 900 (<code>CM</code>).</li>\n\t<li>Only powers of 10 (<code>I</code>, <code>X</code>, <code>C</code>, <code>M</code>) can be appended consecutively at most 3 times to represent multiples of 10. You cannot append 5&nbsp;(<code>V</code>), 50 (<code>L</code>), or 500 (<code>D</code>) multiple times. If you need to append a symbol&nbsp;4 times&nbsp;use the <strong>subtractive form</strong>.</li>\n</ul>\n\n<p>Given an integer, convert it to a Roman numeral.</p>\n\n<p>&nbsp;</p>\n<p><strong class=\"example\">Example 1:</strong></p>\n\n<div class=\"example-block\">\n<p><strong>Input:</strong> <span class=\"example-io\">num = 3749</span></p>\n\n<p><strong>Output:</strong> <span class=\"example-io\">&quot;MMMDCCXLIX&quot;</span></p>\n\n<p><strong>Explanation:</strong></p>\n\n<pre>\n3000 = MMM as 1000 (M) + 1000 (M) + 1000 (M)\n 700 = DCC as 500 (D) + 100 (C) + 100 (C)\n  40 = XL as 10 (X) less of 50 (L)\n   9 = IX as 1 (I) less of 10 (X)\nNote: 49 is not 1 (I) less of 50 (L) because the conversion is based on decimal places\n</pre>\n</div>\n\n<p><strong class=\"example\">Example 2:</strong></p>\n\n<div class=\"example-block\">\n<p><strong>Input:</strong> <span class=\"example-io\">num = 58</span></p>\n\n<p><strong>Output:</strong> <span class=\"example-io\">&quot;LVIII&quot;</span></p>\n\n<p><strong>Explanation:</strong></p>\n\n<pre>\n50 = L\n 8 = VIII\n</pre>\n</div>\n\n<p><strong class=\"example\">Example 3:</strong></p>\n\n<div class=\"example-block\">\n<p><strong>Input:</strong> <span class=\"example-io\">num = 1994</span></p>\n\n<p><strong>Output:</strong> <span class=\"example-io\">&quot;MCMXCIV&quot;</span></p>\n\n<p><strong>Explanation:</strong></p>\n\n<pre>\n1000 = M\n 900 = CM\n  90 = XC\n   4 = IV\n</pre>\n</div>\n\n<p>&nbsp;</p>\n<p><strong>Constraints:</strong></p>\n\n<ul>\n\t<li><code>1 &lt;= num &lt;= 3999</code></li>\n</ul>\n",
+  "created_at": "2026-10-19T12:56:42.086298Z",
+  "updated_at": "2026-10-19T12:56:42.086298Z",
+  "attempts": [
+    {
+      "id": "8ba31b8e-78c4-471d-b806-9ffb847370ec",
+      "problem_id": "524cb0a8-80ab-4a6d-a60c-641eaf8ba5fd",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-19T12:56:42.127820Z",
+      "updated_at": "2026-10-19T12:56:42.127820Z",
+      "submissions": [
+        {
+          "id": "leetcode_1961792774",
+          "problem_id": "524cb0a8-80ab-4a6d-a60c-641eaf8ba5fd",
+          "attempt_id": "8ba31b8e-78c4-471d-b806-9ffb847370ec",
+          "code": "class Solution {\n    public String intToRoman(int num) {\n        int[] values = {\n            1000, 900, 500, 400,\n            100, 90, 50, 40,\n            10, 9, 5, 4, 1\n        };\n\n        String[] symbols = {\n            \"M\", \"CM\", \"D\", \"CD\",\n            \"C\", \"XC\", \"L\", \"XL\",\n            \"X\", \"IX\", \"V\", \"IV\", \"I\"\n        };\n\n        StringBuilder result = new StringBuilder();\n\n        for (int i = 0; i < values.length; i++) {\n            while (num >= values[i]) {\n                result.append(symbols[i]);\n                num -= values[i];\n            }\n        }\n\n        return result.toString();\n    }\n}",
+          "language": "Java",
+          "status": "Accepted",
+          "runtime_ms": 3.0,
+          "memory_mb": 46.312,
+          "submitted_at": "2026-03-28T14:02:12Z",
+          "error_message": null,
+          "submission_hash": "46e0efbb606f35a5318231eb579c858b9730f605b797beca4e4f8d913835cbeb",
+          "source_provider": "leetcode",
+          "source_account": "jaypatil1229"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

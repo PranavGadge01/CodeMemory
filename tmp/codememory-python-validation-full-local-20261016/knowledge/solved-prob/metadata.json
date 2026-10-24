@@ -1,0 +1,46 @@
+{
+  "id": "solved-prob",
+  "title": "Solved Prob",
+  "slug": "solved-prob",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:38.378156Z",
+  "updated_at": "2026-10-15T19:06:38.378156Z",
+  "attempts": [
+    {
+      "id": "9f8cdc38-770a-40fe-ada5-1add48800add",
+      "problem_id": "solved-prob",
+      "attempt_number": 1,
+      "approach_summary": "Attempt",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:38.378156Z",
+      "updated_at": "2026-10-15T19:06:38.378156Z",
+      "submissions": [
+        {
+          "id": "4646ba4a-e27b-4b5c-af2d-e96e15d503c7",
+          "problem_id": "solved-prob",
+          "attempt_id": null,
+          "code": "x",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-15T19:06:38.378156Z",
+          "error_message": null,
+          "submission_hash": "44782a3d9d7020bd699e09833d0f0d1c83b32dc02d868723c3a651ebb98f639d",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

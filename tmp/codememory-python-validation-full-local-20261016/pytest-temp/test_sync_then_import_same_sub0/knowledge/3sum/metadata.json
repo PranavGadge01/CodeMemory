@@ -1,0 +1,77 @@
+{
+  "id": "3ead7d8e-da2f-4bc6-8097-53dd6eca46b0",
+  "title": "3Sum",
+  "slug": "3sum",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/3sum/",
+  "topics": [
+    "Array",
+    "Two Pointers",
+    "Sorting"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:17:00.170906Z",
+  "updated_at": "2026-10-15T19:17:00.170906Z",
+  "attempts": [
+    {
+      "id": "96bb4708-8d01-4b53-b26b-0aa425246965",
+      "problem_id": "3ead7d8e-da2f-4bc6-8097-53dd6eca46b0",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Wrong Answer",
+      "created_at": "2023-11-16T02:00:00Z",
+      "updated_at": "2023-11-16T02:00:00Z",
+      "submissions": [
+        {
+          "id": "leetcode_1004",
+          "problem_id": "3ead7d8e-da2f-4bc6-8097-53dd6eca46b0",
+          "attempt_id": "96bb4708-8d01-4b53-b26b-0aa425246965",
+          "code": "#include <vector>\nclass Solution {\npublic:\n    std::vector<std::vector<int>> threeSum(std::vector<int>& nums) {\n        return {};\n    }\n};",
+          "language": "C++",
+          "status": "Wrong Answer",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2023-11-16T02:00:00Z",
+          "error_message": null,
+          "submission_hash": "d1328cc1f65397207a31f531a1004441684e070f5407714b40b6c280868a333c",
+          "source_provider": "leetcode",
+          "source_account": "syncuser"
+        }
+      ]
+    },
+    {
+      "id": "a86f2c60-0382-4a9e-9e1d-fceaba5ed1df",
+      "problem_id": "3ead7d8e-da2f-4bc6-8097-53dd6eca46b0",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2023-11-16T03:00:00Z",
+      "updated_at": "2023-11-16T03:00:00Z",
+      "submissions": [
+        {
+          "id": "leetcode_1005",
+          "problem_id": "3ead7d8e-da2f-4bc6-8097-53dd6eca46b0",
+          "attempt_id": "a86f2c60-0382-4a9e-9e1d-fceaba5ed1df",
+          "code": "#include <vector>\n#include <algorithm>\nclass Solution {\npublic:\n    std::vector<std::vector<int>> threeSum(std::vector<int>& nums) {\n        std::sort(nums.begin(), nums.end());\n        std::vector<std::vector<int>> res;\n        for (int i = 0; i < nums.size(); ++i) {\n            if (i > 0 && nums[i] == nums[i-1]) continue;\n            int l = i + 1, r = nums.size() - 1;\n            while (l < r) {\n                int sum = nums[i] + nums[l] + nums[r];\n                if (sum == 0) {\n                    res.push_back({nums[i], nums[l], nums[r]});\n                    while (l < r && nums[l] == nums[l+1]) l++;\n                    while (l < r && nums[r] == nums[r-1]) r--;\n                    l++; r--;\n                } else if (sum < 0) l++;\n                else r--;\n            }\n        }\n        return res;\n    }\n};",
+          "language": "C++",
+          "status": "Accepted",
+          "runtime_ms": 32.0,
+          "memory_mb": 20.1,
+          "submitted_at": "2023-11-16T03:00:00Z",
+          "error_message": null,
+          "submission_hash": "58d44212d3fdeaafb9d40af2492fd9790b871766174b8045d1b03e0641dec833",
+          "source_provider": "leetcode",
+          "source_account": "syncuser"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

@@ -68,7 +68,7 @@ export function SubmissionLearningCard({
     fetchData();
   }, [fetchData]);
 
-  const cmp = data?.previous_attempt_comparison;
+  const cmp = data?.previousAttemptComparison;
 
   return (
     <div className={`rounded-xl border border-border-soft bg-surface p-5 flex flex-col gap-4 ${className ?? ""}`}>
@@ -104,22 +104,22 @@ export function SubmissionLearningCard({
           <div className="flex items-center gap-2 flex-wrap">
             <Badge variant="neutral" className="text-caption">{data.status}</Badge>
             <Badge variant="neutral" className="text-caption">
-              {data.current_time_complexity} time
+              {data.currentTimeComplexity} time
             </Badge>
             <Badge variant="neutral" className="text-caption">
-              {data.current_space_complexity} space
+              {data.currentSpaceComplexity} space
             </Badge>
-            {data.complexity_source === "code_estimate" && (
+            {data.complexitySource === "code_estimate" && (
               <span className="text-caption text-text-faint">estimated from code structure</span>
             )}
           </div>
 
           <p className="text-body-sm text-text-secondary leading-relaxed">{data.overview}</p>
 
-          {data.what_went_well.length > 0 && (
+          {data.whatWentWell.length > 0 && (
             <Collapsible title="What you did well" defaultOpen>
               <ul className="space-y-1.5">
-                {data.what_went_well.map((item, i) => (
+                {data.whatWentWell.map((item, i) => (
                   <li key={i} className="flex items-start gap-2 text-body-sm text-text-secondary">
                     <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 text-success shrink-0" />
                     <span>{item}</span>
@@ -147,13 +147,13 @@ export function SubmissionLearningCard({
           <Collapsible title="Complexity, tradeoffs & edge cases">
             <p className="text-caption text-text-secondary">
               <span className="font-medium text-text-primary">Current: </span>
-              {data.current_time_complexity} time, {data.current_space_complexity} space
+              {data.currentTimeComplexity} time, {data.currentSpaceComplexity} space
             </p>
-            {data.alternative_approach && (
+            {data.alternativeApproach && (
               <p className="text-caption text-text-secondary">
                 <span className="font-medium text-text-primary">Alternative: </span>
-                {data.alternative_approach}
-                {data.alternative_time_complexity ? ` (${data.alternative_time_complexity} time)` : ""}
+                {data.alternativeApproach}
+                {data.alternativeTimeComplexity ? ` (${data.alternativeTimeComplexity} time)` : ""}
               </p>
             )}
             {data.tradeoffs && (
@@ -162,9 +162,9 @@ export function SubmissionLearningCard({
                 {data.tradeoffs}
               </p>
             )}
-            {data.edge_cases.length > 0 && (
+            {data.edgeCases.length > 0 && (
               <div className="flex flex-wrap gap-1 pt-1">
-                {data.edge_cases.map((ec) => (
+                {data.edgeCases.map((ec) => (
                   <span key={ec} className="px-1.5 py-0.5 rounded text-caption bg-surface-card text-text-muted border border-border-soft">
                     {ec}
                   </span>
@@ -178,7 +178,7 @@ export function SubmissionLearningCard({
               {cmp.available ? (
                 <div className="space-y-1.5">
                   <p className="text-caption text-text-secondary">
-                    {cmp.previous_status} → {cmp.current_status}
+                    {cmp.previousStatus} → {cmp.currentStatus}
                   </p>
                   <p className="text-body-sm text-text-secondary">{cmp.summary}</p>
                   {cmp.improvement && (
@@ -194,9 +194,9 @@ export function SubmissionLearningCard({
             </Collapsible>
           )}
 
-          {(data.cross_problem_connections.length > 0 || data.lesson || data.next_action) && (
+          {(data.crossProblemConnections.length > 0 || data.lesson || data.nextAction) && (
             <Collapsible title="What you learned / try next time" defaultOpen>
-              {data.cross_problem_connections.map((c, i) => (
+              {data.crossProblemConnections.map((c, i) => (
                 <p key={i} className="text-caption text-text-secondary">{c}</p>
               ))}
               {data.lesson && (
@@ -205,8 +205,8 @@ export function SubmissionLearningCard({
                   {data.lesson}
                 </p>
               )}
-              {data.next_action && (
-                <p className="text-caption text-accent font-medium">→ {data.next_action}</p>
+              {data.nextAction && (
+                <p className="text-caption text-accent font-medium">→ {data.nextAction}</p>
               )}
             </Collapsible>
           )}

@@ -1,0 +1,68 @@
+{
+  "id": "220bf1b8-285e-49ba-9bf9-ed41585bc715",
+  "title": "Binary Tree Level Order Traversal",
+  "slug": "binary-tree-level-order-traversal",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/binary-tree-level-order-traversal/",
+  "topics": [
+    "Tree",
+    "Breadth-First Search",
+    "Binary Tree"
+  ],
+  "statement": "Given the root of a binary tree, return the level order traversal of its nodes' values.",
+  "created_at": "2026-10-15T19:06:36.280779Z",
+  "updated_at": "2026-10-15T19:06:36.280779Z",
+  "attempts": [
+    {
+      "id": "f870f9a3-a0ad-4661-b2f7-c273cd9bee04",
+      "problem_id": "220bf1b8-285e-49ba-9bf9-ed41585bc715",
+      "attempt_number": 1,
+      "approach_summary": "BFS Queue Traversal",
+      "reasoning": "Use deque to traverse tree level by level.",
+      "mistakes": [],
+      "analysis": {
+        "approach_name": "Standard Approach",
+        "time_complexity": "O(N)",
+        "space_complexity": "O(N)",
+        "key_insights": [],
+        "trade_offs": null,
+        "bottleneck": null
+      },
+      "status": "Unknown",
+      "created_at": "2026-10-15T19:06:36.300917Z",
+      "updated_at": "2026-10-15T19:06:36.300917Z",
+      "submissions": []
+    },
+    {
+      "id": "c528aa7d-75e3-424a-8cd0-26f8464111ab",
+      "problem_id": "220bf1b8-285e-49ba-9bf9-ed41585bc715",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:36.326346Z",
+      "updated_at": "2026-10-15T19:06:36.326346Z",
+      "submissions": [
+        {
+          "id": "7b9e3713-99e9-4b0a-a52d-04390571d155",
+          "problem_id": "220bf1b8-285e-49ba-9bf9-ed41585bc715",
+          "attempt_id": "c528aa7d-75e3-424a-8cd0-26f8464111ab",
+          "code": "from collections import deque\ndef levelOrder(root):\n    if not root: return []\n    q = deque([root]); res = []\n    while q:\n        level = []\n        for _ in range(len(q)):\n            n = q.popleft(); level.append(n.val)\n            if n.left: q.append(n.left)\n            if n.right: q.append(n.right)\n        res.append(level)\n    return res",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": 42.0,
+          "memory_mb": 17.0,
+          "submitted_at": "2026-10-15T19:06:36.325356Z",
+          "error_message": null,
+          "submission_hash": "34674fe141acf889e07d839c1dff7e090f4e40a913ff453500376c2aac28516b",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

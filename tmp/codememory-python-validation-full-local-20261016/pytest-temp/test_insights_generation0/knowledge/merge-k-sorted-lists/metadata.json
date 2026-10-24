@@ -1,0 +1,69 @@
+{
+  "id": "f4d524be-146b-460d-b410-b9a0513c09b1",
+  "title": "Merge k Sorted Lists",
+  "slug": "merge-k-sorted-lists",
+  "difficulty": "Hard",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/merge-k-sorted-lists/",
+  "topics": [
+    "Linked List",
+    "Divide and Conquer",
+    "Heap (Priority Queue)",
+    "Merge Sort"
+  ],
+  "statement": "You are given an array of k linked-lists lists, each linked-list is sorted in ascending order. Merge all the linked-lists into one sorted linked-list and return it.",
+  "created_at": "2026-10-15T19:06:37.782210Z",
+  "updated_at": "2026-10-15T19:06:37.782210Z",
+  "attempts": [
+    {
+      "id": "d4d98a03-40c1-437b-a354-e2d926661251",
+      "problem_id": "f4d524be-146b-460d-b410-b9a0513c09b1",
+      "attempt_number": 1,
+      "approach_summary": "Divide and Conquer Merge Pairs",
+      "reasoning": "Merge lists pairwise repeatedly reducing total lists by half each iteration.",
+      "mistakes": [],
+      "analysis": {
+        "approach_name": "Standard Approach",
+        "time_complexity": "O(N log K)",
+        "space_complexity": "O(1)",
+        "key_insights": [],
+        "trade_offs": null,
+        "bottleneck": null
+      },
+      "status": "Unknown",
+      "created_at": "2026-10-15T19:06:37.804459Z",
+      "updated_at": "2026-10-15T19:06:37.804459Z",
+      "submissions": []
+    },
+    {
+      "id": "992eb352-b35d-46ad-a483-e61c10315fc5",
+      "problem_id": "f4d524be-146b-460d-b410-b9a0513c09b1",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:37.829554Z",
+      "updated_at": "2026-10-15T19:06:37.829554Z",
+      "submissions": [
+        {
+          "id": "0177b37e-522b-479e-b349-63e65dc49f7b",
+          "problem_id": "f4d524be-146b-460d-b410-b9a0513c09b1",
+          "attempt_id": "992eb352-b35d-46ad-a483-e61c10315fc5",
+          "code": "def mergeKLists(lists):\n    if not lists: return None\n    while len(lists) > 1:\n        merged = []\n        for i in range(0, len(lists), 2):\n            l1 = lists[i]\n            l2 = lists[i+1] if (i+1) < len(lists) else None\n            merged.append(mergeTwo(l1, l2))\n        lists = merged\n    return lists[0]",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": 90.0,
+          "memory_mb": 18.0,
+          "submitted_at": "2026-10-15T19:06:37.829554Z",
+          "error_message": null,
+          "submission_hash": "4ac3ab9176afbe215517e5498b37347399b51cf9cec1f36809af3465e95fb27c",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

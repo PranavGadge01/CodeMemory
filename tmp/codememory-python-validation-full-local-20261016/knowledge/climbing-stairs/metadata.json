@@ -1,0 +1,18 @@
+{
+  "id": "climbing-stairs",
+  "title": "Climbing Stairs",
+  "slug": "climbing-stairs",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Math",
+    "Dynamic Programming",
+    "Memoization"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:46.041984Z",
+  "updated_at": "2026-10-15T19:06:46.041984Z",
+  "attempts": [],
+  "notes": []
+}

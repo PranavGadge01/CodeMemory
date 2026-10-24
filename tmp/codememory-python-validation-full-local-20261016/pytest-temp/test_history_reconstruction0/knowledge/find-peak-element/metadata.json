@@ -1,0 +1,73 @@
+{
+  "id": "dbacde50-a62b-4335-a339-8f387290b5d2",
+  "title": "Find Peak Element",
+  "slug": "find-peak-element",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:35.167839Z",
+  "updated_at": "2026-10-15T19:06:35.167839Z",
+  "attempts": [
+    {
+      "id": "19b1d16f-21cc-40e0-8c18-212a1f26a661",
+      "problem_id": "dbacde50-a62b-4335-a339-8f387290b5d2",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": "Naive return zero index",
+      "mistakes": [],
+      "analysis": null,
+      "status": "Wrong Answer",
+      "created_at": "2026-10-15T19:06:35.184002Z",
+      "updated_at": "2026-10-15T19:06:35.184002Z",
+      "submissions": [
+        {
+          "id": "501bb16e-34c9-43c0-8c45-b3e9a9b3ea44",
+          "problem_id": "dbacde50-a62b-4335-a339-8f387290b5d2",
+          "attempt_id": "19b1d16f-21cc-40e0-8c18-212a1f26a661",
+          "code": "def findPeakElement(nums): return 0",
+          "language": "python",
+          "status": "Wrong Answer",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-15T19:06:35.182998Z",
+          "error_message": null,
+          "submission_hash": "54907eefdee5ef665fee3642e56aa61e88a775db39f97b95e6ffaf673f684df3",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    },
+    {
+      "id": "1e9f2756-d94b-4845-abfd-a48480dd066f",
+      "problem_id": "dbacde50-a62b-4335-a339-8f387290b5d2",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": "Use max built-in",
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:35.220821Z",
+      "updated_at": "2026-10-15T19:06:35.220821Z",
+      "submissions": [
+        {
+          "id": "27269723-2c85-4159-a5b8-e172a32ed539",
+          "problem_id": "dbacde50-a62b-4335-a339-8f387290b5d2",
+          "attempt_id": "1e9f2756-d94b-4845-abfd-a48480dd066f",
+          "code": "def findPeakElement(nums): return nums.index(max(nums))",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": 48.0,
+          "memory_mb": 16.0,
+          "submitted_at": "2026-10-15T19:06:35.219821Z",
+          "error_message": null,
+          "submission_hash": "104d8d3e3d1278c6acc9e5e3edd1a61d33fe0e777e4168e47e7b5ea6ca24745b",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

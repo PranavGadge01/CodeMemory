@@ -1,0 +1,46 @@
+{
+  "id": "a-two",
+  "title": "A Two",
+  "slug": "a-two",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:33.890121Z",
+  "updated_at": "2026-10-15T19:06:33.890121Z",
+  "attempts": [
+    {
+      "id": "d27dae3f-212e-462b-891b-fc59df8d229f",
+      "problem_id": "a-two",
+      "attempt_number": 1,
+      "approach_summary": "Attempt",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:33.890121Z",
+      "updated_at": "2026-10-15T19:06:33.890121Z",
+      "submissions": [
+        {
+          "id": "fee669b2-cc3f-42be-8ad5-28b6dddd2331",
+          "problem_id": "a-two",
+          "attempt_id": null,
+          "code": "seen = {}\nfor i, n in enumerate(nums):\n    if target - n in seen:\n        return [seen[target - n], i]\n    seen[n] = i\nreturn []",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-01-02T00:00:00Z",
+          "error_message": null,
+          "submission_hash": "26100ba3ccf20057295f4c1cc269c91c52ca0291e2bce30ac25a5f830a027602",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

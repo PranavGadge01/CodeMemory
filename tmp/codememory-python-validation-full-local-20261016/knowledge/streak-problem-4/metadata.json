@@ -1,0 +1,46 @@
+{
+  "id": "prob-streak-4",
+  "title": "Streak Problem 4",
+  "slug": "streak-problem-4",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "String"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:05:56.337286Z",
+  "updated_at": "2026-10-15T19:05:56.337286Z",
+  "attempts": [
+    {
+      "id": "ae117f77-8fc5-45e7-9ab7-c9f161190d4a",
+      "problem_id": "prob-streak-4",
+      "attempt_number": 1,
+      "approach_summary": "Attempt",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:05:56.337286Z",
+      "updated_at": "2026-10-15T19:05:56.337286Z",
+      "submissions": [
+        {
+          "id": "3c91508c-25e2-4801-9c84-5b6660c21f4e",
+          "problem_id": "prob-streak-4",
+          "attempt_id": null,
+          "code": "solution",
+          "language": "java",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-10T10:00:00Z",
+          "error_message": null,
+          "submission_hash": "bfc0b39d15a9ea7e9d56de4f2a3954328b2e9c1d50d80033bd9cfc0cd6c45f20",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

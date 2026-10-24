@@ -1,0 +1,75 @@
+{
+  "id": "852a5b39-93ab-48bc-b502-47a0f7af70b0",
+  "title": "Two Sum",
+  "slug": "two-sum",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:16:48.418362Z",
+  "updated_at": "2026-10-15T19:16:48.418362Z",
+  "attempts": [
+    {
+      "id": "376c0b00-860b-4600-ab02-57d6dcd241c3",
+      "problem_id": "852a5b39-93ab-48bc-b502-47a0f7af70b0",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:16:48.453373Z",
+      "updated_at": "2026-10-15T19:16:48.453373Z",
+      "submissions": [
+        {
+          "id": "leetcode_501",
+          "problem_id": "852a5b39-93ab-48bc-b502-47a0f7af70b0",
+          "attempt_id": "376c0b00-860b-4600-ab02-57d6dcd241c3",
+          "code": "",
+          "language": "python3",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-14T19:16:48.444363Z",
+          "error_message": null,
+          "submission_hash": "6e0a8c58e57af5dfc4e3e00438d4cff36c079354df7aed44ce5adf3eb88c6577",
+          "source_provider": "leetcode",
+          "source_account": "alice"
+        }
+      ]
+    },
+    {
+      "id": "5c2b6160-6a11-4106-ba5e-b276f3d8f2fe",
+      "problem_id": "852a5b39-93ab-48bc-b502-47a0f7af70b0",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:16:48.563202Z",
+      "updated_at": "2026-10-15T19:16:48.563202Z",
+      "submissions": [
+        {
+          "id": "leetcode_502",
+          "problem_id": "852a5b39-93ab-48bc-b502-47a0f7af70b0",
+          "attempt_id": "5c2b6160-6a11-4106-ba5e-b276f3d8f2fe",
+          "code": "",
+          "language": "python3",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-14T19:16:48.444363Z",
+          "error_message": null,
+          "submission_hash": "14a1dbbc093f401f174164a8df6bb68507c371983ee38628baf0d6cb5a950237",
+          "source_provider": "leetcode",
+          "source_account": "bob"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

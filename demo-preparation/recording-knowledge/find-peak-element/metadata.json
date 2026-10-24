@@ -1,0 +1,47 @@
+{
+  "id": "e208bb91-1ec1-4974-9e6d-0f7366a4b649",
+  "title": "Find Peak Element",
+  "slug": "find-peak-element",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/find-peak-element/",
+  "topics": [
+    "Array",
+    "Binary Search"
+  ],
+  "statement": "<p>A peak element is an element that is strictly greater than its neighbors.</p>\n\n<p>Given a <strong>0-indexed</strong> integer array <code>nums</code>, find a peak element, and return its index. If the array contains multiple peaks, return the index to <strong>any of the peaks</strong>.</p>\n\n<p>You may imagine that <code>nums[-1] = nums[n] = -&infin;</code>. In other words, an element is always considered to be strictly greater than a neighbor that is outside the array.</p>\n\n<p>You must write an algorithm that runs in <code>O(log n)</code> time.</p>\n\n<p>&nbsp;</p>\n<p><strong class=\"example\">Example 1:</strong></p>\n\n<pre>\n<strong>Input:</strong> nums = [1,2,3,1]\n<strong>Output:</strong> 2\n<strong>Explanation:</strong> 3 is a peak element and your function should return the index number 2.</pre>\n\n<p><strong class=\"example\">Example 2:</strong></p>\n\n<pre>\n<strong>Input:</strong> nums = [1,2,1,3,5,6,4]\n<strong>Output:</strong> 5\n<strong>Explanation:</strong> Your function can return either index number 1 where the peak element is 2, or index number 5 where the peak element is 6.</pre>\n\n<p>&nbsp;</p>\n<p><strong>Constraints:</strong></p>\n\n<ul>\n\t<li><code>1 &lt;= nums.length &lt;= 1000</code></li>\n\t<li><code>-2<sup>31</sup> &lt;= nums[i] &lt;= 2<sup>31</sup> - 1</code></li>\n\t<li><code>nums[i] != nums[i + 1]</code> for all valid <code>i</code>.</li>\n</ul>\n",
+  "created_at": "2026-10-19T12:56:11.490205Z",
+  "updated_at": "2026-10-19T12:56:11.490205Z",
+  "attempts": [
+    {
+      "id": "4ed2696c-f4ef-46a2-993c-5264e56aa6dd",
+      "problem_id": "e208bb91-1ec1-4974-9e6d-0f7366a4b649",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-19T12:56:11.525218Z",
+      "updated_at": "2026-10-19T12:56:11.525218Z",
+      "submissions": [
+        {
+          "id": "leetcode_2148432831",
+          "problem_id": "e208bb91-1ec1-4974-9e6d-0f7366a4b649",
+          "attempt_id": "4ed2696c-f4ef-46a2-993c-5264e56aa6dd",
+          "code": "class Solution {\n    public int findPeakElement(int[] nums) {\n        int l = 0;\n        int h =nums.length - 1;\n\n        while(l<h){\n            int mid = l + (h - l) / 2;\n\n            if(nums[mid] < nums[mid + 1]){\n                l = mid + 1;\n            }else{\n                h = mid;\n            }\n        }\n\n        return h;\n    }\n}",
+          "language": "Java",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": 44.192,
+          "submitted_at": "2026-09-21T08:22:47Z",
+          "error_message": null,
+          "submission_hash": "8e5a8395a8947ddbbf517deabecb56bce701f666173e726a057cc7f048f186f3",
+          "source_provider": "leetcode",
+          "source_account": "jaypatil1229"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

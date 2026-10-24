@@ -1,0 +1,17 @@
+{
+  "id": "real-catalog-a",
+  "title": "Real Catalog A",
+  "slug": "real-catalog-a",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array",
+    "Hash Table"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:39.797131Z",
+  "updated_at": "2026-10-15T19:06:39.797131Z",
+  "attempts": [],
+  "notes": []
+}

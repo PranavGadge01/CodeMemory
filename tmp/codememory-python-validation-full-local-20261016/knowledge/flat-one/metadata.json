@@ -1,0 +1,75 @@
+{
+  "id": "flat-one",
+  "title": "Flat One",
+  "slug": "flat-one",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:32.760637Z",
+  "updated_at": "2026-10-15T19:06:32.760637Z",
+  "attempts": [
+    {
+      "id": "e505f894-0467-4cce-a23e-7ad7083a6ef3",
+      "problem_id": "flat-one",
+      "attempt_number": 1,
+      "approach_summary": "Attempt",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:32.760637Z",
+      "updated_at": "2026-10-15T19:06:32.760637Z",
+      "submissions": [
+        {
+          "id": "8c032df0-1166-4d38-b71e-9774db382bad",
+          "problem_id": "flat-one",
+          "attempt_id": null,
+          "code": "nums.sort()\nleft, right = 0, len(nums) - 1\nwhile left < right:\n    total = nums[left] + nums[right]\n    if total == target:\n        return [left, right]\n    left += 1\nreturn []",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-01-01T00:00:00Z",
+          "error_message": null,
+          "submission_hash": "5ecb6c46d5d9dde84a9d170059d3a79c0b26e5c1c6ff121a5d64c279f1ae6a88",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    },
+    {
+      "id": "fca7e686-6184-429c-b0d6-0476248877df",
+      "problem_id": "flat-one",
+      "attempt_number": 2,
+      "approach_summary": "Attempt",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:32.760637Z",
+      "updated_at": "2026-10-15T19:06:32.760637Z",
+      "submissions": [
+        {
+          "id": "0579d84a-714e-4cce-8533-3efd8159e911",
+          "problem_id": "flat-one",
+          "attempt_id": null,
+          "code": "nums.sort()\nleft, right = 0, len(nums) - 1\nwhile left < right:\n    total = nums[left] + nums[right]\n    if total == target:\n        return [left, right]\n    left += 1\nreturn []",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-01-01T00:01:00Z",
+          "error_message": null,
+          "submission_hash": "ce9c837d3b2ca009e93d3825ec4b22f8651aea63379bac6e49cc9a0af4f43ab9",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

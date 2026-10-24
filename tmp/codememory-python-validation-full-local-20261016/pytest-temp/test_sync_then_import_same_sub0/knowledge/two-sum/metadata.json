@@ -1,0 +1,105 @@
+{
+  "id": "e204a9fb-b073-4353-a6c0-928024c1567d",
+  "title": "Two Sum",
+  "slug": "two-sum",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/two-sum/",
+  "topics": [
+    "Array",
+    "Hash Table"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:16:59.652303Z",
+  "updated_at": "2026-10-15T19:16:59.652303Z",
+  "attempts": [
+    {
+      "id": "8440fd77-4d15-45e2-bd4b-255003bf85c8",
+      "problem_id": "e204a9fb-b073-4353-a6c0-928024c1567d",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:16:59.698858Z",
+      "updated_at": "2026-10-15T19:16:59.698858Z",
+      "submissions": [
+        {
+          "id": "leetcode_1003",
+          "problem_id": "e204a9fb-b073-4353-a6c0-928024c1567d",
+          "attempt_id": "8440fd77-4d15-45e2-bd4b-255003bf85c8",
+          "code": "class Solution:\n    def twoSum(self, nums: list[int], target: int) -> list[int]:\n        seen = {}\n        for i, n in enumerate(nums):\n            diff = target - n\n            if diff in seen:\n                return [seen[diff], i]\n            seen[n] = i",
+          "language": "Python",
+          "status": "Accepted",
+          "runtime_ms": 45.0,
+          "memory_mb": 17.2,
+          "submitted_at": "2023-11-15T00:13:20Z",
+          "error_message": null,
+          "submission_hash": "047439229750b478b77c0fa8bab1bc20471a51cde984098442d34edc80c44076",
+          "source_provider": "leetcode",
+          "source_account": "syncuser"
+        }
+      ]
+    },
+    {
+      "id": "e80c00b8-3a95-4487-b2ed-ebb39c582276",
+      "problem_id": "e204a9fb-b073-4353-a6c0-928024c1567d",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Wrong Answer",
+      "created_at": "2023-11-14T22:13:20Z",
+      "updated_at": "2023-11-14T22:13:20Z",
+      "submissions": [
+        {
+          "id": "leetcode_1001",
+          "problem_id": "e204a9fb-b073-4353-a6c0-928024c1567d",
+          "attempt_id": "e80c00b8-3a95-4487-b2ed-ebb39c582276",
+          "code": "class Solution:\n    def twoSum(self, nums: list[int], target: int) -> list[int]:\n        return [0, 1]",
+          "language": "Python",
+          "status": "Wrong Answer",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2023-11-14T22:13:20Z",
+          "error_message": null,
+          "submission_hash": "d6e2a8a0af80a7d5c54fa390192cb0fc5b3f080769e927e18a7b693784fc7702",
+          "source_provider": "leetcode",
+          "source_account": "syncuser"
+        }
+      ]
+    },
+    {
+      "id": "c0419da5-a2f7-4398-8c99-46d09f2eb029",
+      "problem_id": "e204a9fb-b073-4353-a6c0-928024c1567d",
+      "attempt_number": 3,
+      "approach_summary": "Attempt 3",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Time Limit Exceeded",
+      "created_at": "2023-11-14T23:13:20Z",
+      "updated_at": "2023-11-14T23:13:20Z",
+      "submissions": [
+        {
+          "id": "leetcode_1002",
+          "problem_id": "e204a9fb-b073-4353-a6c0-928024c1567d",
+          "attempt_id": "c0419da5-a2f7-4398-8c99-46d09f2eb029",
+          "code": "class Solution:\n    def twoSum(self, nums: list[int], target: int) -> list[int]:\n        for i in range(len(nums)):\n            for j in range(len(nums)):\n                if i != j and nums[i] + nums[j] == target:\n                    return [i, j]",
+          "language": "Python",
+          "status": "Time Limit Exceeded",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2023-11-14T23:13:20Z",
+          "error_message": null,
+          "submission_hash": "7ef06a8794b191cc502a994b7487a5649ab5d3f0bd846b2eb9812652c14e7390",
+          "source_provider": "leetcode",
+          "source_account": "syncuser"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

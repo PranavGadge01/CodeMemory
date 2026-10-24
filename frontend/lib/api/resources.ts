@@ -380,7 +380,6 @@ export type {
   NextProblems,
   KnowledgeCluster,
   SolutionEvolutionData,
-  SubmissionListItem,
 } from "@/lib/types";
 
 /* --- LeetCode ---------------------------------------------------------- */

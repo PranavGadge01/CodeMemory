@@ -1,0 +1,44 @@
+{
+  "id": "6df1dca6-aa8f-4c85-af4d-181efef3962e",
+  "title": "Alpha",
+  "slug": "alpha",
+  "difficulty": "Unknown",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [],
+  "statement": null,
+  "created_at": "2026-10-15T19:16:56.797184Z",
+  "updated_at": "2026-10-15T19:16:56.797184Z",
+  "attempts": [
+    {
+      "id": "1695dbea-595d-4c35-af19-a5fb981adeb2",
+      "problem_id": "6df1dca6-aa8f-4c85-af4d-181efef3962e",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:16:56.892436Z",
+      "updated_at": "2026-10-15T19:16:56.892436Z",
+      "submissions": [
+        {
+          "id": "fe78ff98-db87-469b-8b6b-67d7acdb5c0e",
+          "problem_id": "6df1dca6-aa8f-4c85-af4d-181efef3962e",
+          "attempt_id": "1695dbea-595d-4c35-af19-a5fb981adeb2",
+          "code": "",
+          "language": "Python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2023-11-01T10:00:00Z",
+          "error_message": null,
+          "submission_hash": "e83663927dce8a4071b61b795ae969c666ae9f1b5dae28187b751754b43d9c9f",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

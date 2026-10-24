@@ -1,0 +1,47 @@
+{
+  "id": "e7a31751-3034-43bb-84fd-58df3ee03c93",
+  "title": "Valid Parentheses",
+  "slug": "valid-parentheses",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/valid-parentheses/",
+  "topics": [
+    "String",
+    "Stack"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:16:45.933146Z",
+  "updated_at": "2026-10-15T19:16:45.933146Z",
+  "attempts": [
+    {
+      "id": "706fe960-7282-4eb7-888c-8ab3624b1eaf",
+      "problem_id": "e7a31751-3034-43bb-84fd-58df3ee03c93",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2023-11-18T09:33:20Z",
+      "updated_at": "2023-11-18T09:33:20Z",
+      "submissions": [
+        {
+          "id": "leetcode_2001",
+          "problem_id": "e7a31751-3034-43bb-84fd-58df3ee03c93",
+          "attempt_id": "706fe960-7282-4eb7-888c-8ab3624b1eaf",
+          "code": "class Solution:\\n    def isValid(self, s: str) -> bool:\\n        st = []\\n        m = {')': '(', '}': '{', ']': '['}\\n        for c in s:\\n            if c in m:\\n                if not st or st.pop() != m[c]: return False\\n            else: st.append(c)\\n        return not st",
+          "language": "Python",
+          "status": "Accepted",
+          "runtime_ms": 28.0,
+          "memory_mb": 16.5,
+          "submitted_at": "2023-11-18T09:33:20Z",
+          "error_message": null,
+          "submission_hash": "80c36007e0e9b1dcf9e43c404199be9faa4934c43a3e307527110ebecd191edc",
+          "source_provider": "leetcode",
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

@@ -6,6 +6,7 @@ import pytest
 from codememory.domain.enums import DifficultyLevel, SubmissionStatus
 from codememory.domain.import_schema import (
     NormalizedSubmissionRecord,
+    normalize_leetcode_memory,
     parse_memory,
     parse_runtime,
     parse_timestamp,
@@ -23,9 +24,31 @@ def test_parse_runtime():
 
 def test_parse_memory():
     assert parse_memory(16.4) == 16.4
+    assert parse_memory(44_192_000) == 44_192_000.0
     assert parse_memory("16.4 MB") == 16.4
     assert parse_memory("2048 KB") == 2.0
     assert parse_memory(None) is None
+
+
+def test_normalize_leetcode_memory_from_paired_numeric_record():
+    assert normalize_leetcode_memory(44_192_000) == 44.192
+    assert normalize_leetcode_memory(44_192_000.0) == 44.192
+
+
+def test_normalize_leetcode_memory_preserves_missing_values():
+    assert normalize_leetcode_memory(None) is None
+    assert normalize_leetcode_memory("") is None
+    assert normalize_leetcode_memory({}.get("memory")) is None
+
+
+def test_normalize_leetcode_memory_accepts_explicit_units_only():
+    assert normalize_leetcode_memory("44.19 MB") == 44.19
+    assert normalize_leetcode_memory("2048 KB") == 2.0
+    assert normalize_leetcode_memory("44192000") is None
+    assert normalize_leetcode_memory({"value": 44_192_000}) is None
+    assert normalize_leetcode_memory(True) is None
+    assert normalize_leetcode_memory(-1) is None
+    assert normalize_leetcode_memory(float("inf")) is None
 
 
 def test_parse_timestamp():

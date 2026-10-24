@@ -1,0 +1,61 @@
+{
+  "id": "e1a2e070-e7ea-4079-a059-cb3b79226314",
+  "title": "Regex Matching",
+  "slug": "regex-matching",
+  "difficulty": "Hard",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "String"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:18:12.535391Z",
+  "updated_at": "2026-10-15T19:18:12.535391Z",
+  "attempts": [
+    {
+      "id": "5e1db752-20d8-467b-b854-1d1d67fc1fe7",
+      "problem_id": "e1a2e070-e7ea-4079-a059-cb3b79226314",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Wrong Answer",
+      "created_at": "2026-10-15T19:18:12.602846Z",
+      "updated_at": "2026-10-15T19:18:12.602846Z",
+      "submissions": [
+        {
+          "id": "24b04080-0210-44a1-b715-6bf6b33896ba",
+          "problem_id": "e1a2e070-e7ea-4079-a059-cb3b79226314",
+          "attempt_id": "5e1db752-20d8-467b-b854-1d1d67fc1fe7",
+          "code": "wa 1",
+          "language": "python",
+          "status": "Wrong Answer",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-15T19:18:12.599841Z",
+          "error_message": null,
+          "submission_hash": "e6bdaae46d1deb7baea03c47de5290cc3af5be791a2bcd04323fdec4ae948e6a",
+          "source_provider": null,
+          "source_account": null
+        },
+        {
+          "id": "974c73fa-277a-469e-8dcb-b06f3976e80e",
+          "problem_id": "e1a2e070-e7ea-4079-a059-cb3b79226314",
+          "attempt_id": "5e1db752-20d8-467b-b854-1d1d67fc1fe7",
+          "code": "wa 2",
+          "language": "python",
+          "status": "Wrong Answer",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-15T19:18:12.834979Z",
+          "error_message": null,
+          "submission_hash": "def3bdd7a23f36a79bd2aac9e250352e0ecab1d35d5d1859cbd3275d624abd67",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

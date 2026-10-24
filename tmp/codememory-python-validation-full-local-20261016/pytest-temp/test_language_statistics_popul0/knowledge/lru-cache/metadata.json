@@ -1,0 +1,76 @@
+{
+  "id": "5bd6261f-003e-496e-8af7-d37e78e634fe",
+  "title": "LRU Cache",
+  "slug": "lru-cache",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Hash Table",
+    "Design"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:20.286305Z",
+  "updated_at": "2026-10-15T19:06:20.286305Z",
+  "attempts": [
+    {
+      "id": "1c15752d-dd02-4542-aa6e-d2deb591f3cf",
+      "problem_id": "5bd6261f-003e-496e-8af7-d37e78e634fe",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Time Limit Exceeded",
+      "created_at": "2026-10-15T19:06:20.306359Z",
+      "updated_at": "2026-10-15T19:06:20.306359Z",
+      "submissions": [
+        {
+          "id": "a60222d5-bbcb-4985-bdef-467f26414880",
+          "problem_id": "5bd6261f-003e-496e-8af7-d37e78e634fe",
+          "attempt_id": "1c15752d-dd02-4542-aa6e-d2deb591f3cf",
+          "code": "slow",
+          "language": "python",
+          "status": "Time Limit Exceeded",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-14T19:06:20.564066Z",
+          "error_message": null,
+          "submission_hash": "65fc3add80ae4b1a80f21a5a87ca25e5d025d54c71e973f1e4408d86aa5105c8",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    },
+    {
+      "id": "036edbf7-401b-4cea-a39a-876494b0f7aa",
+      "problem_id": "5bd6261f-003e-496e-8af7-d37e78e634fe",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:20.336601Z",
+      "updated_at": "2026-10-15T19:06:20.336601Z",
+      "submissions": [
+        {
+          "id": "acbbff69-b4ed-49e5-a295-19bf37e72fc1",
+          "problem_id": "5bd6261f-003e-496e-8af7-d37e78e634fe",
+          "attempt_id": "036edbf7-401b-4cea-a39a-876494b0f7aa",
+          "code": "optimized",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": 70.0,
+          "memory_mb": 20.0,
+          "submitted_at": "2026-10-14T19:06:20.564066Z",
+          "error_message": null,
+          "submission_hash": "c9d26e227755d686a79b33047a34922bcd9ef741c1e220274ca2336a531d0f49",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

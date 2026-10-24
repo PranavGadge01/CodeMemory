@@ -1,0 +1,17 @@
+{
+  "id": "medium-candidate-b",
+  "title": "Medium Candidate B",
+  "slug": "medium-candidate-b",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array",
+    "Hash Table"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:44.709417Z",
+  "updated_at": "2026-10-15T19:06:44.709417Z",
+  "attempts": [],
+  "notes": []
+}

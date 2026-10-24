@@ -1,0 +1,100 @@
+[
+  {
+    "scene": "intro",
+    "start": 0,
+    "end": 3
+  },
+  {
+    "scene": "intro",
+    "transition": "click_open",
+    "time": 2.5
+  },
+  {
+    "scene": "connect",
+    "start": 4
+  },
+  {
+    "scene": "connect",
+    "action": "username_typed",
+    "time": 7
+  },
+  {
+    "scene": "connect",
+    "action": "click_connect",
+    "time": 8
+  },
+  {
+    "scene": "connect",
+    "action": "success",
+    "end": 22
+  },
+  {
+    "scene": "settings",
+    "start": 23
+  },
+  {
+    "scene": "settings",
+    "end": 31
+  },
+  {
+    "scene": "dashboard",
+    "start": 32
+  },
+  {
+    "scene": "dashboard",
+    "end": 37
+  },
+  {
+    "scene": "problems",
+    "start": 38
+  },
+  {
+    "scene": "problems",
+    "end": 43
+  },
+  {
+    "scene": "problem",
+    "start": 44
+  },
+  {
+    "scene": "problem",
+    "end": 49
+  },
+  {
+    "scene": "search",
+    "start": 50
+  },
+  {
+    "scene": "search",
+    "end": 54
+  },
+  {
+    "scene": "analytics",
+    "start": 55
+  },
+  {
+    "scene": "analytics",
+    "end": 60
+  },
+  {
+    "scene": "knowledge",
+    "start": 61
+  },
+  {
+    "scene": "knowledge",
+    "end": 65
+  },
+  {
+    "scene": "revision",
+    "start": 66
+  },
+  {
+    "scene": "revision",
+    "end": 70
+  },
+  {
+    "scene": "closing",
+    "start": 71,
+    "end": 75
+  }
+]

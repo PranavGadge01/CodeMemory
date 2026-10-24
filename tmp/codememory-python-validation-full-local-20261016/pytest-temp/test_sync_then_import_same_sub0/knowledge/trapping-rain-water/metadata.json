@@ -1,0 +1,49 @@
+{
+  "id": "4efa8219-2185-4988-85c4-61d665ec9b9a",
+  "title": "Trapping Rain Water",
+  "slug": "trapping-rain-water",
+  "difficulty": "Hard",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/trapping-rain-water/",
+  "topics": [
+    "Array",
+    "Two Pointers",
+    "Dynamic Programming",
+    "Stack"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:17:00.434191Z",
+  "updated_at": "2026-10-15T19:17:00.434191Z",
+  "attempts": [
+    {
+      "id": "46d29079-8aca-4051-a331-2eb0054e5bf8",
+      "problem_id": "4efa8219-2185-4988-85c4-61d665ec9b9a",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2023-11-17T05:46:40Z",
+      "updated_at": "2023-11-17T05:46:40Z",
+      "submissions": [
+        {
+          "id": "leetcode_1006",
+          "problem_id": "4efa8219-2185-4988-85c4-61d665ec9b9a",
+          "attempt_id": "46d29079-8aca-4051-a331-2eb0054e5bf8",
+          "code": "class Solution {\n    public int trap(int[] height) {\n        int l = 0, r = height.length - 1;\n        int leftMax = 0, rightMax = 0, water = 0;\n        while (l < r) {\n            if (height[l] < height[r]) {\n                if (height[l] >= leftMax) leftMax = height[l];\n                else water += leftMax - height[l];\n                l++;\n            } else {\n                if (height[r] >= rightMax) rightMax = height[r];\n                else water += rightMax - height[r];\n                r--;\n            }\n        }\n        return water;\n    }\n}",
+          "language": "Java",
+          "status": "Accepted",
+          "runtime_ms": 1.0,
+          "memory_mb": 43.5,
+          "submitted_at": "2023-11-17T05:46:40Z",
+          "error_message": null,
+          "submission_hash": "e19812dd1cb73373901223c9b69c998edd8284e281f38a1054751db77946dc2c",
+          "source_provider": "leetcode",
+          "source_account": "syncuser"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

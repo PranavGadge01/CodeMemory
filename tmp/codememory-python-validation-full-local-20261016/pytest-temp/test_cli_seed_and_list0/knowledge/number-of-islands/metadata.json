@@ -1,0 +1,70 @@
+{
+  "id": "c8718b05-1fde-4d13-8e38-713c46298246",
+  "title": "Number of Islands",
+  "slug": "number-of-islands",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/number-of-islands/",
+  "topics": [
+    "Array",
+    "Depth-First Search",
+    "Breadth-First Search",
+    "Union Find",
+    "Matrix"
+  ],
+  "statement": "Given an m x n 2D binary grid grid which represents a map of '1's (land) and '0's (water), return the number of islands.",
+  "created_at": "2026-10-15T19:06:29.921195Z",
+  "updated_at": "2026-10-15T19:06:29.921195Z",
+  "attempts": [
+    {
+      "id": "b8c47dbf-fea7-42fb-a0a2-66462dfae270",
+      "problem_id": "c8718b05-1fde-4d13-8e38-713c46298246",
+      "attempt_number": 1,
+      "approach_summary": "Grid DFS Traversal",
+      "reasoning": "Traverse 2D matrix; when land '1' encountered, increment island count and DFS sink all connected '1's.",
+      "mistakes": [],
+      "analysis": {
+        "approach_name": "Standard Approach",
+        "time_complexity": "O(M * N)",
+        "space_complexity": "O(M * N)",
+        "key_insights": [],
+        "trade_offs": null,
+        "bottleneck": null
+      },
+      "status": "Unknown",
+      "created_at": "2026-10-15T19:06:29.941377Z",
+      "updated_at": "2026-10-15T19:06:29.941377Z",
+      "submissions": []
+    },
+    {
+      "id": "0893c2e0-4380-4a18-a2e8-34dfd5cc49d1",
+      "problem_id": "c8718b05-1fde-4d13-8e38-713c46298246",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:29.965644Z",
+      "updated_at": "2026-10-15T19:06:29.965644Z",
+      "submissions": [
+        {
+          "id": "b654a3b9-3198-4d93-a6cd-12ead8ee2898",
+          "problem_id": "c8718b05-1fde-4d13-8e38-713c46298246",
+          "attempt_id": "0893c2e0-4380-4a18-a2e8-34dfd5cc49d1",
+          "code": "def numIslands(grid: list[list[str]]) -> int:\n    if not grid: return 0\n    rows, cols = len(grid), len(grid[0])\n    count = 0\n    def dfs(r, c):\n        if r < 0 or c < 0 or r >= rows or c >= cols or grid[r][c] != '1': return\n        grid[r][c] = '0'\n        dfs(r+1, c); dfs(r-1, c); dfs(r, c+1); dfs(r, c-1)\n    for r in range(rows):\n        for c in range(cols):\n            if grid[r][c] == '1':\n                count += 1\n                dfs(r, c)\n    return count",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": 210.0,
+          "memory_mb": 32.1,
+          "submitted_at": "2026-10-15T19:06:29.965644Z",
+          "error_message": null,
+          "submission_hash": "486ef76e2643a67e6b5140e6c7a5bb42a12c367c9b2a87f14a2600749a5cda02",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

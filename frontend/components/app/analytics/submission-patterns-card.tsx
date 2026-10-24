@@ -108,9 +108,9 @@ export function SubmissionPatternsCard({ className }: { className?: string }) {
                 <p className="text-body-sm text-text-muted text-center py-4">No patterns detected yet. Keep practising!</p>
               )}
             </div>
-            {data.sample_size_notes.length > 0 && (
+            {data.sampleSizeNotes.length > 0 && (
               <div className="pt-2 border-t border-border-soft">
-                {data.sample_size_notes.map((n, i) => (
+                {data.sampleSizeNotes.map((n, i) => (
                   <p key={i} className="text-caption text-text-faint flex items-start gap-1.5">
                     <Info className="h-3 w-3 mt-0.5 shrink-0" />{n}
                   </p>

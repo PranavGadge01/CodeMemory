@@ -1,0 +1,68 @@
+{
+  "id": "d731a656-938a-4e5c-8bf6-c97807fea4e2",
+  "title": "Median of Two Sorted Arrays",
+  "slug": "median-of-two-sorted-arrays",
+  "difficulty": "Hard",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/median-of-two-sorted-arrays/",
+  "topics": [
+    "Array",
+    "Binary Search",
+    "Divide and Conquer"
+  ],
+  "statement": "Given two sorted arrays nums1 and nums2 of size m and n respectively, return the median of the two sorted arrays.",
+  "created_at": "2026-10-15T19:06:30.529351Z",
+  "updated_at": "2026-10-15T19:06:30.529351Z",
+  "attempts": [
+    {
+      "id": "6b3a1733-7129-4fcd-8ed9-5c91e24ee6da",
+      "problem_id": "d731a656-938a-4e5c-8bf6-c97807fea4e2",
+      "attempt_number": 1,
+      "approach_summary": "Binary Search on Partition Index",
+      "reasoning": "Perform binary search on smaller array to find valid left/right partition cut.",
+      "mistakes": [],
+      "analysis": {
+        "approach_name": "Standard Approach",
+        "time_complexity": "O(log(min(M, N)))",
+        "space_complexity": "O(1)",
+        "key_insights": [],
+        "trade_offs": null,
+        "bottleneck": null
+      },
+      "status": "Unknown",
+      "created_at": "2026-10-15T19:06:30.553331Z",
+      "updated_at": "2026-10-15T19:06:30.553331Z",
+      "submissions": []
+    },
+    {
+      "id": "717e639a-1f26-40d2-883e-a4aee94e33cd",
+      "problem_id": "d731a656-938a-4e5c-8bf6-c97807fea4e2",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:30.583129Z",
+      "updated_at": "2026-10-15T19:06:30.583129Z",
+      "submissions": [
+        {
+          "id": "194f2223-f65d-4409-9161-4a1a11923bb0",
+          "problem_id": "d731a656-938a-4e5c-8bf6-c97807fea4e2",
+          "attempt_id": "717e639a-1f26-40d2-883e-a4aee94e33cd",
+          "code": "def findMedianSortedArrays(nums1: list[int], nums2: list[int]) -> float:\n    A, B = nums1, nums2\n    total = len(A) + len(B)\n    half = total // 2\n    if len(B) < len(A): A, B = B, A\n    l, r = 0, len(A) - 1\n    while True:\n        i = (l + r) // 2\n        j = half - i - 2\n        Aleft = A[i] if i >= 0 else float('-inf')\n        Aright = A[i + 1] if (i + 1) < len(A) else float('inf')\n        Bleft = B[j] if j >= 0 else float('-inf')\n        Bright = B[j + 1] if (j + 1) < len(B) else float('inf')\n        if Aleft <= Bright and Bleft <= Aright:\n            if total % 2: return min(Aright, Bright)\n            return (max(Aleft, Bleft) + min(Aright, Bright)) / 2\n        elif Aleft > Bright: r = i - 1\n        else: l = i + 1",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": 85.0,
+          "memory_mb": 16.5,
+          "submitted_at": "2026-10-15T19:06:30.582136Z",
+          "error_message": null,
+          "submission_hash": "30fddb23259b5d5729b53c4bc8e70b1c85d02796fe961bf2597fd144e011b48a",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

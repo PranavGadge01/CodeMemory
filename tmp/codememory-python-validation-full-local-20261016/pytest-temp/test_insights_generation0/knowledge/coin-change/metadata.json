@@ -1,0 +1,68 @@
+{
+  "id": "c709b17d-b8f9-4cc5-b0ae-668910568393",
+  "title": "Coin Change",
+  "slug": "coin-change",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/coin-change/",
+  "topics": [
+    "Array",
+    "Dynamic Programming",
+    "Breadth-First Search"
+  ],
+  "statement": "Return the fewest number of coins that you need to make up that amount.",
+  "created_at": "2026-10-15T19:06:36.960815Z",
+  "updated_at": "2026-10-15T19:06:36.960815Z",
+  "attempts": [
+    {
+      "id": "e4cd07a4-0d56-47b8-8ffa-239a8a17c679",
+      "problem_id": "c709b17d-b8f9-4cc5-b0ae-668910568393",
+      "attempt_number": 1,
+      "approach_summary": "Bottom-Up DP",
+      "reasoning": "dp[i] stores min coins to form amount i: dp[i] = min(dp[i], dp[i - coin] + 1).",
+      "mistakes": [],
+      "analysis": {
+        "approach_name": "Standard Approach",
+        "time_complexity": "O(amount * len(coins))",
+        "space_complexity": "O(amount)",
+        "key_insights": [],
+        "trade_offs": null,
+        "bottleneck": null
+      },
+      "status": "Unknown",
+      "created_at": "2026-10-15T19:06:36.988395Z",
+      "updated_at": "2026-10-15T19:06:36.988395Z",
+      "submissions": []
+    },
+    {
+      "id": "7c108ea9-35ac-49a7-a0ce-db5713b05a70",
+      "problem_id": "c709b17d-b8f9-4cc5-b0ae-668910568393",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:37.020816Z",
+      "updated_at": "2026-10-15T19:06:37.020816Z",
+      "submissions": [
+        {
+          "id": "3bf19e9a-0ef7-4653-8c3c-b31527e71beb",
+          "problem_id": "c709b17d-b8f9-4cc5-b0ae-668910568393",
+          "attempt_id": "7c108ea9-35ac-49a7-a0ce-db5713b05a70",
+          "code": "def coinChange(coins: list[int], amount: int) -> int:\n    dp = [float('inf')] * (amount + 1)\n    dp[0] = 0\n    for coin in coins:\n        for i in range(coin, amount + 1):\n            dp[i] = min(dp[i], dp[i - coin] + 1)\n    return dp[amount] if dp[amount] != float('inf') else -1",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": 650.0,
+          "memory_mb": 16.8,
+          "submitted_at": "2026-10-15T19:06:37.019814Z",
+          "error_message": null,
+          "submission_hash": "386c25bb8f18f9bf2c0d7ac3ab36fd439f1b75298e4cf54a146b983ccddf1a83",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

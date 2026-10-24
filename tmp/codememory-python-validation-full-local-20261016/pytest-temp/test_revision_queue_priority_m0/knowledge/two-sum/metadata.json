@@ -1,0 +1,47 @@
+{
+  "id": "f80d4897-076d-419a-8071-bf4141feda44",
+  "title": "Two Sum",
+  "slug": "two-sum",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array",
+    "Hash Table"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:19:12.080875Z",
+  "updated_at": "2026-10-15T19:19:12.080875Z",
+  "attempts": [
+    {
+      "id": "2bb44d8a-4246-4bce-9c55-caa18cf9cb9d",
+      "problem_id": "f80d4897-076d-419a-8071-bf4141feda44",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:19:12.152431Z",
+      "updated_at": "2026-10-15T19:19:12.152431Z",
+      "submissions": [
+        {
+          "id": "65b004a7-fe65-46eb-858c-c35e980a1c2b",
+          "problem_id": "f80d4897-076d-419a-8071-bf4141feda44",
+          "attempt_id": "2bb44d8a-4246-4bce-9c55-caa18cf9cb9d",
+          "code": "pass",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-15T19:19:12.148428Z",
+          "error_message": null,
+          "submission_hash": "e56383283cef1f2c855bacb9b00d0b2a12852705f5f9fb8310302405999d8098",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

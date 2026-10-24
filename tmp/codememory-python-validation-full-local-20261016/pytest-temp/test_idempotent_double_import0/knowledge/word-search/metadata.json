@@ -1,0 +1,49 @@
+{
+  "id": "45b4f6f6-cca8-4e9d-ab5e-40f464b64cb3",
+  "title": "Word Search",
+  "slug": "word-search",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array",
+    "Backtracking",
+    "Depth-First Search",
+    "Matrix"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:18:22.937333Z",
+  "updated_at": "2026-10-15T19:18:22.937333Z",
+  "attempts": [
+    {
+      "id": "97727e69-07de-4a64-b36a-59e621f0d28c",
+      "problem_id": "45b4f6f6-cca8-4e9d-ab5e-40f464b64cb3",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2024-01-22T09:00:00Z",
+      "updated_at": "2024-01-22T09:00:00Z",
+      "submissions": [
+        {
+          "id": "9db57a74-5a99-4bbb-a711-e40ed58dd26f",
+          "problem_id": "45b4f6f6-cca8-4e9d-ab5e-40f464b64cb3",
+          "attempt_id": "97727e69-07de-4a64-b36a-59e621f0d28c",
+          "code": "class Solution {\npublic:\n    bool exist(vector<vector<char>>& board, string word) {\n        int m = board.size(), n = board[0].size();\n        function<bool(int,int,int)> dfs = [&](int r, int c, int idx) -> bool {\n            if (idx == word.size()) return true;\n            if (r < 0 || r >= m || c < 0 || c >= n || board[r][c] != word[idx]) return false;\n            char tmp = board[r][c]; board[r][c] = '#';\n            bool found = dfs(r+1,c,idx+1) || dfs(r-1,c,idx+1) || dfs(r,c+1,idx+1) || dfs(r,c-1,idx+1);\n            board[r][c] = tmp;\n            return found;\n        };\n        for (int r = 0; r < m; r++)\n            for (int c = 0; c < n; c++)\n                if (dfs(r, c, 0)) return true;\n        return false;\n    }\n};",
+          "language": "C++",
+          "status": "Accepted",
+          "runtime_ms": 245.0,
+          "memory_mb": 9.1,
+          "submitted_at": "2024-01-22T09:00:00Z",
+          "error_message": null,
+          "submission_hash": "876b5ea9b79d63ee95003bfa42e1de90c6bd704fa17407047ef3078d6231bc3f",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

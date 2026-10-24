@@ -1,0 +1,47 @@
+{
+  "id": "d0da1769-828c-4080-89bc-df70a5c8c7a6",
+  "title": "Move Zeroes",
+  "slug": "move-zeroes",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/move-zeroes/",
+  "topics": [
+    "Array",
+    "Two Pointers"
+  ],
+  "statement": "<p>Given an integer array <code>nums</code>, move all <code>0</code>&#39;s to the end of it while maintaining the relative order of the non-zero elements.</p>\n\n<p><strong>Note</strong> that you must do this in-place without making a copy of the array.</p>\n\n<p>&nbsp;</p>\n<p><strong class=\"example\">Example 1:</strong></p>\n<pre><strong>Input:</strong> nums = [0,1,0,3,12]\n<strong>Output:</strong> [1,3,12,0,0]\n</pre><p><strong class=\"example\">Example 2:</strong></p>\n<pre><strong>Input:</strong> nums = [0]\n<strong>Output:</strong> [0]\n</pre>\n<p>&nbsp;</p>\n<p><strong>Constraints:</strong></p>\n\n<ul>\n\t<li><code>1 &lt;= nums.length &lt;= 10<sup>4</sup></code></li>\n\t<li><code>-2<sup>31</sup> &lt;= nums[i] &lt;= 2<sup>31</sup> - 1</code></li>\n</ul>\n\n<p>&nbsp;</p>\n<strong>Follow up:</strong> Could you minimize the total number of operations done?",
+  "created_at": "2026-10-19T12:57:06.020155Z",
+  "updated_at": "2026-10-19T12:57:06.020155Z",
+  "attempts": [
+    {
+      "id": "966889b0-da39-4dd5-9645-01f6fb9b040b",
+      "problem_id": "d0da1769-828c-4080-89bc-df70a5c8c7a6",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-19T12:57:06.057168Z",
+      "updated_at": "2026-10-19T12:57:06.057168Z",
+      "submissions": [
+        {
+          "id": "leetcode_1958059292",
+          "problem_id": "d0da1769-828c-4080-89bc-df70a5c8c7a6",
+          "attempt_id": "966889b0-da39-4dd5-9645-01f6fb9b040b",
+          "code": "class Solution {\n    public void moveZeroes(int[] nums) {\n        int insertPos = 0;\n\n        for(int num : nums){\n            if(num != 0){\n                nums[insertPos++] = num;\n            }\n        }\n\n        while(insertPos < nums.length){\n            nums[insertPos++] = 0;\n        }\n    }\n}",
+          "language": "Java",
+          "status": "Accepted",
+          "runtime_ms": 1.0,
+          "memory_mb": 46.904,
+          "submitted_at": "2026-03-24T17:40:34Z",
+          "error_message": null,
+          "submission_hash": "c05e2bb3f37b967d032e58aa7a47da85ed6a5c3f8a10ec5e6f92de9166d6ab74",
+          "source_provider": "leetcode",
+          "source_account": "jaypatil1229"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

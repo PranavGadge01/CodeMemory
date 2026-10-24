@@ -32,6 +32,9 @@ htmlcov/
 env/
 venv/
 ENV/
+.venv-demo
+.venv-demo-locked
+.venv-locked
 
 # Data & Knowledge base (Local User Data)
 data/*.duckdb

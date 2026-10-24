@@ -1,0 +1,62 @@
+{
+  "id": "bcc6683a-360e-4b79-b4ed-ce9f47801fe0",
+  "title": "Median of Two Sorted Arrays",
+  "slug": "median-of-two-sorted-arrays",
+  "difficulty": "Hard",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Binary Search",
+    "Divide and Conquer"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:21.381387Z",
+  "updated_at": "2026-10-15T19:06:21.381387Z",
+  "attempts": [
+    {
+      "id": "db796f9d-bf37-49d5-aa51-64590149aef0",
+      "problem_id": "bcc6683a-360e-4b79-b4ed-ce9f47801fe0",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Wrong Answer",
+      "created_at": "2026-10-15T19:06:21.413185Z",
+      "updated_at": "2026-10-15T19:06:21.413185Z",
+      "submissions": [
+        {
+          "id": "867610cd-0628-42d8-9251-313b7c5a2536",
+          "problem_id": "bcc6683a-360e-4b79-b4ed-ce9f47801fe0",
+          "attempt_id": "db796f9d-bf37-49d5-aa51-64590149aef0",
+          "code": "attempt1",
+          "language": "cpp",
+          "status": "Wrong Answer",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-14T19:06:21.600730Z",
+          "error_message": null,
+          "submission_hash": "f46c3d1934a946c7daa4338d8db1105b559089a92d03affd91779d57e198f2b2",
+          "source_provider": null,
+          "source_account": null
+        },
+        {
+          "id": "666301bf-1be7-4c88-b417-87382d9f3338",
+          "problem_id": "bcc6683a-360e-4b79-b4ed-ce9f47801fe0",
+          "attempt_id": "db796f9d-bf37-49d5-aa51-64590149aef0",
+          "code": "attempt2",
+          "language": "cpp",
+          "status": "Wrong Answer",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-14T19:06:21.600730Z",
+          "error_message": null,
+          "submission_hash": "4587006ac40b55b79952f760a3c84842cd4456b0015b594483dfd7fa5a3cee61",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

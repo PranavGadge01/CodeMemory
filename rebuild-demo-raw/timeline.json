@@ -1,0 +1,144 @@
+[
+  {
+    "scene": "intro",
+    "action": "landing",
+    "start": 0
+  },
+  {
+    "scene": "intro",
+    "action": "landing",
+    "end": 2
+  },
+  {
+    "scene": "connect",
+    "action": "navigate_to_connect",
+    "start": 2
+  },
+  {
+    "scene": "connect",
+    "action": "enter_username",
+    "time": 3
+  },
+  {
+    "scene": "connect",
+    "action": "username_typed",
+    "time": 3.5
+  },
+  {
+    "scene": "connect",
+    "action": "processing",
+    "time": 5
+  },
+  {
+    "scene": "connect",
+    "action": "success",
+    "end": 9
+  },
+  {
+    "scene": "settings",
+    "action": "navigate",
+    "start": 10
+  },
+  {
+    "scene": "settings",
+    "action": "creds_stored",
+    "time": 13
+  },
+  {
+    "scene": "dashboard",
+    "action": "navigate",
+    "start": 15
+  },
+  {
+    "scene": "dashboard",
+    "action": "show_stats",
+    "time": 17
+  },
+  {
+    "scene": "dashboard",
+    "action": "scroll_to_insights",
+    "time": 18,
+    "end": 20
+  },
+  {
+    "scene": "problems",
+    "action": "navigate",
+    "start": 20
+  },
+  {
+    "scene": "problems",
+    "action": "show_list",
+    "time": 22
+  },
+  {
+    "scene": "problems",
+    "action": "search",
+    "time": 23,
+    "end": 25
+  },
+  {
+    "scene": "problem",
+    "action": "navigate",
+    "start": 25
+  },
+  {
+    "scene": "problem",
+    "action": "show_detail",
+    "time": 27
+  },
+  {
+    "scene": "problem",
+    "action": "show_submissions",
+    "time": 28,
+    "end": 30
+  },
+  {
+    "scene": "search",
+    "action": "navigate",
+    "start": 30
+  },
+  {
+    "scene": "search",
+    "action": "show_results",
+    "time": 32,
+    "end": 34
+  },
+  {
+    "scene": "analytics",
+    "action": "navigate",
+    "start": 34
+  },
+  {
+    "scene": "analytics",
+    "action": "show_metrics",
+    "time": 36
+  },
+  {
+    "scene": "analytics",
+    "action": "show_insights",
+    "time": 37,
+    "end": 39
+  },
+  {
+    "scene": "knowledge",
+    "action": "navigate",
+    "start": 39
+  },
+  {
+    "scene": "knowledge",
+    "action": "show_graph",
+    "time": 42,
+    "end": 44
+  },
+  {
+    "scene": "revision",
+    "action": "navigate",
+    "start": 44
+  },
+  {
+    "scene": "revision",
+    "action": "show_queue",
+    "time": 46,
+    "end": 46
+  }
+]

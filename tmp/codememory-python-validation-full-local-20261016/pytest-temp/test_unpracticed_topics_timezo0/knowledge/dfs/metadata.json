@@ -1,0 +1,46 @@
+{
+  "id": "279b3fbd-574f-48ac-a536-eb3f4dab721b",
+  "title": "DFS",
+  "slug": "dfs",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Tree"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:18:17.108043Z",
+  "updated_at": "2026-10-15T19:18:17.108043Z",
+  "attempts": [
+    {
+      "id": "1df72399-b26f-41a5-8813-c2a00d018ffe",
+      "problem_id": "279b3fbd-574f-48ac-a536-eb3f4dab721b",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:18:17.180582Z",
+      "updated_at": "2026-10-15T19:18:17.180582Z",
+      "submissions": [
+        {
+          "id": "fdc76f10-247b-4e31-9785-0355c4441e15",
+          "problem_id": "279b3fbd-574f-48ac-a536-eb3f4dab721b",
+          "attempt_id": "1df72399-b26f-41a5-8813-c2a00d018ffe",
+          "code": "dfs code",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-15T19:18:17.177582Z",
+          "error_message": null,
+          "submission_hash": "e36dd19ddb25a52f0527c9ee9ecf8afc5eabfb57ba0d3dd96e6bfdca8a66d3c9",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

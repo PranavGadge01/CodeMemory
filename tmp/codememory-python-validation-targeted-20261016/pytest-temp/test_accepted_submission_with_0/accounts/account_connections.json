@@ -1,0 +1,20 @@
+{
+  "leetcode": {
+    "provider": "LeetCode",
+    "username": "alice",
+    "display_name": null,
+    "user_avatar": null,
+    "status": "Connected",
+    "connected_at": "2026-10-15T18:54:06.947769Z",
+    "last_sync_at": null,
+    "last_sync_status": null,
+    "last_sync_error": null,
+    "capabilities": {
+      "profile_sync": true,
+      "progress_sync": true,
+      "recent_submissions": true,
+      "private_code_scraping": false
+    },
+    "metadata": {}
+  }
+}

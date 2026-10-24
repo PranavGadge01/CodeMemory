@@ -1,0 +1,46 @@
+{
+  "id": "cfb05a62-6fa4-47ad-9608-f78d7dc64636",
+  "title": "Length of Last Word",
+  "slug": "length-of-last-word",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/length-of-last-word/",
+  "topics": [
+    "String"
+  ],
+  "statement": "<p>Given a string <code>s</code> consisting of words and spaces, return <em>the length of the <strong>last</strong> word in the string.</em></p>\n\n<p>A <strong>word</strong> is a maximal <span data-keyword=\"substring-nonempty\">substring</span> consisting of non-space characters only.</p>\n\n<p>&nbsp;</p>\n<p><strong class=\"example\">Example 1:</strong></p>\n\n<pre>\n<strong>Input:</strong> s = &quot;Hello World&quot;\n<strong>Output:</strong> 5\n<strong>Explanation:</strong> The last word is &quot;World&quot; with length 5.\n</pre>\n\n<p><strong class=\"example\">Example 2:</strong></p>\n\n<pre>\n<strong>Input:</strong> s = &quot;   fly me   to   the moon  &quot;\n<strong>Output:</strong> 4\n<strong>Explanation:</strong> The last word is &quot;moon&quot; with length 4.\n</pre>\n\n<p><strong class=\"example\">Example 3:</strong></p>\n\n<pre>\n<strong>Input:</strong> s = &quot;luffy is still joyboy&quot;\n<strong>Output:</strong> 6\n<strong>Explanation:</strong> The last word is &quot;joyboy&quot; with length 6.\n</pre>\n\n<p>&nbsp;</p>\n<p><strong>Constraints:</strong></p>\n\n<ul>\n\t<li><code>1 &lt;= s.length &lt;= 10<sup>4</sup></code></li>\n\t<li><code>s</code> consists of only English letters and spaces <code>&#39; &#39;</code>.</li>\n\t<li>There will be at least one word in <code>s</code>.</li>\n</ul>\n",
+  "created_at": "2026-10-19T12:56:28.339657Z",
+  "updated_at": "2026-10-19T12:56:28.339657Z",
+  "attempts": [
+    {
+      "id": "4aea75ee-d1d8-4814-b80f-67d531f7479c",
+      "problem_id": "cfb05a62-6fa4-47ad-9608-f78d7dc64636",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-19T12:56:28.368660Z",
+      "updated_at": "2026-10-19T12:56:28.368660Z",
+      "submissions": [
+        {
+          "id": "leetcode_1968148094",
+          "problem_id": "cfb05a62-6fa4-47ad-9608-f78d7dc64636",
+          "attempt_id": "4aea75ee-d1d8-4814-b80f-67d531f7479c",
+          "code": "class Solution {\n    public int lengthOfLastWord(String s) {\n        int i = s.length() - 1;\n\n        while (i >= 0 && s.charAt(i) == ' ') {\n            i--;\n        }\n\n        int length = 0;\n        while (i >= 0 && s.charAt(i) != ' ') {\n            length++;\n            i--;\n        }\n\n        return length;\n    }\n}",
+          "language": "Java",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": 43.212,
+          "submitted_at": "2026-04-03T23:46:34Z",
+          "error_message": null,
+          "submission_hash": "b43d6458fd66674d6633506affccc902e909c52c8055f406db368a558ce44efe",
+          "source_provider": "leetcode",
+          "source_account": "jaypatil1229"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

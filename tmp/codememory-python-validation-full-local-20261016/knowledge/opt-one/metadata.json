@@ -1,0 +1,75 @@
+{
+  "id": "opt-one",
+  "title": "Opt One",
+  "slug": "opt-one",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:32.653998Z",
+  "updated_at": "2026-10-15T19:06:32.653998Z",
+  "attempts": [
+    {
+      "id": "eb5ada25-8f6c-41b6-9d94-69c8787f3755",
+      "problem_id": "opt-one",
+      "attempt_number": 1,
+      "approach_summary": "Attempt",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Time Limit Exceeded",
+      "created_at": "2026-10-15T19:06:32.654999Z",
+      "updated_at": "2026-10-15T19:06:32.654999Z",
+      "submissions": [
+        {
+          "id": "c9f17923-ddb5-4df1-9a60-8de303075ba7",
+          "problem_id": "opt-one",
+          "attempt_id": null,
+          "code": "total = 0\nfor i in range(len(nums)):\n    for j in range(len(nums)):\n        if nums[i] + nums[j] == target:\n            total += 1\nreturn total",
+          "language": "python",
+          "status": "Time Limit Exceeded",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-01-01T00:00:00Z",
+          "error_message": null,
+          "submission_hash": "e33e9ba474d8b86976ad5e5c1e2c504ef2d9b5a2acb52d9ecc47edfe93a1f42e",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    },
+    {
+      "id": "b4161114-8b07-4a39-9f4a-cea459ab50da",
+      "problem_id": "opt-one",
+      "attempt_number": 2,
+      "approach_summary": "Attempt",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:32.654999Z",
+      "updated_at": "2026-10-15T19:06:32.654999Z",
+      "submissions": [
+        {
+          "id": "e80563f7-81e2-42e6-869e-d42fcf28fbcd",
+          "problem_id": "opt-one",
+          "attempt_id": null,
+          "code": "seen = {}\nfor i, n in enumerate(nums):\n    if target - n in seen:\n        return [seen[target - n], i]\n    seen[n] = i\nreturn []",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": 40.0,
+          "memory_mb": null,
+          "submitted_at": "2026-01-01T00:01:00Z",
+          "error_message": null,
+          "submission_hash": "e712b0667a2e7d56643c83bf848ba989255b5a902c707e18839bf1623030e5a1",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

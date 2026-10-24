@@ -1,0 +1,49 @@
+{
+  "id": "73a0788d-00cf-4988-96b3-55ce866e63b3",
+  "title": "Add Binary",
+  "slug": "add-binary",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/add-binary/",
+  "topics": [
+    "Math",
+    "String",
+    "Bit Manipulation",
+    "Simulation"
+  ],
+  "statement": "<p>Given two binary strings <code>a</code> and <code>b</code>, return <em>their sum as a binary string</em>.</p>\n\n<p>&nbsp;</p>\n<p><strong class=\"example\">Example 1:</strong></p>\n<pre><strong>Input:</strong> a = \"11\", b = \"1\"\n<strong>Output:</strong> \"100\"\n</pre><p><strong class=\"example\">Example 2:</strong></p>\n<pre><strong>Input:</strong> a = \"1010\", b = \"1011\"\n<strong>Output:</strong> \"10101\"\n</pre>\n<p>&nbsp;</p>\n<p><strong>Constraints:</strong></p>\n\n<ul>\n\t<li><code>1 &lt;= a.length, b.length &lt;= 10<sup>4</sup></code></li>\n\t<li><code>a</code> and <code>b</code> consist&nbsp;only of <code>&#39;0&#39;</code> or <code>&#39;1&#39;</code> characters.</li>\n\t<li>Each string does not contain leading zeros except for the zero itself.</li>\n</ul>\n",
+  "created_at": "2026-10-19T17:52:19.204618Z",
+  "updated_at": "2026-10-19T17:52:19.204618Z",
+  "attempts": [
+    {
+      "id": "c9447033-9ee1-4ce1-bccc-8870b3fedbfd",
+      "problem_id": "73a0788d-00cf-4988-96b3-55ce866e63b3",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-19T17:52:19.243234Z",
+      "updated_at": "2026-10-19T17:52:19.243234Z",
+      "submissions": [
+        {
+          "id": "leetcode_1970067711",
+          "problem_id": "73a0788d-00cf-4988-96b3-55ce866e63b3",
+          "attempt_id": "c9447033-9ee1-4ce1-bccc-8870b3fedbfd",
+          "code": "",
+          "language": "Java",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-04-05T23:44:42Z",
+          "error_message": null,
+          "submission_hash": "6e0694021eb6f80027ebc0b99fe4c0399e1222a15a832f4d5fa0082b5b4bd59f",
+          "source_provider": "leetcode",
+          "source_account": "jaypatil1229"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

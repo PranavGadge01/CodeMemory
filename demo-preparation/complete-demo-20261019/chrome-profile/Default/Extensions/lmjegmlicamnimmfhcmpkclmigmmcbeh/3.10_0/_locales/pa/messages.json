@@ -1,0 +1,11 @@
+{
+   "extensiondescription": {
+      "message": "ਤੁਹਾਡੇ ਕੰਪਿਊਟਰ 'ਤੇ ਸਥਾਪਤ ਅਨੁਰੂਪ ਐਪਲੀਕੇਸ਼ਨਾਂ ਵਿੱਚ ਤੁਹਾਡੇ ਬ੍ਰਾਊਜ਼ਰ ਤੋਂ Drive ਫ਼ਾਈਲਾਂ ਨੂੰ ਸਿੱਧਾ ਖੋਲ੍ਹੋ।"
+   },
+   "extensionname": {
+      "message": "Drive ਲਈ ਐਪਲੀਕੇਸ਼ਨ ਲਾਂਚਰ (Google ਵੱਲੋਂ)"
+   },
+   "extensionshortname": {
+      "message": "Google Drive ਐਪ ਲਾਂਚਰ"
+   }
+}

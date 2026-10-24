@@ -1,0 +1,23 @@
+{
+  "leetcode": {
+    "provider": "LeetCode",
+    "username": "syncuser",
+    "display_name": null,
+    "user_avatar": null,
+    "status": "Connected",
+    "connected_at": "2026-10-15T19:17:15.918971Z",
+    "last_sync_at": "2026-10-15T19:17:16.236827Z",
+    "last_sync_status": "Partial",
+    "last_sync_error": "LeetCode profile fetch failed; submission data may be incomplete.",
+    "capabilities": {
+      "profile_sync": true,
+      "progress_sync": true,
+      "recent_submissions": true,
+      "private_code_scraping": false
+    },
+    "metadata": {
+      "latest_persisted_timestamp": "2023-11-15T00:13:20+00:00",
+      "latest_external_id": "leetcode_111"
+    }
+  }
+}

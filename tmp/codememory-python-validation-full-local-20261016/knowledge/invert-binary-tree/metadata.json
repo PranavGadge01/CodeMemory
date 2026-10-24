@@ -1,0 +1,19 @@
+{
+  "id": "invert-binary-tree",
+  "title": "Invert Binary Tree",
+  "slug": "invert-binary-tree",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Tree",
+    "Depth-First Search",
+    "Breadth-First Search",
+    "Binary Tree"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:46.011464Z",
+  "updated_at": "2026-10-15T19:06:46.011464Z",
+  "attempts": [],
+  "notes": []
+}

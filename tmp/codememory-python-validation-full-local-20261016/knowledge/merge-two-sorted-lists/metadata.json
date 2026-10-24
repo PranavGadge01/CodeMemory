@@ -1,0 +1,47 @@
+{
+  "id": "merge-two-sorted-lists",
+  "title": "Merge Two Sorted Lists",
+  "slug": "merge-two-sorted-lists",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Linked List",
+    "Recursion"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:45.873563Z",
+  "updated_at": "2026-10-15T19:06:45.873563Z",
+  "attempts": [
+    {
+      "id": "81cc76d5-204e-4ed2-9061-4369e2830a9d",
+      "problem_id": "merge-two-sorted-lists",
+      "attempt_number": 1,
+      "approach_summary": "Attempt",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:45.873563Z",
+      "updated_at": "2026-10-15T19:06:45.873563Z",
+      "submissions": [
+        {
+          "id": "bd62a638-c8c6-4864-8932-3dfe1ec342c7",
+          "problem_id": "merge-two-sorted-lists",
+          "attempt_id": null,
+          "code": "pass",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-01-06T00:00:00Z",
+          "error_message": null,
+          "submission_hash": "9b98c15883b9833801ed50bdf597cb28f503df2144e904422952595c69d3ff6b",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

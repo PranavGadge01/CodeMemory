@@ -1,0 +1,84 @@
+{
+  "id": "749c3d39-5a20-44b6-b086-5ecaf724b6d5",
+  "title": "Hard Struggle",
+  "slug": "hard-struggle",
+  "difficulty": "Hard",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Dynamic Programming"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:19:08.195152Z",
+  "updated_at": "2026-10-15T19:19:09.137314Z",
+  "attempts": [
+    {
+      "id": "476e7907-5b1f-4e05-a26f-803ee2fe842e",
+      "problem_id": "749c3d39-5a20-44b6-b086-5ecaf724b6d5",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Wrong Answer",
+      "created_at": "2026-10-15T19:19:08.265835Z",
+      "updated_at": "2026-10-15T19:19:08.265835Z",
+      "submissions": [
+        {
+          "id": "a1859f62-cee0-4ccf-956d-f4d21ba9c6ca",
+          "problem_id": "749c3d39-5a20-44b6-b086-5ecaf724b6d5",
+          "attempt_id": "476e7907-5b1f-4e05-a26f-803ee2fe842e",
+          "code": "fail 1",
+          "language": "python",
+          "status": "Wrong Answer",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-15T19:19:08.262922Z",
+          "error_message": null,
+          "submission_hash": "67981e7447540cc146879a0a3fa4c0c77b7e76e8672ab70f407ac7c09209e3ca",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    },
+    {
+      "id": "2c5e1b51-7964-4245-8233-c5441574edd9",
+      "problem_id": "749c3d39-5a20-44b6-b086-5ecaf724b6d5",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Time Limit Exceeded",
+      "created_at": "2026-10-15T19:19:08.501038Z",
+      "updated_at": "2026-10-15T19:19:08.501038Z",
+      "submissions": [
+        {
+          "id": "f5982cff-250a-46b6-acab-514dd579bfff",
+          "problem_id": "749c3d39-5a20-44b6-b086-5ecaf724b6d5",
+          "attempt_id": "2c5e1b51-7964-4245-8233-c5441574edd9",
+          "code": "fail 2",
+          "language": "python",
+          "status": "Time Limit Exceeded",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-15T19:19:08.497119Z",
+          "error_message": null,
+          "submission_hash": "41441ba4d5bc0deaa5525f20e2c4bd9b3c89919490ed091e9514797394a8c2e5",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": [
+    {
+      "id": "64f8f3ac-1293-4c56-ba85-6e751057d0a1",
+      "problem_id": "749c3d39-5a20-44b6-b086-5ecaf724b6d5",
+      "attempt_id": null,
+      "content": "Reviewed DP state transitions",
+      "note_type": "General",
+      "created_at": "2026-10-15T19:19:09.137314Z"
+    }
+  ]
+}

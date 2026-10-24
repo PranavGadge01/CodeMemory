@@ -1,0 +1,70 @@
+{
+  "id": "fed35914-d484-47ea-b796-45d74dc1fe0a",
+  "title": "3Sum",
+  "slug": "3sum",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/3sum/",
+  "topics": [
+    "Array",
+    "Two Pointers",
+    "Sorting"
+  ],
+  "statement": "Given an integer array nums, return all the triplets [nums[i], nums[j], nums[k]] such that i != j, i != k, and j != k, and nums[i] + nums[j] + nums[k] == 0.",
+  "created_at": "2026-10-15T19:06:36.515535Z",
+  "updated_at": "2026-10-15T19:06:36.515535Z",
+  "attempts": [
+    {
+      "id": "ddc79519-3c10-4e33-9e06-875694862a90",
+      "problem_id": "fed35914-d484-47ea-b796-45d74dc1fe0a",
+      "attempt_number": 1,
+      "approach_summary": "Sort + Two Pointers",
+      "reasoning": "Sort array first, iterate first element, use two pointers for remaining target sum.",
+      "mistakes": [
+        "Duplicate triplets generated when not skipping duplicate elements."
+      ],
+      "analysis": {
+        "approach_name": "Standard Approach",
+        "time_complexity": "O(N^2)",
+        "space_complexity": "O(1)",
+        "key_insights": [],
+        "trade_offs": null,
+        "bottleneck": null
+      },
+      "status": "Unknown",
+      "created_at": "2026-10-15T19:06:36.539421Z",
+      "updated_at": "2026-10-15T19:06:36.539421Z",
+      "submissions": []
+    },
+    {
+      "id": "b6255a6d-b17f-4d33-a18d-61fbfd11296e",
+      "problem_id": "fed35914-d484-47ea-b796-45d74dc1fe0a",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:36.567162Z",
+      "updated_at": "2026-10-15T19:06:36.567162Z",
+      "submissions": [
+        {
+          "id": "a9a9e896-29b6-4b8f-87a2-47e309f0f563",
+          "problem_id": "fed35914-d484-47ea-b796-45d74dc1fe0a",
+          "attempt_id": "b6255a6d-b17f-4d33-a18d-61fbfd11296e",
+          "code": "def threeSum(nums: list[int]) -> list[list[int]]:\n    nums.sort()\n    res = []\n    for i in range(len(nums) - 2):\n        if i > 0 and nums[i] == nums[i-1]: continue\n        l, r = i + 1, len(nums) - 1\n        while l < r:\n            s = nums[i] + nums[l] + nums[r]\n            if s < 0: l += 1\n            elif s > 0: r -= 1\n            else:\n                res.append([nums[i], nums[l], nums[r]])\n                while l < r and nums[l] == nums[l+1]: l += 1\n                while l < r and nums[r] == nums[r-1]: r -= 1\n                l += 1; r -= 1\n    return res",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": 180.0,
+          "memory_mb": 19.5,
+          "submitted_at": "2026-10-15T19:06:36.566163Z",
+          "error_message": null,
+          "submission_hash": "7496cf98aee26bc68faad40d3b3304b7b7b9ad2884652309adc04c8aeaf2244f",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

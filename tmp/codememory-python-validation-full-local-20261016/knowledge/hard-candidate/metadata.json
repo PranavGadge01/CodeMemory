@@ -1,0 +1,17 @@
+{
+  "id": "hard-candidate",
+  "title": "Hard Candidate",
+  "slug": "hard-candidate",
+  "difficulty": "Hard",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array",
+    "Hash Table"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:44.680886Z",
+  "updated_at": "2026-10-15T19:06:44.680886Z",
+  "attempts": [],
+  "notes": []
+}

@@ -1,0 +1,46 @@
+{
+  "id": "prob-beta",
+  "title": "Prob Beta",
+  "slug": "prob-beta",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:39.135940Z",
+  "updated_at": "2026-10-15T19:06:39.135940Z",
+  "attempts": [
+    {
+      "id": "26f727f8-4782-4af2-b115-ceda4aabd3ae",
+      "problem_id": "prob-beta",
+      "attempt_number": 1,
+      "approach_summary": "Attempt",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Wrong Answer",
+      "created_at": "2026-10-15T19:06:39.167101Z",
+      "updated_at": "2026-10-15T19:06:39.167101Z",
+      "submissions": [
+        {
+          "id": "208983d9-34ad-4777-8700-cc391ffe0655",
+          "problem_id": "prob-beta",
+          "attempt_id": null,
+          "code": "x",
+          "language": "python",
+          "status": "Wrong Answer",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-15T19:06:39.167101Z",
+          "error_message": null,
+          "submission_hash": "e1094843aa0e3b7f53263005df6de6f8c0c54a919cd59bbe8b4a71b3f25a7780",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

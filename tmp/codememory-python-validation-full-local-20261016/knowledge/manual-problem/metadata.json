@@ -1,0 +1,46 @@
+{
+  "id": "prob-manual",
+  "title": "Manual Problem",
+  "slug": "manual-problem",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:09.122933Z",
+  "updated_at": "2026-10-15T19:06:09.122933Z",
+  "attempts": [
+    {
+      "id": "6a30f290-fd14-4f25-9918-74f7c90dc594",
+      "problem_id": "prob-manual",
+      "attempt_number": 1,
+      "approach_summary": "Attempt",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:09.122933Z",
+      "updated_at": "2026-10-15T19:06:09.122933Z",
+      "submissions": [
+        {
+          "id": "2df63024-dbef-4a42-92ae-d4f66bd842e0",
+          "problem_id": "prob-manual",
+          "attempt_id": null,
+          "code": "x = 1",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-15T19:06:09.122933Z",
+          "error_message": null,
+          "submission_hash": "b67b8fe268d6a67e2ea8cbf43e18125de61f8918d616aded3a3246bfab5f19c3",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <rect width="1920" height="1080" fill="#f8f8f6"/>
+  <circle cx="380" cy="920" r="420" fill="#fff0d8" opacity="0.72"/>
+  <rect x="240" y="210" width="58" height="58" rx="15" fill="#fff0d8"/>
+  <path d="M257 225v28M257 232h25M257 246h25M277 232l7 7-7 7" fill="none" stroke="#f2a10b" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="257" cy="225" r="4" fill="#f2a10b"/><circle cx="257" cy="253" r="4" fill="#f2a10b"/>
+  <text x="324" y="253" font-family="Arial, sans-serif" font-size="26" font-weight="700" letter-spacing="2" fill="#252525">CODEMEMORY</text>
+  <text x="240" y="426" font-family="Arial, sans-serif" font-size="70" font-weight="700" letter-spacing="-1" fill="#191a1b">Connect. Import. Revisit.</text>
+  <text x="244" y="500" font-family="Arial, sans-serif" font-size="30" fill="#64666a">Make past coding work easier to find and learn from.</text>
+  <g transform="translate(240 640)">
+    <rect width="390" height="150" rx="18" fill="#ffffff" stroke="#e2e3df" stroke-width="2"/>
+    <text x="32" y="62" font-family="Arial, sans-serif" font-size="18" letter-spacing="2" fill="#85878a">01</text>
+    <text x="32" y="108" font-family="Arial, sans-serif" font-size="30" font-weight="600" fill="#222426">Connect a profile</text>
+    <path d="M408 75h58" stroke="#f2a10b" stroke-width="3"/><path d="m456 64 12 11-12 11" fill="none" stroke="#f2a10b" stroke-width="3"/>
+    <rect x="488" width="390" height="150" rx="18" fill="#ffffff" stroke="#e2e3df" stroke-width="2"/>
+    <text x="520" y="62" font-family="Arial, sans-serif" font-size="18" letter-spacing="2" fill="#85878a">02</text>
+    <text x="520" y="108" font-family="Arial, sans-serif" font-size="30" font-weight="600" fill="#222426">Import history</text>
+    <path d="M896 75h58" stroke="#f2a10b" stroke-width="3"/><path d="m944 64 12 11-12 11" fill="none" stroke="#f2a10b" stroke-width="3"/>
+    <rect x="978" width="390" height="150" rx="18" fill="#ffffff" stroke="#e2e3df" stroke-width="2"/>
+    <text x="1010" y="62" font-family="Arial, sans-serif" font-size="18" letter-spacing="2" fill="#85878a">03</text>
+    <text x="1010" y="108" font-family="Arial, sans-serif" font-size="30" font-weight="600" fill="#222426">Learn from it</text>
+  </g>
+  <text x="240" y="956" font-family="Arial, sans-serif" font-size="19" letter-spacing="3" fill="#777a7d">CODEMEMORY · PRODUCT DEMO</text>
+</svg>

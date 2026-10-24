@@ -1,0 +1,68 @@
+{
+  "id": "3bee8c9b-a51d-4e92-82ac-b2dee7b7c5be",
+  "title": "Subsets",
+  "slug": "subsets",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/subsets/",
+  "topics": [
+    "Array",
+    "Backtracking",
+    "Bit Manipulation"
+  ],
+  "statement": "Given an integer array nums of unique elements, return all possible subsets (the power set).",
+  "created_at": "2026-10-15T19:06:37.389912Z",
+  "updated_at": "2026-10-15T19:06:37.389912Z",
+  "attempts": [
+    {
+      "id": "f63a2127-0051-41ad-b82f-27465b5c502d",
+      "problem_id": "3bee8c9b-a51d-4e92-82ac-b2dee7b7c5be",
+      "attempt_number": 1,
+      "approach_summary": "Backtracking Decision Tree",
+      "reasoning": "At each element index, decide whether to include element or skip.",
+      "mistakes": [],
+      "analysis": {
+        "approach_name": "Standard Approach",
+        "time_complexity": "O(2^N)",
+        "space_complexity": "O(N)",
+        "key_insights": [],
+        "trade_offs": null,
+        "bottleneck": null
+      },
+      "status": "Unknown",
+      "created_at": "2026-10-15T19:06:37.416489Z",
+      "updated_at": "2026-10-15T19:06:37.416489Z",
+      "submissions": []
+    },
+    {
+      "id": "2bd4b003-963e-4621-b966-d4bb4e525b6b",
+      "problem_id": "3bee8c9b-a51d-4e92-82ac-b2dee7b7c5be",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:37.471858Z",
+      "updated_at": "2026-10-15T19:06:37.471858Z",
+      "submissions": [
+        {
+          "id": "13201856-2b78-41b4-8111-06bd8dc9a4c3",
+          "problem_id": "3bee8c9b-a51d-4e92-82ac-b2dee7b7c5be",
+          "attempt_id": "2bd4b003-963e-4621-b966-d4bb4e525b6b",
+          "code": "def subsets(nums: list[int]) -> list[list[int]]:\n    res = []\n    def backtrack(idx, path):\n        if idx == len(nums):\n            res.append(path[:]); return\n        backtrack(idx + 1, path + [nums[idx]])\n        backtrack(idx + 1, path)\n    backtrack(0, [])\n    return res",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": 35.0,
+          "memory_mb": 16.4,
+          "submitted_at": "2026-10-15T19:06:37.469848Z",
+          "error_message": null,
+          "submission_hash": "de5e5112b6a8f4cfeb9ca77a7882a65734e1f01defa39ce524231c8c1df66c58",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

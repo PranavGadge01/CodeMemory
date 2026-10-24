@@ -1,0 +1,47 @@
+{
+  "id": "f8e1a5bd-01d4-4de8-8a96-3502713bc31a",
+  "title": "Subsets",
+  "slug": "subsets",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/subsets/",
+  "topics": [
+    "Array",
+    "Backtracking"
+  ],
+  "statement": "Given an integer array nums of unique elements, return all possible subsets.",
+  "created_at": "2026-10-15T19:06:34.836520Z",
+  "updated_at": "2026-10-15T19:06:34.836520Z",
+  "attempts": [
+    {
+      "id": "9ea93f56-052b-4ac1-b7e5-030d91d5e951",
+      "problem_id": "f8e1a5bd-01d4-4de8-8a96-3502713bc31a",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:34.853561Z",
+      "updated_at": "2026-10-15T19:06:34.853561Z",
+      "submissions": [
+        {
+          "id": "2dcdb25b-b1d5-4f00-be89-74c8d5723056",
+          "problem_id": "f8e1a5bd-01d4-4de8-8a96-3502713bc31a",
+          "attempt_id": "9ea93f56-052b-4ac1-b7e5-030d91d5e951",
+          "code": "def subsets(nums):\n    res = [[]]\n    for n in nums:\n        res += [r + [n] for r in res]\n    return res",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": 35.0,
+          "memory_mb": 16.1,
+          "submitted_at": "2026-10-15T19:06:34.853561Z",
+          "error_message": null,
+          "submission_hash": "a78a659f19196c7cd610cd9eee2bb2de7a2a552e83f7a5a3dde00006c2e57267",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

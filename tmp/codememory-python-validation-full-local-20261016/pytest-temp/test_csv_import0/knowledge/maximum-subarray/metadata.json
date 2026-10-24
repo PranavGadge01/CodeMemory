@@ -1,0 +1,47 @@
+{
+  "id": "d251b759-63e7-4661-9f88-210f45f41dee",
+  "title": "Maximum Subarray",
+  "slug": "maximum-subarray",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array",
+    "Dynamic Programming"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:35.513411Z",
+  "updated_at": "2026-10-15T19:06:35.513411Z",
+  "attempts": [
+    {
+      "id": "b2c397cc-2f45-4664-a647-5f6497496b84",
+      "problem_id": "d251b759-63e7-4661-9f88-210f45f41dee",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-09-06T12:00:00Z",
+      "updated_at": "2026-09-06T12:00:00Z",
+      "submissions": [
+        {
+          "id": "sub-202",
+          "problem_id": "d251b759-63e7-4661-9f88-210f45f41dee",
+          "attempt_id": "b2c397cc-2f45-4664-a647-5f6497496b84",
+          "code": "def maxSubArray(nums): pass",
+          "language": "Python",
+          "status": "Accepted",
+          "runtime_ms": 50.0,
+          "memory_mb": 28.4,
+          "submitted_at": "2026-09-06T12:00:00Z",
+          "error_message": null,
+          "submission_hash": "80bf674014f6abc105f841bd67a6f789f13992966fd73bc5670e0e62efa76253",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

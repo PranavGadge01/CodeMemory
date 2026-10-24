@@ -1,0 +1,70 @@
+{
+  "id": "2bae0fb0-69ad-49e3-9fee-e6779be970df",
+  "title": "Word Search II",
+  "slug": "word-search-ii",
+  "difficulty": "Hard",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/word-search-ii/",
+  "topics": [
+    "Array",
+    "String",
+    "Backtracking",
+    "Trie",
+    "Matrix"
+  ],
+  "statement": "Given an m x n board of characters and a list of strings words, return all words on the board.",
+  "created_at": "2026-10-15T19:06:30.705744Z",
+  "updated_at": "2026-10-15T19:06:30.705744Z",
+  "attempts": [
+    {
+      "id": "2c5032ae-6941-40a3-b73a-33a6aa66a83d",
+      "problem_id": "2bae0fb0-69ad-49e3-9fee-e6779be970df",
+      "attempt_number": 1,
+      "approach_summary": "Trie-based Backtracking DFS",
+      "reasoning": "Construct Trie of words and prune invalid search branches early during board DFS.",
+      "mistakes": [],
+      "analysis": {
+        "approach_name": "Standard Approach",
+        "time_complexity": "O(M * N * 4^L)",
+        "space_complexity": "O(SUM(len(word)))",
+        "key_insights": [],
+        "trade_offs": null,
+        "bottleneck": null
+      },
+      "status": "Unknown",
+      "created_at": "2026-10-15T19:06:30.729078Z",
+      "updated_at": "2026-10-15T19:06:30.729078Z",
+      "submissions": []
+    },
+    {
+      "id": "26282c30-a77c-4ee8-918b-c4a735a2dd03",
+      "problem_id": "2bae0fb0-69ad-49e3-9fee-e6779be970df",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:30.767816Z",
+      "updated_at": "2026-10-15T19:06:30.767816Z",
+      "submissions": [
+        {
+          "id": "36afe782-3425-4148-a86e-19f0b8b927a1",
+          "problem_id": "2bae0fb0-69ad-49e3-9fee-e6779be970df",
+          "attempt_id": "26282c30-a77c-4ee8-918b-c4a735a2dd03",
+          "code": "class TrieNode:\n    def __init__(self):\n        self.children = {}\n        self.is_word = False\n",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": 1200.0,
+          "memory_mb": 35.0,
+          "submitted_at": "2026-10-15T19:06:30.766816Z",
+          "error_message": null,
+          "submission_hash": "a1c3da715214fed4e9db385515fb09c7545a8c36e768ab59d716169771882898",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

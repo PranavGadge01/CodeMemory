@@ -1,0 +1,44 @@
+{
+  "id": "561039a4-8be2-4e34-aa39-71dd1809e216",
+  "title": "Problem 13",
+  "slug": "problem-13",
+  "difficulty": "Unknown",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/problem-13/",
+  "topics": [],
+  "statement": null,
+  "created_at": "2026-10-15T19:17:19.780608Z",
+  "updated_at": "2026-10-15T19:17:19.780608Z",
+  "attempts": [
+    {
+      "id": "ec90d380-5dd8-44c2-a70e-2d21a4983eee",
+      "problem_id": "561039a4-8be2-4e34-aa39-71dd1809e216",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:17:19.858246Z",
+      "updated_at": "2026-10-15T19:17:19.858246Z",
+      "submissions": [
+        {
+          "id": "leetcode_13",
+          "problem_id": "561039a4-8be2-4e34-aa39-71dd1809e216",
+          "attempt_id": "ec90d380-5dd8-44c2-a70e-2d21a4983eee",
+          "code": "",
+          "language": "Python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2023-11-14T22:13:33Z",
+          "error_message": null,
+          "submission_hash": "cbab65cb058b9f2bd75cc26734c1f127dcd69fce53c1d79637c86b9607f39bba",
+          "source_provider": "leetcode",
+          "source_account": "syncuser"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

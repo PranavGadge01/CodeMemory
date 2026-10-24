@@ -1,0 +1,47 @@
+{
+  "id": "0e8bc6e1-2c5c-48f9-88e8-ff9e97eef54d",
+  "title": "Valid Parentheses",
+  "slug": "valid-parentheses",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Stack",
+    "String"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:18:27.487357Z",
+  "updated_at": "2026-10-15T19:18:27.487357Z",
+  "attempts": [
+    {
+      "id": "eb6a9fb3-33ae-426a-af7c-f1642542df74",
+      "problem_id": "0e8bc6e1-2c5c-48f9-88e8-ff9e97eef54d",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2024-01-12T10:00:00Z",
+      "updated_at": "2024-01-12T10:00:00Z",
+      "submissions": [
+        {
+          "id": "44bc7a25-1a11-429f-b8e6-35c3d0091a55",
+          "problem_id": "0e8bc6e1-2c5c-48f9-88e8-ff9e97eef54d",
+          "attempt_id": "eb6a9fb3-33ae-426a-af7c-f1642542df74",
+          "code": "class Solution {\n    public boolean isValid(String s) {\n        Stack<Character> stack = new Stack<>();\n        for (char c : s.toCharArray()) {\n            if (c == '(' || c == '[' || c == '{') stack.push(c);\n            else if (stack.isEmpty()) return false;\n            else if (c == ')' && stack.pop() != '(') return false;\n            else if (c == ']' && stack.pop() != '[') return false;\n            else if (c == '}' && stack.pop() != '{') return false;\n        }\n        return stack.isEmpty();\n    }\n}",
+          "language": "Java",
+          "status": "Accepted",
+          "runtime_ms": 3.0,
+          "memory_mb": 40.2,
+          "submitted_at": "2024-01-12T10:00:00Z",
+          "error_message": null,
+          "submission_hash": "396ee0156bc60b64554eff10c203961c68cad87f5714eaff7c9175976049f7bd",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

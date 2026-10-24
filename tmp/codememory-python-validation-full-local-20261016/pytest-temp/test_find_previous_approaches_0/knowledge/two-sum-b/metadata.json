@@ -1,0 +1,46 @@
+{
+  "id": "prob-b-3",
+  "title": "Two Sum B",
+  "slug": "two-sum-b",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:18:02.832587Z",
+  "updated_at": "2026-10-15T19:18:02.832587Z",
+  "attempts": [
+    {
+      "id": "70c2f3b6-0e8f-4e8a-bd3b-887002fecc05",
+      "problem_id": "prob-b-3",
+      "attempt_number": 1,
+      "approach_summary": "Hash map approach",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:18:02.832587Z",
+      "updated_at": "2026-10-15T19:18:02.832587Z",
+      "submissions": [
+        {
+          "id": "148373ff-038e-4e11-92d4-2f47ba3668bf",
+          "problem_id": "prob-b-3",
+          "attempt_id": null,
+          "code": "def twoSum(): pass",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-15T19:18:02.832587Z",
+          "error_message": null,
+          "submission_hash": "e8ba01e495d2ace3a491e594ccd50ad4d0e40dec94b1a0dd149127588373ce90",
+          "source_provider": "leetcode",
+          "source_account": "account_b"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

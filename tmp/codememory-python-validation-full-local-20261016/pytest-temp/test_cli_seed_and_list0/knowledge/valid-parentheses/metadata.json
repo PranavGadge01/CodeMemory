@@ -1,0 +1,67 @@
+{
+  "id": "7f88a652-10d7-4ae6-9ac5-58ebcfa30ae3",
+  "title": "Valid Parentheses",
+  "slug": "valid-parentheses",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/valid-parentheses/",
+  "topics": [
+    "String",
+    "Stack"
+  ],
+  "statement": "Given a string s containing just the characters '(', ')', '{', '}', '[' and ']', determine if the input string is valid.",
+  "created_at": "2026-10-15T19:06:29.538828Z",
+  "updated_at": "2026-10-15T19:06:29.538828Z",
+  "attempts": [
+    {
+      "id": "8a1848fa-00b9-4fd1-8887-36b6eea21770",
+      "problem_id": "7f88a652-10d7-4ae6-9ac5-58ebcfa30ae3",
+      "attempt_number": 1,
+      "approach_summary": "Stack Matching",
+      "reasoning": "Push opening brackets to stack; pop and match closing brackets.",
+      "mistakes": [],
+      "analysis": {
+        "approach_name": "Standard Approach",
+        "time_complexity": "O(N)",
+        "space_complexity": "O(N)",
+        "key_insights": [],
+        "trade_offs": null,
+        "bottleneck": null
+      },
+      "status": "Unknown",
+      "created_at": "2026-10-15T19:06:29.561906Z",
+      "updated_at": "2026-10-15T19:06:29.561906Z",
+      "submissions": []
+    },
+    {
+      "id": "cc9f4588-c7c5-45df-ab60-f7fe8756b69e",
+      "problem_id": "7f88a652-10d7-4ae6-9ac5-58ebcfa30ae3",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:29.589491Z",
+      "updated_at": "2026-10-15T19:06:29.589491Z",
+      "submissions": [
+        {
+          "id": "b61e1480-1449-46ff-b10c-191443dcfa22",
+          "problem_id": "7f88a652-10d7-4ae6-9ac5-58ebcfa30ae3",
+          "attempt_id": "cc9f4588-c7c5-45df-ab60-f7fe8756b69e",
+          "code": "def isValid(s: str) -> bool:\n    stack = []\n    mp = {')': '(', '}': '{', ']': '['}\n    for char in s:\n        if char in mp:\n            top = stack.pop() if stack else '#'\n            if mp[char] != top: return False\n        else: stack.append(char)\n    return not stack",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": 30.0,
+          "memory_mb": 14.8,
+          "submitted_at": "2026-10-15T19:06:29.589491Z",
+          "error_message": null,
+          "submission_hash": "b13fbf1a261fe0362eea2f7e27728a5e62816593b81f016f7f1c7cc2f0e1b7cd",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

@@ -1,0 +1,90 @@
+{
+  "id": "ca1aa50f-2467-40bb-aebf-f8eec1c2d57c",
+  "title": "Word Break II",
+  "slug": "word-break-ii",
+  "difficulty": "Hard",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "DP"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:18:13.598636Z",
+  "updated_at": "2026-10-15T19:18:13.598636Z",
+  "attempts": [
+    {
+      "id": "45a7e8b5-22f2-4ec6-b077-6d68e46551c1",
+      "problem_id": "ca1aa50f-2467-40bb-aebf-f8eec1c2d57c",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Time Limit Exceeded",
+      "created_at": "2026-10-15T19:18:13.681168Z",
+      "updated_at": "2026-10-15T19:18:13.681168Z",
+      "submissions": [
+        {
+          "id": "bd4a8770-dd31-4db1-8075-3ef211cefa5e",
+          "problem_id": "ca1aa50f-2467-40bb-aebf-f8eec1c2d57c",
+          "attempt_id": "45a7e8b5-22f2-4ec6-b077-6d68e46551c1",
+          "code": "tle 1",
+          "language": "python",
+          "status": "Time Limit Exceeded",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-15T19:18:13.678164Z",
+          "error_message": null,
+          "submission_hash": "69ae528d5d8de1a69a1166bfd5fc3a6961056fda9dc9a4c7f2572f61d681103d",
+          "source_provider": null,
+          "source_account": null
+        },
+        {
+          "id": "4cf7357a-7590-4dba-9df6-ebc73a132fbc",
+          "problem_id": "ca1aa50f-2467-40bb-aebf-f8eec1c2d57c",
+          "attempt_id": "45a7e8b5-22f2-4ec6-b077-6d68e46551c1",
+          "code": "tle 2",
+          "language": "python",
+          "status": "Time Limit Exceeded",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-15T19:18:13.927619Z",
+          "error_message": null,
+          "submission_hash": "6bdcacb663e0eef1d91ffb9336608c10dd1109b85426ebf42a5906d4650cb51d",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    },
+    {
+      "id": "8eb28dfa-3f61-4509-9c31-3c862be370de",
+      "problem_id": "ca1aa50f-2467-40bb-aebf-f8eec1c2d57c",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:18:14.147198Z",
+      "updated_at": "2026-10-15T19:18:14.147198Z",
+      "submissions": [
+        {
+          "id": "3bf92284-ff8a-49bf-b701-715919ba4ebd",
+          "problem_id": "ca1aa50f-2467-40bb-aebf-f8eec1c2d57c",
+          "attempt_id": "8eb28dfa-3f61-4509-9c31-3c862be370de",
+          "code": "acc",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-15T19:18:14.144202Z",
+          "error_message": null,
+          "submission_hash": "7a892c9a56d7b67c49ed493f41d1e9d65f529c5b9b8727531702d53df130f358",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

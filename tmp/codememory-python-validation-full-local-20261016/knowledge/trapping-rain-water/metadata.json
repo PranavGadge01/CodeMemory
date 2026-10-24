@@ -1,0 +1,19 @@
+{
+  "id": "trapping-rain-water",
+  "title": "Trapping Rain Water",
+  "slug": "trapping-rain-water",
+  "difficulty": "Hard",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array",
+    "Two Pointers",
+    "Stack",
+    "Monotonic Stack"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:46.088600Z",
+  "updated_at": "2026-10-15T19:06:46.088600Z",
+  "attempts": [],
+  "notes": []
+}

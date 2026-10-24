@@ -1,0 +1,61 @@
+{
+  "id": "prob-streak-1",
+  "title": "Streak Problem 1",
+  "slug": "streak-problem-1",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:05:56.248749Z",
+  "updated_at": "2026-10-15T19:05:56.248749Z",
+  "attempts": [
+    {
+      "id": "2631e35e-a801-47de-97ee-944ba391bd92",
+      "problem_id": "prob-streak-1",
+      "attempt_number": 1,
+      "approach_summary": "Attempt",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:05:56.248749Z",
+      "updated_at": "2026-10-15T19:05:56.248749Z",
+      "submissions": [
+        {
+          "id": "6b30de13-a0e2-443c-b577-ed4e664d257e",
+          "problem_id": "prob-streak-1",
+          "attempt_id": null,
+          "code": "solution",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-15T10:00:00Z",
+          "error_message": null,
+          "submission_hash": "94ab29ad19941eb367115c4b25eca6da3eb01c23858499b0bc91778c380fe5f9",
+          "source_provider": null,
+          "source_account": null
+        },
+        {
+          "id": "be9283ea-7b6a-426c-9f1e-d0079d362e88",
+          "problem_id": "prob-streak-1",
+          "attempt_id": null,
+          "code": "wrong",
+          "language": "python",
+          "status": "Wrong Answer",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-15T12:00:00Z",
+          "error_message": null,
+          "submission_hash": "bbec07ab0ed17988b2b06649d1e9ff75bb3a931e6f4a648c7e9646800b9b4ad7",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

@@ -1,0 +1,77 @@
+{
+  "id": "b2700837-8fb7-490f-a2ce-260a9244d9ad",
+  "title": "Rotate Array",
+  "slug": "rotate-array",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/rotate-array/",
+  "topics": [
+    "Array",
+    "Math",
+    "Two Pointers"
+  ],
+  "statement": "<p>Given an integer array <code>nums</code>, rotate the array to the right by <code>k</code> steps, where <code>k</code> is non-negative.</p>\n\n<p>&nbsp;</p>\n<p><strong class=\"example\">Example 1:</strong></p>\n\n<pre>\n<strong>Input:</strong> nums = [1,2,3,4,5,6,7], k = 3\n<strong>Output:</strong> [5,6,7,1,2,3,4]\n<strong>Explanation:</strong>\nrotate 1 steps to the right: [7,1,2,3,4,5,6]\nrotate 2 steps to the right: [6,7,1,2,3,4,5]\nrotate 3 steps to the right: [5,6,7,1,2,3,4]\n</pre>\n\n<p><strong class=\"example\">Example 2:</strong></p>\n\n<pre>\n<strong>Input:</strong> nums = [-1,-100,3,99], k = 2\n<strong>Output:</strong> [3,99,-1,-100]\n<strong>Explanation:</strong> \nrotate 1 steps to the right: [99,-1,-100,3]\nrotate 2 steps to the right: [3,99,-1,-100]\n</pre>\n\n<p>&nbsp;</p>\n<p><strong>Constraints:</strong></p>\n\n<ul>\n\t<li><code>1 &lt;= nums.length &lt;= 10<sup>5</sup></code></li>\n\t<li><code>-2<sup>31</sup> &lt;= nums[i] &lt;= 2<sup>31</sup> - 1</code></li>\n\t<li><code>0 &lt;= k &lt;= 10<sup>5</sup></code></li>\n</ul>\n\n<p>&nbsp;</p>\n<p><strong>Follow up:</strong></p>\n\n<ul>\n\t<li>Try to come up with as many solutions as you can. There are at least <strong>three</strong> different ways to solve this problem.</li>\n\t<li>Could you do it in-place with <code>O(1)</code> extra space?</li>\n</ul>\n",
+  "created_at": "2026-10-19T12:57:12.451776Z",
+  "updated_at": "2026-10-19T12:57:12.451776Z",
+  "attempts": [
+    {
+      "id": "112f9538-a230-415d-88bc-75f816d62c71",
+      "problem_id": "b2700837-8fb7-490f-a2ce-260a9244d9ad",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-19T12:57:12.487776Z",
+      "updated_at": "2026-10-19T12:57:12.487776Z",
+      "submissions": [
+        {
+          "id": "leetcode_1956953634",
+          "problem_id": "b2700837-8fb7-490f-a2ce-260a9244d9ad",
+          "attempt_id": "112f9538-a230-415d-88bc-75f816d62c71",
+          "code": "class Solution {\n    public void rotate(int[] nums, int k) {\n        int n = nums.length;\n        k = k % n;\n\n        reverse(nums, 0, n - 1);\n        reverse(nums, 0, k - 1);\n        reverse(nums, k, n - 1);\n    }\n\n    private void reverse(int[] nums, int left, int right) {\n        while(left < right){\n            int temp = nums[left];\n            nums[left] = nums[right];\n            nums[right] = temp;\n            left++;\n            right--;\n        }\n    }\n}",
+          "language": "Java",
+          "status": "Accepted",
+          "runtime_ms": 1.0,
+          "memory_mb": 61.0,
+          "submitted_at": "2026-03-23T17:11:40Z",
+          "error_message": null,
+          "submission_hash": "c286aecdb30bcceb8caeb4fc9727c597487119076a5edecea73ed46ed208cab4",
+          "source_provider": "leetcode",
+          "source_account": "jaypatil1229"
+        }
+      ]
+    },
+    {
+      "id": "2318c5da-56cb-44b0-858a-6d63f6c9e53e",
+      "problem_id": "b2700837-8fb7-490f-a2ce-260a9244d9ad",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-19T12:57:13.335624Z",
+      "updated_at": "2026-10-19T12:57:13.335624Z",
+      "submissions": [
+        {
+          "id": "leetcode_1956952846",
+          "problem_id": "b2700837-8fb7-490f-a2ce-260a9244d9ad",
+          "attempt_id": "2318c5da-56cb-44b0-858a-6d63f6c9e53e",
+          "code": "class Solution {\n    public void rotate(int[] nums, int k) {\n        int n = nums.length;\n        k = k % n;\n\n        int temp[] = new int[k];\n\n        // copy rotated part\n        for(int i = (n - k); i < n; i++){\n            temp[i - (n - k)] = nums[i];\n        }\n\n        // shift non-rotated part\n        for(int i = (n - k - 1); i >= 0; i--){\n            nums[i + k] = nums[i];\n        }\n\n        // put rotated part in array\n        for(int i = 0; i < k; i++){\n            nums[i] = temp[i];\n        }\n    }\n}",
+          "language": "Java",
+          "status": "Accepted",
+          "runtime_ms": 1.0,
+          "memory_mb": 63.12,
+          "submitted_at": "2026-03-23T17:11:03Z",
+          "error_message": null,
+          "submission_hash": "dc2be2496bd8169f7766aa04ac5793558616f99bd334689e9dcfe9de820ae4cf",
+          "source_provider": "leetcode",
+          "source_account": "jaypatil1229"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

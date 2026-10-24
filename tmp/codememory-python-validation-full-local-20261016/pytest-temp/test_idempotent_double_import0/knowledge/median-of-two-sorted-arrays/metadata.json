@@ -1,0 +1,48 @@
+{
+  "id": "9bdb98c5-c86a-4a24-908b-8d8821b266c7",
+  "title": "Median of Two Sorted Arrays",
+  "slug": "median-of-two-sorted-arrays",
+  "difficulty": "Hard",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array",
+    "Binary Search",
+    "Divide and Conquer"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:18:23.377572Z",
+  "updated_at": "2026-10-15T19:18:23.377572Z",
+  "attempts": [
+    {
+      "id": "c17578cf-31f6-446b-9eaf-b92e1f8e6492",
+      "problem_id": "9bdb98c5-c86a-4a24-908b-8d8821b266c7",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2024-01-26T09:00:00Z",
+      "updated_at": "2024-01-26T09:00:00Z",
+      "submissions": [
+        {
+          "id": "0938fae6-34f8-452d-a30f-67feea976c12",
+          "problem_id": "9bdb98c5-c86a-4a24-908b-8d8821b266c7",
+          "attempt_id": "c17578cf-31f6-446b-9eaf-b92e1f8e6492",
+          "code": "class Solution:\n    def findMedianSortedArrays(self, nums1, nums2):\n        A, B = nums1, nums2\n        if len(A) > len(B): A, B = B, A\n        m, n = len(A), len(B)\n        lo, hi = 0, m\n        while lo <= hi:\n            i = (lo + hi) // 2\n            j = (m + n + 1) // 2 - i\n            maxLeftA = float('-inf') if i == 0 else A[i-1]\n            minRightA = float('inf') if i == m else A[i]\n            maxLeftB = float('-inf') if j == 0 else B[j-1]\n            minRightB = float('inf') if j == n else B[j]\n            if maxLeftA <= minRightB and maxLeftB <= minRightA:\n                if (m + n) % 2 == 0:\n                    return (max(maxLeftA, maxLeftB) + min(minRightA, minRightB)) / 2\n                else:\n                    return max(maxLeftA, maxLeftB)\n            elif maxLeftA > minRightB: hi = i - 1\n            else: lo = i + 1\n        return 0.0",
+          "language": "Python",
+          "status": "Accepted",
+          "runtime_ms": 52.0,
+          "memory_mb": 16.9,
+          "submitted_at": "2024-01-26T09:00:00Z",
+          "error_message": null,
+          "submission_hash": "eebac4d4ad2b156298737154534926ca60f12f6fbd3f17635d14647c5a070125",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

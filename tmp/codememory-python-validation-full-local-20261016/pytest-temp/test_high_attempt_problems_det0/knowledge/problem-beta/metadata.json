@@ -1,0 +1,73 @@
+{
+  "id": "e62c5bca-59c4-43ba-9e50-c115cf653aec",
+  "title": "Problem Beta",
+  "slug": "problem-beta",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [],
+  "statement": null,
+  "created_at": "2026-10-15T19:18:15.730703Z",
+  "updated_at": "2026-10-15T19:18:15.730703Z",
+  "attempts": [
+    {
+      "id": "d750ff6a-1ddd-42c1-9ac2-a2d86b178f78",
+      "problem_id": "e62c5bca-59c4-43ba-9e50-c115cf653aec",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Wrong Answer",
+      "created_at": "2026-10-15T19:18:15.823200Z",
+      "updated_at": "2026-10-15T19:18:15.823200Z",
+      "submissions": [
+        {
+          "id": "d5d0a2f5-a2da-4c94-918a-3a15449407bc",
+          "problem_id": "e62c5bca-59c4-43ba-9e50-c115cf653aec",
+          "attempt_id": "d750ff6a-1ddd-42c1-9ac2-a2d86b178f78",
+          "code": "att 1",
+          "language": "python",
+          "status": "Wrong Answer",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-15T19:18:15.821197Z",
+          "error_message": null,
+          "submission_hash": "354ffaded473bbb315d4bba2daf6f4d7202ec89735e45e163ad68dd5c1e11986",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    },
+    {
+      "id": "ba773665-6b8e-4f47-a90d-4e744479702b",
+      "problem_id": "e62c5bca-59c4-43ba-9e50-c115cf653aec",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:18:15.988144Z",
+      "updated_at": "2026-10-15T19:18:15.988144Z",
+      "submissions": [
+        {
+          "id": "983541fc-b9f4-4a01-8aa5-82f84f3f7ac3",
+          "problem_id": "e62c5bca-59c4-43ba-9e50-c115cf653aec",
+          "attempt_id": "ba773665-6b8e-4f47-a90d-4e744479702b",
+          "code": "att 2",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-15T19:18:15.986118Z",
+          "error_message": null,
+          "submission_hash": "109bb6334b749de20b5b8e31c27fecc211a0b88172b7fd4bb6c28f6da82eef38",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

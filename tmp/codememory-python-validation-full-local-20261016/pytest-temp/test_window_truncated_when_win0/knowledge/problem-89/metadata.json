@@ -1,0 +1,44 @@
+{
+  "id": "3c089184-b566-48bc-9fc3-7c1c636e81ad",
+  "title": "Problem 89",
+  "slug": "problem-89",
+  "difficulty": "Unknown",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/problem-89/",
+  "topics": [],
+  "statement": null,
+  "created_at": "2026-10-15T19:17:37.331291Z",
+  "updated_at": "2026-10-15T19:17:37.331291Z",
+  "attempts": [
+    {
+      "id": "094745e7-0a51-47fe-98ac-07151a5ff97d",
+      "problem_id": "3c089184-b566-48bc-9fc3-7c1c636e81ad",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:17:37.411314Z",
+      "updated_at": "2026-10-15T19:17:37.411314Z",
+      "submissions": [
+        {
+          "id": "leetcode_89",
+          "problem_id": "3c089184-b566-48bc-9fc3-7c1c636e81ad",
+          "attempt_id": "094745e7-0a51-47fe-98ac-07151a5ff97d",
+          "code": "",
+          "language": "Python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2023-11-14T22:14:49Z",
+          "error_message": null,
+          "submission_hash": "c7f438ecb322d2840579f0d6d6d98b489b7614881ee7f73c3cccf450c800daad",
+          "source_provider": "leetcode",
+          "source_account": "syncuser"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

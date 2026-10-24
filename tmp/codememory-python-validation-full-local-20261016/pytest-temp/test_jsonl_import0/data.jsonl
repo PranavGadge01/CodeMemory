@@ -1,0 +1,2 @@
+{"title": "Valid Parentheses", "difficulty": "Easy", "language": "python", "code": "def isValid(s): return True", "status": "Accepted", "timestamp": "2026-09-06T14:00:00Z", "submission_id": "sub-301"}
+{"title": "Valid Parentheses", "difficulty": "Easy", "language": "python", "code": "def isValid(s): return False", "status": "Wrong Answer", "timestamp": "2026-09-06T13:50:00Z", "submission_id": "sub-300"}

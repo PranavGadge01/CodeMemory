@@ -1,0 +1,76 @@
+{
+  "id": "7eb1598c-f0f9-4e92-a399-03165013b06d",
+  "title": "Valid Parentheses",
+  "slug": "valid-parentheses",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Stack",
+    "String"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:20.470239Z",
+  "updated_at": "2026-10-15T19:06:20.470239Z",
+  "attempts": [
+    {
+      "id": "a9b673d0-f631-426d-9b86-d6ee24efe4da",
+      "problem_id": "7eb1598c-f0f9-4e92-a399-03165013b06d",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Wrong Answer",
+      "created_at": "2026-10-15T19:06:20.492827Z",
+      "updated_at": "2026-10-15T19:06:20.492827Z",
+      "submissions": [
+        {
+          "id": "8b19b6a7-13aa-4ab9-8f9f-2dcc5ab4eacb",
+          "problem_id": "7eb1598c-f0f9-4e92-a399-03165013b06d",
+          "attempt_id": "a9b673d0-f631-426d-9b86-d6ee24efe4da",
+          "code": "bad",
+          "language": "java",
+          "status": "Wrong Answer",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-14T19:06:20.564066Z",
+          "error_message": null,
+          "submission_hash": "3b5359134f938d0583cc73a938449936535a694150acb3c9e475152045e0da07",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    },
+    {
+      "id": "04a06ea6-fbea-45ae-b4cf-91f0d3bed05d",
+      "problem_id": "7eb1598c-f0f9-4e92-a399-03165013b06d",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:20.528203Z",
+      "updated_at": "2026-10-15T19:06:20.528203Z",
+      "submissions": [
+        {
+          "id": "e56cba0a-aa52-4735-9a73-dec9b8d1625c",
+          "problem_id": "7eb1598c-f0f9-4e92-a399-03165013b06d",
+          "attempt_id": "04a06ea6-fbea-45ae-b4cf-91f0d3bed05d",
+          "code": "good",
+          "language": "java",
+          "status": "Accepted",
+          "runtime_ms": 10.0,
+          "memory_mb": 8.0,
+          "submitted_at": "2026-10-14T19:06:20.564066Z",
+          "error_message": null,
+          "submission_hash": "9478c276aeb4b8f934de99dc25464c68f363eb6ff6615516e85c3432e203a994",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

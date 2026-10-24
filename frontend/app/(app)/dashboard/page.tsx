@@ -12,17 +12,11 @@ import { Timeline } from "@/components/app/timeline";
 import { ActivityHeatmap } from "@/components/charts/activity-heatmap";
 import { BarChart } from "@/components/charts/bar-chart";
 import { DistributionBars } from "@/components/charts/distribution";
-import { SolutionEvolution } from "@/components/app/solution-evolution";
 import { DifficultyBadge } from "@/components/ui/badges";
 import { Button } from "@/components/ui/button";
 import { Reveal } from "@/components/system/reveal";
-import { getEvolutionStory } from "@/lib/mock/snippets";
 import { formatPercent, formatNumber, formatRelative } from "@/lib/format";
 import { ErrorState, PageSkeleton, EmptyDataState } from "@/components/app/data-states";
-
-// The backend does not expose a dashboard-level evolution story. Keep the
-// curated sample clearly identified as an example rather than user data.
-const STORY_SLUG = "3sum";
 
 export default function DashboardPage() {
   const [state, setState] = React.useState<
@@ -40,8 +34,6 @@ export default function DashboardPage() {
     });
     return () => { cancelled = true; };
   }, []);
-  const story = getEvolutionStory(STORY_SLUG);
-
   if (state.status !== "success") {
     return <DashboardPending state={state} />;
   }
@@ -58,7 +50,7 @@ export default function DashboardPage() {
         <PageHeader
           eyebrow="Overview"
           title={greeting()}
-          description="Your coding memory, as it stands today. Activity and metrics use your indexed history; the example evolution below is illustrative."
+          description="Your coding memory, as it stands today. Activity and metrics use your indexed history."
           actions={
             <>
               <Button variant="outline" size="sm" asChild>
@@ -181,19 +173,6 @@ export default function DashboardPage() {
             </Surface>
           </Reveal>
         </div>
-
-        <Reveal>
-          {story ? (
-            <Surface className="overflow-hidden">
-              <SurfaceHeader
-                eyebrow="Example"
-                title="How solution evolution works"
-                description="Illustrative sample story, not generated from your submission history."
-              />
-              <SolutionEvolution story={story} />
-            </Surface>
-          ) : null}
-        </Reveal>
 
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
           <Reveal>

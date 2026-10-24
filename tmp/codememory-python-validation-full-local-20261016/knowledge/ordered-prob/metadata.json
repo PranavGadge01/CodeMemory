@@ -1,0 +1,61 @@
+{
+  "id": "uuid-zzzz",
+  "title": "Ordered Problem",
+  "slug": "ordered-prob",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:39.024327Z",
+  "updated_at": "2026-10-15T19:06:39.024327Z",
+  "attempts": [
+    {
+      "id": "3db86fa8-0db9-4533-8968-9a12b10e190d",
+      "problem_id": "uuid-zzzz",
+      "attempt_number": 1,
+      "approach_summary": "Attempt",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:39.034773Z",
+      "updated_at": "2026-10-15T19:06:39.034773Z",
+      "submissions": [
+        {
+          "id": "f50813a4-2413-4bff-9faa-7d3066deee38",
+          "problem_id": "uuid-zzzz",
+          "attempt_id": null,
+          "code": "old code \u2014 brute force nested loops",
+          "language": "python",
+          "status": "Wrong Answer",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2024-01-01T00:00:00Z",
+          "error_message": null,
+          "submission_hash": "9798f898d2b8d659de7a969a89ffadf89b59e4c5203b5679b782d83f872cd931",
+          "source_provider": null,
+          "source_account": null
+        },
+        {
+          "id": "3e49e063-20b8-4baa-87da-45e9bcdd3887",
+          "problem_id": "uuid-zzzz",
+          "attempt_id": null,
+          "code": "new code \u2014 single pass",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2024-06-01T00:00:00Z",
+          "error_message": null,
+          "submission_hash": "4832b6aefe01d0fd6a72d693dc1269fa18c8cc343fca62f66864896a8009427c",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

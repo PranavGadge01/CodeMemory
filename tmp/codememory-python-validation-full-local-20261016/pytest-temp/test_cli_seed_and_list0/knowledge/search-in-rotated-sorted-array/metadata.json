@@ -1,0 +1,67 @@
+{
+  "id": "d092c0c0-3081-4d35-8dae-14db7dcc5749",
+  "title": "Search in Rotated Sorted Array",
+  "slug": "search-in-rotated-sorted-array",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/search-in-rotated-sorted-array/",
+  "topics": [
+    "Array",
+    "Binary Search"
+  ],
+  "statement": "Given the array nums after the possible rotation and an integer target, return the index of target if it is in nums.",
+  "created_at": "2026-10-15T19:06:29.767962Z",
+  "updated_at": "2026-10-15T19:06:29.767962Z",
+  "attempts": [
+    {
+      "id": "96c08d67-90ae-4724-b351-185597d40a9c",
+      "problem_id": "d092c0c0-3081-4d35-8dae-14db7dcc5749",
+      "attempt_number": 1,
+      "approach_summary": "Modified Binary Search",
+      "reasoning": "Determine which half of the rotated array is sorted at each step.",
+      "mistakes": [],
+      "analysis": {
+        "approach_name": "Standard Approach",
+        "time_complexity": "O(log N)",
+        "space_complexity": "O(1)",
+        "key_insights": [],
+        "trade_offs": null,
+        "bottleneck": null
+      },
+      "status": "Unknown",
+      "created_at": "2026-10-15T19:06:29.786659Z",
+      "updated_at": "2026-10-15T19:06:29.786659Z",
+      "submissions": []
+    },
+    {
+      "id": "155b7c48-7420-4ef4-b597-f95861c27cd9",
+      "problem_id": "d092c0c0-3081-4d35-8dae-14db7dcc5749",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:29.812581Z",
+      "updated_at": "2026-10-15T19:06:29.812581Z",
+      "submissions": [
+        {
+          "id": "22df2cef-0204-4dd0-a200-fab8eac75860",
+          "problem_id": "d092c0c0-3081-4d35-8dae-14db7dcc5749",
+          "attempt_id": "155b7c48-7420-4ef4-b597-f95861c27cd9",
+          "code": "def search(nums: list[int], target: int) -> int:\n    l, r = 0, len(nums) - 1\n    while l <= r:\n        mid = (l + r) // 2\n        if nums[mid] == target: return mid\n        if nums[l] <= nums[mid]:\n            if nums[l] <= target < nums[mid]: r = mid - 1\n            else: l = mid + 1\n        else:\n            if nums[mid] < target <= nums[r]: l = mid + 1\n            else: r = mid - 1\n    return -1",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": 40.0,
+          "memory_mb": 16.5,
+          "submitted_at": "2026-10-15T19:06:29.811580Z",
+          "error_message": null,
+          "submission_hash": "d747f0773992941a10efb0635cc5811ab3e5b7e3a10b9e585212d5fc12684148",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

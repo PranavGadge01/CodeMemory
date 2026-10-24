@@ -79,8 +79,6 @@ export function AccountSection() {
         }
 
         if (authResult.status === "fulfilled") {
-          setConnected(authResult.value.connected);
-          setUsername(authResult.value.username);
           setAuth((prev) => ({
             ...prev,
             checked: true,
@@ -132,11 +130,14 @@ export function AccountSection() {
       }));
       setConnected(result.connected);
       setUsername(result.username);
-    } catch {
+    } catch (error) {
       setAuth((prev) => ({
         ...prev,
         validating: false,
-        error: "Could not validate and store the credentials. Check that the backend is available and try again.",
+        error:
+          error instanceof Error
+            ? error.message
+            : "Could not validate and store the credentials. Check that the backend is available and try again.",
       }));
     }
   };
@@ -192,8 +193,6 @@ export function AccountSection() {
     setAuth((prev) => ({ ...prev, error: null, checked: false }));
     try {
       const result = await validateLeetCodeCredentials();
-      setConnected(result.connected);
-      setUsername(result.username);
       setAuth((prev) => ({
         ...prev,
         checked: true,

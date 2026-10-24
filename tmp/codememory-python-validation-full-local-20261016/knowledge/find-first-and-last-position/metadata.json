@@ -1,0 +1,47 @@
+{
+  "id": "find-first-and-last-position",
+  "title": "Find First And Last Position",
+  "slug": "find-first-and-last-position",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Binary Search",
+    "Array"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:44.206921Z",
+  "updated_at": "2026-10-15T19:06:44.206921Z",
+  "attempts": [
+    {
+      "id": "603faa6c-45ae-4495-b09c-6843bf5094a5",
+      "problem_id": "find-first-and-last-position",
+      "attempt_number": 1,
+      "approach_summary": "Attempt",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:44.206921Z",
+      "updated_at": "2026-10-15T19:06:44.206921Z",
+      "submissions": [
+        {
+          "id": "f1e1eaa5-3d7e-48b7-9a96-b3cc00d928e1",
+          "problem_id": "find-first-and-last-position",
+          "attempt_id": null,
+          "code": "pass",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-01-03T00:00:00Z",
+          "error_message": null,
+          "submission_hash": "d12e9781c221f5cd6989b70a0fe4ad231a7b1e0a54123ab9adf569db82de6898",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

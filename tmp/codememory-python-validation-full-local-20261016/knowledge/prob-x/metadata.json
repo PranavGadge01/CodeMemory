@@ -1,0 +1,16 @@
+{
+  "id": "prob-x",
+  "title": "Prob X",
+  "slug": "prob-x",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:39.673417Z",
+  "updated_at": "2026-10-15T19:06:39.673417Z",
+  "attempts": [],
+  "notes": []
+}

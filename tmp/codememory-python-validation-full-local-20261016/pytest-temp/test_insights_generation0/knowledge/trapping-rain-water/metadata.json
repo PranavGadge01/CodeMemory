@@ -1,0 +1,70 @@
+{
+  "id": "18ea2634-29e4-46f1-a52d-f6b35f6eb779",
+  "title": "Trapping Rain Water",
+  "slug": "trapping-rain-water",
+  "difficulty": "Hard",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/trapping-rain-water/",
+  "topics": [
+    "Array",
+    "Two Pointers",
+    "Dynamic Programming",
+    "Stack",
+    "Monotonic Stack"
+  ],
+  "statement": "Given n non-negative integers representing an elevation map where the width of each bar is 1, compute how much water it can trap after raining.",
+  "created_at": "2026-10-15T19:06:37.605394Z",
+  "updated_at": "2026-10-15T19:06:37.605394Z",
+  "attempts": [
+    {
+      "id": "1f5292e0-1c60-474e-bede-ac9f4cf493b6",
+      "problem_id": "18ea2634-29e4-46f1-a52d-f6b35f6eb779",
+      "attempt_number": 1,
+      "approach_summary": "Two Pointers Max Left / Max Right",
+      "reasoning": "Maintain left_max and right_max bounds moving l and r towards each other.",
+      "mistakes": [],
+      "analysis": {
+        "approach_name": "Standard Approach",
+        "time_complexity": "O(N)",
+        "space_complexity": "O(1)",
+        "key_insights": [],
+        "trade_offs": null,
+        "bottleneck": null
+      },
+      "status": "Unknown",
+      "created_at": "2026-10-15T19:06:37.629465Z",
+      "updated_at": "2026-10-15T19:06:37.629465Z",
+      "submissions": []
+    },
+    {
+      "id": "a8d8b389-2ee2-4caa-a3b3-d588188695f8",
+      "problem_id": "18ea2634-29e4-46f1-a52d-f6b35f6eb779",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:37.664809Z",
+      "updated_at": "2026-10-15T19:06:37.664809Z",
+      "submissions": [
+        {
+          "id": "345544a8-e01b-4541-9192-d539d9feceb7",
+          "problem_id": "18ea2634-29e4-46f1-a52d-f6b35f6eb779",
+          "attempt_id": "a8d8b389-2ee2-4caa-a3b3-d588188695f8",
+          "code": "def trap(height: list[int]) -> int:\n    if not height: return 0\n    l, r = 0, len(height) - 1\n    left_max, right_max = height[l], height[r]\n    water = 0\n    while l < r:\n        if left_max < right_max:\n            l += 1\n            left_max = max(left_max, height[l])\n            water += left_max - height[l]\n        else:\n            r -= 1\n            right_max = max(right_max, height[r])\n            water += right_max - height[r]\n    return water",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": 110.0,
+          "memory_mb": 18.6,
+          "submitted_at": "2026-10-15T19:06:37.663809Z",
+          "error_message": null,
+          "submission_hash": "195e40e603b8fdae6a2f46a4d6903ee0c2cbd92a6c2b0484d24ce923b9856b27",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <rect width="1920" height="1080" fill="#f8f8f6"/>
+  <circle cx="1540" cy="180" r="360" fill="#fff0d8" opacity="0.78"/>
+  <path d="M0 872H1920" stroke="#e7e7e2" stroke-width="2"/>
+  <g transform="translate(240 332)">
+    <rect width="58" height="58" rx="15" fill="#fff0d8"/>
+    <path d="M17 15v28M17 22h25M17 36h25M37 22l7 7-7 7" fill="none" stroke="#f2a10b" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="17" cy="15" r="4" fill="#f2a10b"/><circle cx="17" cy="43" r="4" fill="#f2a10b"/>
+  </g>
+  <text x="324" y="377" font-family="Arial, sans-serif" font-size="26" font-weight="700" letter-spacing="2" fill="#252525">CODEMEMORY</text>
+  <rect x="240" y="474" width="86" height="7" rx="4" fill="#f2a10b"/>
+  <text x="240" y="585" font-family="Arial, sans-serif" font-size="92" font-weight="700" letter-spacing="-2" fill="#191a1b">Your coding history,</text>
+  <text x="240" y="690" font-family="Arial, sans-serif" font-size="92" font-weight="700" letter-spacing="-2" fill="#191a1b">remembered.</text>
+  <text x="245" y="780" font-family="Arial, sans-serif" font-size="30" fill="#64666a">Connect your LeetCode history to what you learn next.</text>
+  <text x="240" y="956" font-family="Arial, sans-serif" font-size="19" letter-spacing="3" fill="#777a7d">A PRODUCT WALKTHROUGH</text>
+</svg>

@@ -1,0 +1,16 @@
+import requests
+import json
+
+API_URL = "http://127.0.0.1:8001/api/v1/leetcode"
+
+# Store the authenticated credentials (privately, not recorded)
+session = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfYXV0aF91c2VyX2lkIjoiMjEyNjA0MTEiLCJfYXV0aF91c2VyX2JhY2tlbmQiOiJhbGxhdXRoLmFjY291bnQuYXV0aF9iYWNrZW5kcy5BdXRoZW50aWNhdGlvbkJhY2tlbmQiLCJfYXV0aF91c2VyX2hhc2giOiJmM2EzMWU1ZGI4OTY0MDVjZjVkMjQ1YThjOTYwNDBjM2MyMzM1YzMzYjdmYWQ3YWIwZDFiN2YxMTA5ODY4Y2Y3Iiwic2Vzc2lvbl91dWlkIjoiNTQ3NDg4YjUiLCJpZCI6MjEyNjA0MTEsImVtYWlsIjoiamF5cGF0aWw4NzY2QGdtYWlsLmNvbSIsInVzZXJuYW1lIjoiamF5cGF0aWwxMjI5IiwidXNlcl9zbHVnIjoiamF5cGF0aWwxMjI5IiwiYXZhdGFyIjoiaHR0cHM6Ly9hc3NldHMubGVldGNvZGUuY29tL3VzZXJzL3VoTzVrSWROZHcvYXZhdGFyXzE3NzMzMjcxOTkucG5nIiwicmVmcmVzaGVkX2F0IjoxNzkyMzM2ODcxLCJpcCI6IjI3LjUuMTAzLjExMyIsImlkZW50aXR5IjoiYzA2MDUyOGEwM2E2M2IxYmMxYjBkMWZkZjJhODhjZmUiLCJkZXZpY2Vfd2l0aF9pcCI6WyI2YmY0NmMwMWZiNjAwYjFhYWMyMDdmMmE5Y2JjOTkzZiIsIjI3LjUuMTAzLjExMyJdfQ.aFJBjr3TxSiM5COKIFYJgt6eaGqiK79Aj8R7uQW1OgA"
+csrf_token = "MEDAmEuqJ9z9MIozDuXfEDPfsksu6mkG"
+
+print("Storing LeetCode credentials...")
+resp = requests.post(
+    f"{API_URL}/auth/store",
+    json={"session": session, "csrf_token": csrf_token}
+)
+print(f"Status: {resp.status_code}")
+print(f"Response: {json.dumps(resp.json(), indent=2)}")

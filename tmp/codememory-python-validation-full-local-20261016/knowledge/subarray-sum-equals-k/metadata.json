@@ -1,0 +1,18 @@
+{
+  "id": "subarray-sum-equals-k",
+  "title": "Subarray Sum Equals K",
+  "slug": "subarray-sum-equals-k",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array",
+    "Hash Table",
+    "Prefix Sum"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:46.115130Z",
+  "updated_at": "2026-10-15T19:06:46.115130Z",
+  "attempts": [],
+  "notes": []
+}

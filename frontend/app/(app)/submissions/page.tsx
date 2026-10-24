@@ -28,6 +28,25 @@ export interface SubmissionsSearch {
 
 const DEFAULTS: SubmissionsSearch = { q: "", status: "All", language: "All" };
 
+type SubmissionsPageData =
+  | {
+      mode: "detail";
+      submission: Awaited<ReturnType<typeof getSubmission>>;
+      problem: Awaited<ReturnType<typeof getProblem>> | null;
+    }
+  | {
+      mode: "list";
+      rows: SubmissionRow[];
+      summary: Awaited<ReturnType<typeof listSubmissions>>["summary"];
+      filterOptions: Awaited<ReturnType<typeof listSubmissions>>["filterOptions"];
+      filteredTotal: number;
+    };
+
+type SubmissionsPageState =
+  | { status: "loading" }
+  | { status: "error"; error: ApiError }
+  | { status: "success"; data: SubmissionsPageData };
+
 export default function SubmissionsPage() {
   return <React.Suspense fallback={<SubmissionsSurface><PageSkeleton /></SubmissionsSurface>}><SubmissionsContent /></React.Suspense>;
 }
@@ -41,7 +60,7 @@ function SubmissionsContent() {
     language: typeof raw.language === "string" ? raw.language : DEFAULTS.language,
   };
 
-  const [state, setState] = React.useState<any>({ status: "loading" });
+  const [state, setState] = React.useState<SubmissionsPageState>({ status: "loading" });
 
   React.useEffect(() => {
     let cancelled = false;
@@ -83,7 +102,7 @@ function SubmissionsContent() {
     })().then((data) => { if (!cancelled) setState({ status: "success", data }); })
       .catch((error: unknown) => { if (!cancelled) setState({ status: "error", error: error instanceof ApiError ? error : new ApiError("Could not load submissions.", "ERROR", 0) }); });
     return () => { cancelled = true; };
-  }, [raw.id, raw.q, raw.status, raw.language]);
+  }, [raw.id, params.q, params.status, params.language]);
 
   return (
     <PageContainer>
@@ -112,7 +131,7 @@ function SubmissionsContent() {
             />
             <Reveal><SubmissionDetail submission={state.data.submission} problem={state.data.problem} /></Reveal>
           </>
-        ) : state.status === "success" ? (
+        ) : state.status === "success" && state.data.mode === "list" ? (
           <>
             <StatStrip
               stats={[

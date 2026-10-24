@@ -1,0 +1,44 @@
+{
+  "id": "71e03951-d4f0-4d5b-a19d-eab2969802b6",
+  "title": "New Problem 1",
+  "slug": "new-problem-1",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [],
+  "statement": null,
+  "created_at": "2026-10-15T19:18:19.888259Z",
+  "updated_at": "2026-10-15T19:18:19.888259Z",
+  "attempts": [
+    {
+      "id": "268eda79-36b9-4eb6-972e-cc8856bb2b75",
+      "problem_id": "71e03951-d4f0-4d5b-a19d-eab2969802b6",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:18:19.984792Z",
+      "updated_at": "2026-10-15T19:18:19.984792Z",
+      "submissions": [
+        {
+          "id": "355a821d-467f-4cb1-9872-d84fd1286ccf",
+          "problem_id": "71e03951-d4f0-4d5b-a19d-eab2969802b6",
+          "attempt_id": "268eda79-36b9-4eb6-972e-cc8856bb2b75",
+          "code": "perfect",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-15T19:18:19.982798Z",
+          "error_message": null,
+          "submission_hash": "7bb63f770d91842754033fc7ced536393e6a9b64dde42d7c00e7d159c8694b2d",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

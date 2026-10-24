@@ -1,0 +1,46 @@
+{
+  "id": "dae459fa-d839-4856-be5e-db840f8acf24",
+  "title": "Sliding Window Problem",
+  "slug": "sliding-window",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Sliding Window"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:18:05.049150Z",
+  "updated_at": "2026-10-15T19:18:05.049150Z",
+  "attempts": [
+    {
+      "id": "f005da56-0feb-41a6-8ede-81b4feb5ecfc",
+      "problem_id": "dae459fa-d839-4856-be5e-db840f8acf24",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:18:05.121580Z",
+      "updated_at": "2026-10-15T19:18:05.121580Z",
+      "submissions": [
+        {
+          "id": "ac0dddca-9480-415d-8c1b-36f66124263f",
+          "problem_id": "dae459fa-d839-4856-be5e-db840f8acf24",
+          "attempt_id": "f005da56-0feb-41a6-8ede-81b4feb5ecfc",
+          "code": "def solve(): pass",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-15T19:18:05.116583Z",
+          "error_message": null,
+          "submission_hash": "73359c6aad25713694e126e68dc0d91c3254fcb934b1a57ab5d0ae4add36cc0d",
+          "source_provider": "leetcode",
+          "source_account": "account_a"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

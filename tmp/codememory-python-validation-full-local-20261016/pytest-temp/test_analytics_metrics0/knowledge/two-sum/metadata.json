@@ -1,0 +1,76 @@
+{
+  "id": "fc1c2697-cda2-4d8f-a390-42d1e25276ee",
+  "title": "Two Sum",
+  "slug": "two-sum",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array",
+    "Hash Table"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:18.164118Z",
+  "updated_at": "2026-10-15T19:06:18.164118Z",
+  "attempts": [
+    {
+      "id": "948f6dfe-6117-48e2-beb5-9182ff59992a",
+      "problem_id": "fc1c2697-cda2-4d8f-a390-42d1e25276ee",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Time Limit Exceeded",
+      "created_at": "2026-10-15T19:06:18.183107Z",
+      "updated_at": "2026-10-15T19:06:18.183107Z",
+      "submissions": [
+        {
+          "id": "8f5ee3e6-5e84-4aaf-969c-64e9018158cf",
+          "problem_id": "fc1c2697-cda2-4d8f-a390-42d1e25276ee",
+          "attempt_id": "948f6dfe-6117-48e2-beb5-9182ff59992a",
+          "code": "brute force",
+          "language": "python",
+          "status": "Time Limit Exceeded",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-15T19:06:18.182106Z",
+          "error_message": null,
+          "submission_hash": "9c3639f056aedf3259ac8b1bee330496127181df820d92516145aa488b81a3ab",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    },
+    {
+      "id": "5af97921-605f-40b7-b764-f7c00a0b5ce0",
+      "problem_id": "fc1c2697-cda2-4d8f-a390-42d1e25276ee",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:18.219755Z",
+      "updated_at": "2026-10-15T19:06:18.219755Z",
+      "submissions": [
+        {
+          "id": "e791c07c-03b4-4d56-9408-8369bcaf46d5",
+          "problem_id": "fc1c2697-cda2-4d8f-a390-42d1e25276ee",
+          "attempt_id": "5af97921-605f-40b7-b764-f7c00a0b5ce0",
+          "code": "hash map",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": 40.0,
+          "memory_mb": 16.0,
+          "submitted_at": "2026-10-15T19:06:18.218749Z",
+          "error_message": null,
+          "submission_hash": "60805cd405c09bc381560aa7a614ff38da3e1d6c1affd20b9c8ff212e234af86",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

@@ -1,0 +1,69 @@
+{
+  "id": "55e69a26-3093-4d03-ae9e-e0ec623c823b",
+  "title": "Course Schedule",
+  "slug": "course-schedule",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/course-schedule/",
+  "topics": [
+    "Depth-First Search",
+    "Breadth-First Search",
+    "Graph",
+    "Topological Sort"
+  ],
+  "statement": "Return true if you can finish all courses. Otherwise, return false.",
+  "created_at": "2026-10-15T19:06:29.996207Z",
+  "updated_at": "2026-10-15T19:06:29.996207Z",
+  "attempts": [
+    {
+      "id": "c2096cdb-264b-4d56-802f-80c5074d48e4",
+      "problem_id": "55e69a26-3093-4d03-ae9e-e0ec623c823b",
+      "attempt_number": 1,
+      "approach_summary": "Kahn's Algorithm (Topological Sort BFS)",
+      "reasoning": "Track in-degrees of nodes; process 0 in-degree nodes via BFS queue.",
+      "mistakes": [],
+      "analysis": {
+        "approach_name": "Standard Approach",
+        "time_complexity": "O(V + E)",
+        "space_complexity": "O(V + E)",
+        "key_insights": [],
+        "trade_offs": null,
+        "bottleneck": null
+      },
+      "status": "Unknown",
+      "created_at": "2026-10-15T19:06:30.020052Z",
+      "updated_at": "2026-10-15T19:06:30.020052Z",
+      "submissions": []
+    },
+    {
+      "id": "ca887f45-5a68-4077-a497-c4a945855b87",
+      "problem_id": "55e69a26-3093-4d03-ae9e-e0ec623c823b",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:30.050778Z",
+      "updated_at": "2026-10-15T19:06:30.050778Z",
+      "submissions": [
+        {
+          "id": "569b680e-75f4-43c6-88d2-8545e1ebdee9",
+          "problem_id": "55e69a26-3093-4d03-ae9e-e0ec623c823b",
+          "attempt_id": "ca887f45-5a68-4077-a497-c4a945855b87",
+          "code": "from collections import deque\ndef canFinish(numCourses: int, prerequisites: list[list[int]]) -> bool:\n    adj = [[] for _ in range(numCourses)]\n    indegree = [0] * numCourses\n    for crs, pre in prerequisites:\n        adj[pre].append(crs)\n        indegree[crs] += 1\n    q = deque([i for i in range(numCourses) if indegree[i] == 0])\n    visited = 0\n    while q:\n        node = q.popleft()\n        visited += 1\n        for nxt in adj[node]:\n            indegree[nxt] -= 1\n            if indegree[nxt] == 0: q.append(nxt)\n    return visited == numCourses",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": 85.0,
+          "memory_mb": 17.5,
+          "submitted_at": "2026-10-15T19:06:30.049777Z",
+          "error_message": null,
+          "submission_hash": "af03febe7a2e064babdb92c1c7f4541e83cf590e8f2e872441e611ef0dcb3f18",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

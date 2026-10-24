@@ -1,0 +1,16 @@
+{
+  "id": "ec554598-8cc8-4a8d-b117-c0a2edc43753",
+  "title": "LRU Cache",
+  "slug": "lru-cache",
+  "difficulty": "Hard",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Design"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:05:59.215933Z",
+  "updated_at": "2026-10-15T19:05:59.215933Z",
+  "attempts": [],
+  "notes": []
+}

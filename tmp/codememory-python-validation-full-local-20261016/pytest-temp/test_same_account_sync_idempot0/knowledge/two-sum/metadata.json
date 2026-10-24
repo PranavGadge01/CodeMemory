@@ -1,0 +1,44 @@
+{
+  "id": "ef26f0e4-8ec4-4089-8bb6-3d54eb81586d",
+  "title": "Two Sum",
+  "slug": "two-sum",
+  "difficulty": "Unknown",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/two-sum/",
+  "topics": [],
+  "statement": null,
+  "created_at": "2026-10-15T19:16:50.320468Z",
+  "updated_at": "2026-10-15T19:16:50.320468Z",
+  "attempts": [
+    {
+      "id": "16425615-d96d-4447-96a2-98f49c09134f",
+      "problem_id": "ef26f0e4-8ec4-4089-8bb6-3d54eb81586d",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:16:50.367617Z",
+      "updated_at": "2026-10-15T19:16:50.367617Z",
+      "submissions": [
+        {
+          "id": "leetcode_111",
+          "problem_id": "ef26f0e4-8ec4-4089-8bb6-3d54eb81586d",
+          "attempt_id": "16425615-d96d-4447-96a2-98f49c09134f",
+          "code": "",
+          "language": "Python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2023-11-14T22:13:20Z",
+          "error_message": null,
+          "submission_hash": "ee89f45babae9f6f958b97487a31888fcd3566f82230444a11f007f7d67d7cbe",
+          "source_provider": "leetcode",
+          "source_account": "syncuser"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

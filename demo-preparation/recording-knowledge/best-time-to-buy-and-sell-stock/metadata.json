@@ -1,0 +1,47 @@
+{
+  "id": "e8a7a515-1447-4392-b0f9-f65e6d92d2ac",
+  "title": "Best Time to Buy and Sell Stock",
+  "slug": "best-time-to-buy-and-sell-stock",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/best-time-to-buy-and-sell-stock/",
+  "topics": [
+    "Array",
+    "Dynamic Programming"
+  ],
+  "statement": "<p>You are given an array <code>prices</code> where <code>prices[i]</code> is the price of a given stock on the <code>i<sup>th</sup></code> day.</p>\n\n<p>You want to maximize your profit by choosing a <strong>single day</strong> to buy one stock and choosing a <strong>different day in the future</strong> to sell that stock.</p>\n\n<p>Return <em>the maximum profit you can achieve from this transaction</em>. If you cannot achieve any profit, return <code>0</code>.</p>\n\n<p>&nbsp;</p>\n<p><strong class=\"example\">Example 1:</strong></p>\n\n<pre>\n<strong>Input:</strong> prices = [7,1,5,3,6,4]\n<strong>Output:</strong> 5\n<strong>Explanation:</strong> Buy on day 2 (price = 1) and sell on day 5 (price = 6), profit = 6-1 = 5.\nNote that buying on day 2 and selling on day 1 is not allowed because you must buy before you sell.\n</pre>\n\n<p><strong class=\"example\">Example 2:</strong></p>\n\n<pre>\n<strong>Input:</strong> prices = [7,6,4,3,1]\n<strong>Output:</strong> 0\n<strong>Explanation:</strong> In this case, no transactions are done and the max profit = 0.\n</pre>\n\n<p>&nbsp;</p>\n<p><strong>Constraints:</strong></p>\n\n<ul>\n\t<li><code>1 &lt;= prices.length &lt;= 10<sup>5</sup></code></li>\n\t<li><code>0 &lt;= prices[i] &lt;= 10<sup>4</sup></code></li>\n</ul>\n",
+  "created_at": "2026-10-19T12:57:32.855423Z",
+  "updated_at": "2026-10-19T12:57:32.855423Z",
+  "attempts": [
+    {
+      "id": "7f2ec99c-792c-4fd0-b798-d9f62adc601a",
+      "problem_id": "e8a7a515-1447-4392-b0f9-f65e6d92d2ac",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-19T12:57:32.896432Z",
+      "updated_at": "2026-10-19T12:57:32.896432Z",
+      "submissions": [
+        {
+          "id": "leetcode_1954530646",
+          "problem_id": "e8a7a515-1447-4392-b0f9-f65e6d92d2ac",
+          "attempt_id": "7f2ec99c-792c-4fd0-b798-d9f62adc601a",
+          "code": "class Solution {\n    public int maxProfit(int[] prices) {\n        int maxProfit = 0, i = 0, j = 0;\n\n        while(j < prices.length){\n            \n            if(prices[i] > prices[j]){\n                i = j;\n            }else{\n                int profit = prices[j] - prices[i];\n                if(profit > maxProfit){\n                    maxProfit = profit;\n                }\n            }\n\n            j++;\n        }\n\n        return maxProfit;\n        \n    }\n}",
+          "language": "Java",
+          "status": "Accepted",
+          "runtime_ms": 1.0,
+          "memory_mb": 94.516,
+          "submitted_at": "2026-03-21T07:00:30Z",
+          "error_message": null,
+          "submission_hash": "f17bc36546f3d7dc875b1ee5c6379c0f80fd0e97862cfd9da481f2dc97b297a9",
+          "source_provider": "leetcode",
+          "source_account": "jaypatil1229"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

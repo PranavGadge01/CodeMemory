@@ -1,0 +1,18 @@
+{
+  "id": "binary-tree-level-order-traversal",
+  "title": "Binary Tree Level Order Traversal",
+  "slug": "binary-tree-level-order-traversal",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Tree",
+    "Breadth-First Search",
+    "Binary Tree"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:46.026471Z",
+  "updated_at": "2026-10-15T19:06:46.026471Z",
+  "attempts": [],
+  "notes": []
+}

@@ -1,0 +1,44 @@
+{
+  "id": "a735bcd4-2d21-4b4d-bdc5-3fb70c9a74bb",
+  "title": "Problem 98",
+  "slug": "problem-98",
+  "difficulty": "Unknown",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/problem-98/",
+  "topics": [],
+  "statement": null,
+  "created_at": "2026-10-15T19:17:39.378036Z",
+  "updated_at": "2026-10-15T19:17:39.378036Z",
+  "attempts": [
+    {
+      "id": "2d41477e-e919-4608-bc96-0b0182616ff4",
+      "problem_id": "a735bcd4-2d21-4b4d-bdc5-3fb70c9a74bb",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:17:39.461576Z",
+      "updated_at": "2026-10-15T19:17:39.461576Z",
+      "submissions": [
+        {
+          "id": "leetcode_98",
+          "problem_id": "a735bcd4-2d21-4b4d-bdc5-3fb70c9a74bb",
+          "attempt_id": "2d41477e-e919-4608-bc96-0b0182616ff4",
+          "code": "",
+          "language": "Python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2023-11-14T22:14:58Z",
+          "error_message": null,
+          "submission_hash": "5b4043af6ba345263add82614fc49b655ccadb8c305cd64c3afef44a80ab09a4",
+          "source_provider": "leetcode",
+          "source_account": "syncuser"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

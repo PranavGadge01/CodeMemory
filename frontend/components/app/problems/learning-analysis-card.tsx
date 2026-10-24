@@ -36,11 +36,11 @@ function TimelineEntry({ entry, total }: { entry: AttemptTimelineEntry; total: n
             {entry.status}
           </Badge>
           <span className="text-caption text-text-muted">{entry.language}</span>
-          {entry.runtime_ms != null && (
-            <span className="text-caption text-text-faint font-mono">{entry.runtime_ms}ms</span>
+          {entry.runtimeMs != null && (
+            <span className="text-caption text-text-faint font-mono">{entry.runtimeMs}ms</span>
           )}
-          {entry.memory_mb != null && (
-            <span className="text-caption text-text-faint font-mono">{entry.memory_mb}MB</span>
+          {entry.memoryMb != null && (
+            <span className="text-caption text-text-faint font-mono">{entry.memoryMb}MB</span>
           )}
           {entry.date && (
             <span className="text-caption text-text-faint">
@@ -120,7 +120,7 @@ export function LearningAnalysisCard({ slug, className }: { slug: string; classN
                 <p className="text-caption font-medium text-text-primary mb-3">Attempt timeline</p>
                 <div>
                   {data.timeline.map((entry) => (
-                    <TimelineEntry key={entry.submission_id} entry={entry} total={data.timeline.length} />
+                    <TimelineEntry key={entry.submissionId} entry={entry} total={data.timeline.length} />
                   ))}
                 </div>
               </div>
@@ -129,11 +129,11 @@ export function LearningAnalysisCard({ slug, className }: { slug: string; classN
             )}
 
             {/* Changes between attempts */}
-            {data.changes_between_attempts.length > 0 && (
+            {data.changesBetweenAttempts.length > 0 && (
               <div>
                 <p className="text-caption font-medium text-text-primary mb-2">What changed between attempts</p>
                 <ul className="space-y-1">
-                  {data.changes_between_attempts.map((c, i) => (
+                  {data.changesBetweenAttempts.map((c, i) => (
                     <li key={i} className="text-body-sm text-text-secondary flex items-start gap-1.5">
                       <Minus className="h-3.5 w-3.5 mt-0.5 text-text-faint shrink-0" />{c}
                     </li>
@@ -157,28 +157,28 @@ export function LearningAnalysisCard({ slug, className }: { slug: string; classN
               />
               <List
                 title="Unresolved issues"
-                items={data.unresolved_issues}
+                items={data.unresolvedIssues}
                 icon={<AlertCircle className="h-3.5 w-3.5" />}
                 color="text-warning"
               />
             </div>
 
             {/* Summary */}
-            {data.learning_summary && (
+            {data.learningSummary && (
               <div className="rounded-lg p-3 bg-surface-card border border-border-soft space-y-1.5">
                 <div className="flex items-center gap-1.5 text-caption font-medium text-text-primary">
                   <CheckCircle2 className="h-3.5 w-3.5 text-accent" />
                   <span>Learning summary</span>
                 </div>
-                <p className="text-body-sm text-text-secondary leading-relaxed">{data.learning_summary}</p>
+                <p className="text-body-sm text-text-secondary leading-relaxed">{data.learningSummary}</p>
               </div>
             )}
 
             {/* Next action */}
-            {data.recommended_next_action && (
+            {data.recommendedNextAction && (
               <div className="rounded-lg p-3 bg-accent/8 border border-accent/20">
                 <p className="text-caption font-medium text-accent mb-1">Recommended next action</p>
-                <p className="text-body-sm text-text-secondary">{data.recommended_next_action}</p>
+                <p className="text-body-sm text-text-secondary">{data.recommendedNextAction}</p>
               </div>
             )}
           </>

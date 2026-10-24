@@ -1,0 +1,76 @@
+{
+  "id": "36630f63-ff3f-4c81-9daf-de8c6a6ec711",
+  "title": "Binary Search",
+  "slug": "binary-search",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array",
+    "Binary Search"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:18:35.338653Z",
+  "updated_at": "2026-10-15T19:18:35.338653Z",
+  "attempts": [
+    {
+      "id": "dec191b9-8268-4e8a-b1b6-55120e7fbcef",
+      "problem_id": "36630f63-ff3f-4c81-9daf-de8c6a6ec711",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Wrong Answer",
+      "created_at": "2024-01-24T09:00:00Z",
+      "updated_at": "2024-01-24T09:00:00Z",
+      "submissions": [
+        {
+          "id": "cb1309e1-2fa7-459e-8471-e76bf62c7a49",
+          "problem_id": "36630f63-ff3f-4c81-9daf-de8c6a6ec711",
+          "attempt_id": "dec191b9-8268-4e8a-b1b6-55120e7fbcef",
+          "code": "class Solution:\n    def search(self, nums, target):\n        lo, hi = 0, len(nums)\n        while lo < hi:\n            mid = (lo + hi) // 2\n            if nums[mid] == target: return mid\n            elif nums[mid] < target: lo = mid + 1\n            else: hi = mid - 1\n        return -1",
+          "language": "Python",
+          "status": "Wrong Answer",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2024-01-24T09:00:00Z",
+          "error_message": null,
+          "submission_hash": "4bad11799448940303574c81b79e7122692cd181a271589a5c367534f295807b",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    },
+    {
+      "id": "c7c113fa-efdb-4942-b5d0-316ff876af19",
+      "problem_id": "36630f63-ff3f-4c81-9daf-de8c6a6ec711",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2024-01-24T10:30:00Z",
+      "updated_at": "2024-01-24T10:30:00Z",
+      "submissions": [
+        {
+          "id": "4b5e7d62-d31a-4c93-ae96-f1b883306efa",
+          "problem_id": "36630f63-ff3f-4c81-9daf-de8c6a6ec711",
+          "attempt_id": "c7c113fa-efdb-4942-b5d0-316ff876af19",
+          "code": "class Solution:\n    def search(self, nums, target):\n        lo, hi = 0, len(nums) - 1\n        while lo <= hi:\n            mid = (lo + hi) // 2\n            if nums[mid] == target: return mid\n            elif nums[mid] < target: lo = mid + 1\n            else: hi = mid - 1\n        return -1",
+          "language": "Python",
+          "status": "Accepted",
+          "runtime_ms": 38.0,
+          "memory_mb": 15.1,
+          "submitted_at": "2024-01-24T10:30:00Z",
+          "error_message": null,
+          "submission_hash": "f21c6ecaa33332cda17e87b5311a7f4daf6bfbdf9eb75edd9608281fd5acc083",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

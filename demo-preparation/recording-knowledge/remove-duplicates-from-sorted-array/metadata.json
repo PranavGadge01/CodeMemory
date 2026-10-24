@@ -1,0 +1,76 @@
+{
+  "id": "e04f0ada-0b03-472d-b145-aecd271c78e3",
+  "title": "Remove Duplicates from Sorted Array",
+  "slug": "remove-duplicates-from-sorted-array",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/remove-duplicates-from-sorted-array/",
+  "topics": [
+    "Array",
+    "Two Pointers"
+  ],
+  "statement": "<p>Given an integer array <code>nums</code> sorted in <strong>non-decreasing order</strong>, remove the duplicates <a href=\"https://en.wikipedia.org/wiki/In-place_algorithm\" target=\"_blank\"><strong>in-place</strong></a> such that each unique element appears only <strong>once</strong>. The <strong>relative order</strong> of the elements should be kept the <strong>same</strong>.</p>\n\n<p>Consider the number of <em>unique elements</em> in&nbsp;<code>nums</code> to be <code>k<strong>\u200b\u200b\u200b\u200b\u200b\u200b\u200b</strong></code>\u200b\u200b\u200b\u200b\u200b\u200b\u200b. <meta charset=\"UTF-8\" />After removing duplicates, return the number of unique elements&nbsp;<code>k</code>.</p>\n\n<p><meta charset=\"UTF-8\" />The first&nbsp;<code>k</code>&nbsp;elements of&nbsp;<code>nums</code>&nbsp;should contain the unique numbers in <strong>sorted order</strong>. The remaining elements beyond index&nbsp;<code>k - 1</code>&nbsp;can be ignored.</p>\n\n<p><strong>Custom Judge:</strong></p>\n\n<p>The judge will test your solution with the following code:</p>\n\n<pre>\nint[] nums = [...]; // Input array\nint[] expectedNums = [...]; // The expected answer with correct length\n\nint k = removeDuplicates(nums); // Calls your implementation\n\nassert k == expectedNums.length;\nfor (int i = 0; i &lt; k; i++) {\n    assert nums[i] == expectedNums[i];\n}\n</pre>\n\n<p>If all assertions pass, then your solution will be <strong>accepted</strong>.</p>\n\n<p>&nbsp;</p>\n<p><strong class=\"example\">Example 1:</strong></p>\n\n<pre>\n<strong>Input:</strong> nums = [1,1,2]\n<strong>Output:</strong> 2, nums = [1,2,_]\n<strong>Explanation:</strong> Your function should return k = 2, with the first two elements of nums being 1 and 2 respectively.\nIt does not matter what you leave beyond the returned k (hence they are underscores).\n</pre>\n\n<p><strong class=\"example\">Example 2:</strong></p>\n\n<pre>\n<strong>Input:</strong> nums = [0,0,1,1,1,2,2,3,3,4]\n<strong>Output:</strong> 5, nums = [0,1,2,3,4,_,_,_,_,_]\n<strong>Explanation:</strong> Your function should return k = 5, with the first five elements of nums being 0, 1, 2, 3, and 4 respectively.\nIt does not matter what you leave beyond the returned k (hence they are underscores).\n</pre>\n\n<p>&nbsp;</p>\n<p><strong>Constraints:</strong></p>\n\n<ul>\n\t<li><code>1 &lt;= nums.length &lt;= 3 * 10<sup>4</sup></code></li>\n\t<li><code>-100 &lt;= nums[i] &lt;= 100</code></li>\n\t<li><code>nums</code> is sorted in <strong>non-decreasing</strong> order.</li>\n</ul>\n",
+  "created_at": "2026-10-19T12:57:43.190530Z",
+  "updated_at": "2026-10-19T12:57:43.190530Z",
+  "attempts": [
+    {
+      "id": "a825d3d8-94c0-418c-87f1-0b22c8a57fb4",
+      "problem_id": "e04f0ada-0b03-472d-b145-aecd271c78e3",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-19T12:57:43.233513Z",
+      "updated_at": "2026-10-19T12:57:43.233513Z",
+      "submissions": [
+        {
+          "id": "leetcode_1954044798",
+          "problem_id": "e04f0ada-0b03-472d-b145-aecd271c78e3",
+          "attempt_id": "a825d3d8-94c0-418c-87f1-0b22c8a57fb4",
+          "code": "class Solution {\n    public int removeDuplicates(int[] nums) {\n        if(nums.length == 0) return 0;\n\n        int k = 1;\n\n        for(int i = 1; i < nums.length; i++){\n            if(nums[i] != nums[i - 1]) {\n                nums[k] = nums[i];\n                k++;\n            }\n        }\n\n        return k;\n    }\n}",
+          "language": "Java",
+          "status": "Accepted",
+          "runtime_ms": 1.0,
+          "memory_mb": 46.776,
+          "submitted_at": "2026-03-20T15:36:24Z",
+          "error_message": null,
+          "submission_hash": "72cc2a6d05a8c3196cf2d42f9e97513b7403f383ac0275fe5a3508356be209d4",
+          "source_provider": "leetcode",
+          "source_account": "jaypatil1229"
+        }
+      ]
+    },
+    {
+      "id": "9c8f1b3e-3216-46c5-94f1-711d7f721bf0",
+      "problem_id": "e04f0ada-0b03-472d-b145-aecd271c78e3",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-19T12:57:44.028920Z",
+      "updated_at": "2026-10-19T12:57:44.028920Z",
+      "submissions": [
+        {
+          "id": "leetcode_1954044600",
+          "problem_id": "e04f0ada-0b03-472d-b145-aecd271c78e3",
+          "attempt_id": "9c8f1b3e-3216-46c5-94f1-711d7f721bf0",
+          "code": "class Solution {\n    public int removeDuplicates(int[] nums) {\n        if(nums.length == 0) return 0;\n\n        int k = 1;\n\n        for(int i = 1; i < nums.length; i++){\n            if(nums[i] != nums[i - 1]) {\n                nums[k] = nums[i];\n                k++;\n            }\n        }\n\n        return k;\n    }\n}",
+          "language": "Java",
+          "status": "Accepted",
+          "runtime_ms": 1.0,
+          "memory_mb": 46.468,
+          "submitted_at": "2026-03-20T15:36:10Z",
+          "error_message": null,
+          "submission_hash": "faf6bcd2fb47c0c71faf5da5b896f7b6bb38442ef4c878517ffa56e8fdb925a8",
+          "source_provider": "leetcode",
+          "source_account": "jaypatil1229"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

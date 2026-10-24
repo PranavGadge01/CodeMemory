@@ -1,0 +1,46 @@
+{
+  "id": "uuid-aaaa",
+  "title": "Array Problem",
+  "slug": "array-prob",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:38.904008Z",
+  "updated_at": "2026-10-15T19:06:38.904008Z",
+  "attempts": [
+    {
+      "id": "cfdf5009-1837-481f-9051-e778b66d7ac1",
+      "problem_id": "uuid-aaaa",
+      "attempt_number": 1,
+      "approach_summary": "Attempt",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:38.904008Z",
+      "updated_at": "2026-10-15T19:06:38.904008Z",
+      "submissions": [
+        {
+          "id": "576cb8fa-bd3e-42f2-84e5-4eebb4a8f9eb",
+          "problem_id": "uuid-aaaa",
+          "attempt_id": null,
+          "code": "solution A",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-15T19:06:38.904008Z",
+          "error_message": null,
+          "submission_hash": "13d9f30f06821d4bfd36772862f5d0127f3517a8c3e7630450f72a556698bb76",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

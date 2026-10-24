@@ -1,0 +1,46 @@
+{
+  "id": "hw-two",
+  "title": "Hw Two",
+  "slug": "hw-two",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Hash Table"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:31.722443Z",
+  "updated_at": "2026-10-15T19:06:31.722443Z",
+  "attempts": [
+    {
+      "id": "9f762236-43d0-47c6-91dd-932b5065ad86",
+      "problem_id": "hw-two",
+      "attempt_number": 1,
+      "approach_summary": "Attempt",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:31.722443Z",
+      "updated_at": "2026-10-15T19:06:31.722443Z",
+      "submissions": [
+        {
+          "id": "f5dab927-9b11-4aa7-831b-1804faca3cd4",
+          "problem_id": "hw-two",
+          "attempt_id": null,
+          "code": "seen = {}\nfor i, n in enumerate(nums):\n    if target - n in seen:\n        return [seen[target - n], i]\n    seen[n] = i\nreturn []",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-01-02T00:00:00Z",
+          "error_message": null,
+          "submission_hash": "43b4a3ac2c0fd82a65e35a627d9f0517a847c7624a79ddda4da264b8ef920ad8",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

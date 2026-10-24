@@ -1,0 +1,44 @@
+{
+  "id": "938820c2-981c-4fe1-8057-5c891b249d53",
+  "title": "Delta",
+  "slug": "delta",
+  "difficulty": "Unknown",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [],
+  "statement": null,
+  "created_at": "2026-10-15T19:16:58.056738Z",
+  "updated_at": "2026-10-15T19:16:58.056738Z",
+  "attempts": [
+    {
+      "id": "5743c385-b449-4f3f-80c1-18bec55b0f8d",
+      "problem_id": "938820c2-981c-4fe1-8057-5c891b249d53",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:16:58.116559Z",
+      "updated_at": "2026-10-15T19:16:58.116559Z",
+      "submissions": [
+        {
+          "id": "leetcode_500",
+          "problem_id": "938820c2-981c-4fe1-8057-5c891b249d53",
+          "attempt_id": "5743c385-b449-4f3f-80c1-18bec55b0f8d",
+          "code": "def solve(): pass",
+          "language": "Python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2023-11-01T10:00:00Z",
+          "error_message": null,
+          "submission_hash": "391f56e16cc365c8085192488b7334ec52abe87607f36410962669f4b7767162",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

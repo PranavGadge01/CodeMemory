@@ -1,0 +1,44 @@
+{
+  "id": "acb723bd-834c-4393-8875-c358768d30b8",
+  "title": "3Sum",
+  "slug": "3sum",
+  "difficulty": "Unknown",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/3sum/",
+  "topics": [],
+  "statement": null,
+  "created_at": "2026-10-15T19:17:02.273584Z",
+  "updated_at": "2026-10-15T19:17:02.273584Z",
+  "attempts": [
+    {
+      "id": "13ddf8dd-5466-444e-a3d9-3456d6a2b182",
+      "problem_id": "acb723bd-834c-4393-8875-c358768d30b8",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:17:02.330110Z",
+      "updated_at": "2026-10-15T19:17:02.330110Z",
+      "submissions": [
+        {
+          "id": "leetcode_112",
+          "problem_id": "acb723bd-834c-4393-8875-c358768d30b8",
+          "attempt_id": "13ddf8dd-5466-444e-a3d9-3456d6a2b182",
+          "code": "class Solution: pass",
+          "language": "Python",
+          "status": "Accepted",
+          "runtime_ms": 45.0,
+          "memory_mb": 17.2,
+          "submitted_at": "2023-11-15T00:13:20Z",
+          "error_message": null,
+          "submission_hash": "20943344bc3802cfcec8d4dc0b08f8ad86a10596577af749e31f3dcfa789f87a",
+          "source_provider": "leetcode",
+          "source_account": "syncuser"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

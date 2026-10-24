@@ -1,0 +1,47 @@
+{
+  "id": "e9d67f00-c325-48b9-a466-a7cb1da6e413",
+  "title": "Climbing Stairs",
+  "slug": "climbing-stairs",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Dynamic Programming",
+    "Math"
+  ],
+  "statement": "You are climbing a staircase. It takes n steps to reach the top.",
+  "created_at": "2026-10-15T19:19:05.002593Z",
+  "updated_at": "2026-10-15T19:19:05.002593Z",
+  "attempts": [
+    {
+      "id": "e03ee53a-aa31-4ac6-ab00-b93581b9d2e7",
+      "problem_id": "e9d67f00-c325-48b9-a466-a7cb1da6e413",
+      "attempt_number": 1,
+      "approach_summary": "Simple DP",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:19:05.002593Z",
+      "updated_at": "2026-10-15T19:19:05.002593Z",
+      "submissions": [
+        {
+          "id": "43f1d147-81cb-4e16-87bb-dee8b20e046a",
+          "problem_id": "e9d67f00-c325-48b9-a466-a7cb1da6e413",
+          "attempt_id": null,
+          "code": "def climbStairs(n):\n    return n",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": 30.0,
+          "memory_mb": 14.0,
+          "submitted_at": "2026-10-15T19:19:05.002593Z",
+          "error_message": null,
+          "submission_hash": "7af0f67673e3b5ce67b06d57b9700e96e58621992e4341b41cafb058b1cfe750",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

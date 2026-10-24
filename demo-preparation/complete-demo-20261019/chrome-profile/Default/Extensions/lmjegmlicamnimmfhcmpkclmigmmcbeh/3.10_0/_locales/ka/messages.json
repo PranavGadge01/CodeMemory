@@ -1,0 +1,11 @@
+{
+   "extensiondescription": {
+      "message": "გახსენით Drive-ის ფაილები პირდაპირ თქვენი ბრაუზერიდან თავსებად აპლიკაციებში, რომლებიც დაყენებულია თქვენს კომპიუტერში."
+   },
+   "extensionname": {
+      "message": "აპლიკაციის გამშვები Drive-ისთვის (Google-ისგან)"
+   },
+   "extensionshortname": {
+      "message": "Google Drive-ის აპის გამშვები"
+   }
+}

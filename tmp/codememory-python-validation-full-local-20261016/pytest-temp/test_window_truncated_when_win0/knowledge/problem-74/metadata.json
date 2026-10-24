@@ -1,0 +1,44 @@
+{
+  "id": "14527c4f-577d-411c-9216-6413ad6a6be0",
+  "title": "Problem 74",
+  "slug": "problem-74",
+  "difficulty": "Unknown",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/problem-74/",
+  "topics": [],
+  "statement": null,
+  "created_at": "2026-10-15T19:17:33.877066Z",
+  "updated_at": "2026-10-15T19:17:33.877066Z",
+  "attempts": [
+    {
+      "id": "b410709a-fd64-4e64-973c-8def900bbaf4",
+      "problem_id": "14527c4f-577d-411c-9216-6413ad6a6be0",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:17:33.965944Z",
+      "updated_at": "2026-10-15T19:17:33.965944Z",
+      "submissions": [
+        {
+          "id": "leetcode_74",
+          "problem_id": "14527c4f-577d-411c-9216-6413ad6a6be0",
+          "attempt_id": "b410709a-fd64-4e64-973c-8def900bbaf4",
+          "code": "",
+          "language": "Python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2023-11-14T22:14:34Z",
+          "error_message": null,
+          "submission_hash": "7568fd13d0d99ae0bd8ca8dc20720c0de47169582ab4a3ffdc94d3c3d8a69e28",
+          "source_provider": "leetcode",
+          "source_account": "syncuser"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

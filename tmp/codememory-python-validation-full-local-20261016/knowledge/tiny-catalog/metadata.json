@@ -1,0 +1,46 @@
+{
+  "id": "tiny-catalog",
+  "title": "Tiny Catalog",
+  "slug": "tiny-catalog",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:39.470181Z",
+  "updated_at": "2026-10-15T19:06:39.470181Z",
+  "attempts": [
+    {
+      "id": "0f19008a-f806-4169-bfc6-0fbcf19a7f55",
+      "problem_id": "tiny-catalog",
+      "attempt_number": 1,
+      "approach_summary": "Attempt",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:39.470181Z",
+      "updated_at": "2026-10-15T19:06:39.470181Z",
+      "submissions": [
+        {
+          "id": "4fcc2038-df2c-4da2-8365-0d97e5eb58e0",
+          "problem_id": "tiny-catalog",
+          "attempt_id": null,
+          "code": "x",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-15T19:06:39.470181Z",
+          "error_message": null,
+          "submission_hash": "0c46a105857b70d47161831134726c6f51f89ed87f10acfc93dabda2779a7516",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

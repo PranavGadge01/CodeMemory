@@ -1,0 +1,48 @@
+{
+  "id": "067d6ba3-b686-4183-9226-84ab60ed1fc3",
+  "title": "Longest Substring Without Repeating Characters",
+  "slug": "longest-substring-without-repeating-characters",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Hash Table",
+    "String",
+    "Sliding Window"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:18:28.075100Z",
+  "updated_at": "2026-10-15T19:18:28.075100Z",
+  "attempts": [
+    {
+      "id": "ef362c96-5a0b-4ff9-ab75-252051b3c489",
+      "problem_id": "067d6ba3-b686-4183-9226-84ab60ed1fc3",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2024-01-15T09:00:00Z",
+      "updated_at": "2024-01-15T09:00:00Z",
+      "submissions": [
+        {
+          "id": "23e54ab0-8013-4bf0-ac62-4ebfbaf2b496",
+          "problem_id": "067d6ba3-b686-4183-9226-84ab60ed1fc3",
+          "attempt_id": "ef362c96-5a0b-4ff9-ab75-252051b3c489",
+          "code": "class Solution:\n    def lengthOfLongestSubstring(self, s):\n        seen = set()\n        left = 0\n        max_len = 0\n        for right, c in enumerate(s):\n            while c in seen:\n                seen.remove(s[left])\n                left += 1\n            seen.add(c)\n            max_len = max(max_len, right - left + 1)\n        return max_len",
+          "language": "Python",
+          "status": "Accepted",
+          "runtime_ms": 55.0,
+          "memory_mb": 14.8,
+          "submitted_at": "2024-01-15T09:00:00Z",
+          "error_message": null,
+          "submission_hash": "25ac8acb9d4c9c90e3fe6c8e09ce8f6669dfea0a209e3712ce271aece049c01d",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

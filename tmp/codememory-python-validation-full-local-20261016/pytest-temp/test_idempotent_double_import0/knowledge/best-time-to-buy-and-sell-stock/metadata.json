@@ -1,0 +1,48 @@
+{
+  "id": "cae5a826-d48c-4c04-a1ec-f74faba98af9",
+  "title": "Best Time to Buy and Sell Stock",
+  "slug": "best-time-to-buy-and-sell-stock",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array",
+    "Dynamic Programming",
+    "Greedy"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:18:21.534831Z",
+  "updated_at": "2026-10-15T19:18:21.534831Z",
+  "attempts": [
+    {
+      "id": "6b9d3f23-520a-49b1-a337-88372f09d830",
+      "problem_id": "cae5a826-d48c-4c04-a1ec-f74faba98af9",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2024-01-11T09:00:00Z",
+      "updated_at": "2024-01-11T09:00:00Z",
+      "submissions": [
+        {
+          "id": "527fb7b2-d04f-4701-b932-477798395b47",
+          "problem_id": "cae5a826-d48c-4c04-a1ec-f74faba98af9",
+          "attempt_id": "6b9d3f23-520a-49b1-a337-88372f09d830",
+          "code": "class Solution:\n    def maxProfit(self, prices):\n        min_price = float('inf')\n        max_profit = 0\n        for p in prices:\n            min_price = min(min_price, p)\n            max_profit = max(max_profit, p - min_price)\n        return max_profit",
+          "language": "Python",
+          "status": "Accepted",
+          "runtime_ms": 58.0,
+          "memory_mb": 23.1,
+          "submitted_at": "2024-01-11T09:00:00Z",
+          "error_message": null,
+          "submission_hash": "ebd9dd42b0c56a092f29ffa615c33c5e8701af656576fe48cfd0daefa13074f2",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

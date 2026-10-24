@@ -1,0 +1,76 @@
+{
+  "id": "948b755a-504e-49f4-a2b1-cf187ea60477",
+  "title": "Two Sum",
+  "slug": "two-sum",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array",
+    "Hash Table"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:18:33.255410Z",
+  "updated_at": "2026-10-15T19:18:33.255410Z",
+  "attempts": [
+    {
+      "id": "1da63aca-293d-475a-8a1a-7e4583d06e15",
+      "problem_id": "948b755a-504e-49f4-a2b1-cf187ea60477",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Wrong Answer",
+      "created_at": "2024-01-10T09:00:00Z",
+      "updated_at": "2024-01-10T09:00:00Z",
+      "submissions": [
+        {
+          "id": "4087fb3e-2f6e-4464-8217-a449d3825bf9",
+          "problem_id": "948b755a-504e-49f4-a2b1-cf187ea60477",
+          "attempt_id": "1da63aca-293d-475a-8a1a-7e4583d06e15",
+          "code": "class Solution:\n    def twoSum(self, nums, target):\n        for i in range(len(nums)):\n            for j in range(i+1, len(nums)):\n                if nums[i]+nums[j]==target:\n                    return [i,j]",
+          "language": "Python",
+          "status": "Wrong Answer",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2024-01-10T09:00:00Z",
+          "error_message": null,
+          "submission_hash": "27bcc4a8bd0fa6f6981cc36ec37dd6b511584ecc6b7fd4f31e021b8d5f65c1c0",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    },
+    {
+      "id": "eed0f0b3-d177-4996-83e9-cc307064b163",
+      "problem_id": "948b755a-504e-49f4-a2b1-cf187ea60477",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2024-01-10T10:00:00Z",
+      "updated_at": "2024-01-10T10:00:00Z",
+      "submissions": [
+        {
+          "id": "36cede31-276c-41e5-bd83-e95c7a1344d7",
+          "problem_id": "948b755a-504e-49f4-a2b1-cf187ea60477",
+          "attempt_id": "eed0f0b3-d177-4996-83e9-cc307064b163",
+          "code": "class Solution:\n    def twoSum(self, nums, target):\n        seen = {}\n        for i, n in enumerate(nums):\n            diff = target - n\n            if diff in seen:\n                return [seen[diff], i]\n            seen[n] = i",
+          "language": "Python",
+          "status": "Accepted",
+          "runtime_ms": 45.0,
+          "memory_mb": 16.4,
+          "submitted_at": "2024-01-10T10:00:00Z",
+          "error_message": null,
+          "submission_hash": "2685eafe262cecc5161e3aba179a64ae9e23c297c9f9dbc3256b8ecb394fd804",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

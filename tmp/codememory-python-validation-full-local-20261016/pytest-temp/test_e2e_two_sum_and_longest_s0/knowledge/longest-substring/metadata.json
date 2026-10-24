@@ -1,0 +1,77 @@
+{
+  "id": "d9be114a-6c70-421a-ada2-94a1ca392666",
+  "title": "Longest Substring Without Repeating Characters",
+  "slug": "longest-substring",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Hash Table",
+    "String",
+    "Sliding Window"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:18:08.626680Z",
+  "updated_at": "2026-10-15T19:18:08.626680Z",
+  "attempts": [
+    {
+      "id": "74557311-1ef0-4552-bc26-e55d77f47e85",
+      "problem_id": "d9be114a-6c70-421a-ada2-94a1ca392666",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Time Limit Exceeded",
+      "created_at": "2026-10-15T19:18:08.720849Z",
+      "updated_at": "2026-10-15T19:18:08.720849Z",
+      "submissions": [
+        {
+          "id": "40a03fbb-91f3-43f4-aab2-525675d98062",
+          "problem_id": "d9be114a-6c70-421a-ada2-94a1ca392666",
+          "attempt_id": "74557311-1ef0-4552-bc26-e55d77f47e85",
+          "code": "def lengthOfLongestSubstring(s):\n for i in range(len(s)):\n  for j in range(i, len(s)):\n   if len(set(s[i:j])) != j-i: pass",
+          "language": "python",
+          "status": "Time Limit Exceeded",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-15T19:18:08.716849Z",
+          "error_message": null,
+          "submission_hash": "54bbbfaf199aca442f5bd80176a0e15a64969b17e640c44d224ea6654160e62d",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    },
+    {
+      "id": "86e8ab54-7a5f-42e2-b938-1cae1eee74f8",
+      "problem_id": "d9be114a-6c70-421a-ada2-94a1ca392666",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:18:08.951866Z",
+      "updated_at": "2026-10-15T19:18:08.951866Z",
+      "submissions": [
+        {
+          "id": "0fbe942c-e97d-4c00-a1e3-139b2c0b4d9a",
+          "problem_id": "d9be114a-6c70-421a-ada2-94a1ca392666",
+          "attempt_id": "86e8ab54-7a5f-42e2-b938-1cae1eee74f8",
+          "code": "def lengthOfLongestSubstring(s):\n char_map = {}\n left = max_len = 0\n for right, char in enumerate(s):\n  if char in char_map and char_map[char] >= left: left = char_map[char] + 1\n  char_map[char] = right\n  max_len = max(max_len, right - left + 1)\n return max_len",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": 55.0,
+          "memory_mb": null,
+          "submitted_at": "2026-10-15T19:18:08.948853Z",
+          "error_message": null,
+          "submission_hash": "dc571aa3ce7210f56114fec01439300c85518c74bb252db65aa92a0d9bb94648",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

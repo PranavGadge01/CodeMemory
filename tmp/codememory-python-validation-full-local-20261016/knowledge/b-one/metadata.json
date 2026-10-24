@@ -1,0 +1,46 @@
+{
+  "id": "b-one",
+  "title": "B One",
+  "slug": "b-one",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Dynamic Programming"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:31.466910Z",
+  "updated_at": "2026-10-15T19:06:31.466910Z",
+  "attempts": [
+    {
+      "id": "b44adbff-b2b7-48ac-9635-b56a9c4159fc",
+      "problem_id": "b-one",
+      "attempt_number": 1,
+      "approach_summary": "Attempt",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Wrong Answer",
+      "created_at": "2026-10-15T19:06:31.466910Z",
+      "updated_at": "2026-10-15T19:06:31.466910Z",
+      "submissions": [
+        {
+          "id": "992b3944-cd4d-4cc9-832b-722396788785",
+          "problem_id": "b-one",
+          "attempt_id": null,
+          "code": "total = 0\nfor i in range(len(nums)):\n    for j in range(len(nums)):\n        if nums[i] + nums[j] == target:\n            total += 1\nreturn total",
+          "language": "python",
+          "status": "Wrong Answer",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-01-03T00:00:00Z",
+          "error_message": null,
+          "submission_hash": "a316a4344b60f431d79dd67b5df8c5a3b4f9c01285e80d933511523698eed7f0",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

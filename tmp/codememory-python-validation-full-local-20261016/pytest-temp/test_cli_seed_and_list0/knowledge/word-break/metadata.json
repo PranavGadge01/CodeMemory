@@ -1,0 +1,71 @@
+{
+  "id": "c15147e7-a6ed-4c63-b268-52d1ece4d022",
+  "title": "Word Break",
+  "slug": "word-break",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/word-break/",
+  "topics": [
+    "Array",
+    "Hash Table",
+    "String",
+    "Dynamic Programming",
+    "Trie",
+    "Memoization"
+  ],
+  "statement": "Given a string s and a dictionary of strings wordDict, return true if s can be segmented into space-separated sequence of dictionary words.",
+  "created_at": "2026-10-15T19:06:30.091734Z",
+  "updated_at": "2026-10-15T19:06:30.091734Z",
+  "attempts": [
+    {
+      "id": "20472606-f4f5-4f73-a0f2-320d77ed0233",
+      "problem_id": "c15147e7-a6ed-4c63-b268-52d1ece4d022",
+      "attempt_number": 1,
+      "approach_summary": "1D DP Array",
+      "reasoning": "dp[i] represents whether s[:i] can be segmented into words in wordDict.",
+      "mistakes": [],
+      "analysis": {
+        "approach_name": "Standard Approach",
+        "time_complexity": "O(N^2 * M)",
+        "space_complexity": "O(N)",
+        "key_insights": [],
+        "trade_offs": null,
+        "bottleneck": null
+      },
+      "status": "Unknown",
+      "created_at": "2026-10-15T19:06:30.116450Z",
+      "updated_at": "2026-10-15T19:06:30.116450Z",
+      "submissions": []
+    },
+    {
+      "id": "92307da6-bc19-4f69-91ec-ad2b4ceb4877",
+      "problem_id": "c15147e7-a6ed-4c63-b268-52d1ece4d022",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:30.141257Z",
+      "updated_at": "2026-10-15T19:06:30.141257Z",
+      "submissions": [
+        {
+          "id": "f2cc69d0-0a78-4391-a8a1-5d54d68dfcc7",
+          "problem_id": "c15147e7-a6ed-4c63-b268-52d1ece4d022",
+          "attempt_id": "92307da6-bc19-4f69-91ec-ad2b4ceb4877",
+          "code": "def wordBreak(s: str, wordDict: list[str]) -> bool:\n    words = set(wordDict)\n    dp = [False] * (len(s) + 1)\n    dp[0] = True\n    for i in range(1, len(s) + 1):\n        for j in range(i):\n            if dp[j] and s[j:i] in words:\n                dp[i] = True\n                break\n    return dp[len(s)]",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": 40.0,
+          "memory_mb": 16.2,
+          "submitted_at": "2026-10-15T19:06:30.141257Z",
+          "error_message": null,
+          "submission_hash": "906819b040a8a7eca71b2cdbe88c261c775f7c89fc22c08a8193941b30f52562",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

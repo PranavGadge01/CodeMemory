@@ -1,0 +1,48 @@
+{
+  "id": "3f64bb70-28d6-40aa-a374-b3708f970f73",
+  "title": "Add Two Numbers",
+  "slug": "add-two-numbers",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/add-two-numbers/",
+  "topics": [
+    "Linked List",
+    "Math",
+    "Recursion"
+  ],
+  "statement": "<p>You are given two <strong>non-empty</strong> linked lists representing two non-negative integers. The digits are stored in <strong>reverse order</strong>, and each of their nodes contains a single digit. Add the two numbers and return the sum&nbsp;as a linked list.</p>\n\n<p>You may assume the two numbers do not contain any leading zero, except the number 0 itself.</p>\n\n<p>&nbsp;</p>\n<p><strong class=\"example\">Example 1:</strong></p>\n<img alt=\"\" src=\"https://assets.leetcode.com/uploads/2020/10/02/addtwonumber1.jpg\" style=\"width: 483px; height: 342px;\" />\n<pre>\n<strong>Input:</strong> l1 = [2,4,3], l2 = [5,6,4]\n<strong>Output:</strong> [7,0,8]\n<strong>Explanation:</strong> 342 + 465 = 807.\n</pre>\n\n<p><strong class=\"example\">Example 2:</strong></p>\n\n<pre>\n<strong>Input:</strong> l1 = [0], l2 = [0]\n<strong>Output:</strong> [0]\n</pre>\n\n<p><strong class=\"example\">Example 3:</strong></p>\n\n<pre>\n<strong>Input:</strong> l1 = [9,9,9,9,9,9,9], l2 = [9,9,9,9]\n<strong>Output:</strong> [8,9,9,9,0,0,0,1]\n</pre>\n\n<p>&nbsp;</p>\n<p><strong>Constraints:</strong></p>\n\n<ul>\n\t<li>The number of nodes in each linked list is in the range <code>[1, 100]</code>.</li>\n\t<li><code>0 &lt;= Node.val &lt;= 9</code></li>\n\t<li>It is guaranteed that the list represents a number that does not have leading zeros.</li>\n</ul>\n",
+  "created_at": "2026-10-19T12:57:47.919265Z",
+  "updated_at": "2026-10-19T12:57:47.919265Z",
+  "attempts": [
+    {
+      "id": "c4c2a79a-13b7-47d0-8a4f-822a1d80db4d",
+      "problem_id": "3f64bb70-28d6-40aa-a374-b3708f970f73",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-19T12:57:47.961938Z",
+      "updated_at": "2026-10-19T12:57:47.961938Z",
+      "submissions": [
+        {
+          "id": "leetcode_1953142611",
+          "problem_id": "3f64bb70-28d6-40aa-a374-b3708f970f73",
+          "attempt_id": "c4c2a79a-13b7-47d0-8a4f-822a1d80db4d",
+          "code": "class Solution {\n    public ListNode addTwoNumbers(ListNode l1, ListNode l2) {\n        ListNode dummy = new ListNode(0);\n        ListNode current = dummy;\n\n        int carry = 0;\n\n        while(l1 != null || l2 != null) {\n            int sum = carry;\n\n            if(l1 != null) {\n                sum += l1.val;\n                l1 = l1.next;\n            }\n\n            if(l2 != null) {\n                sum += l2.val;\n                l2 = l2.next;\n            }\n\n            carry = sum / 10;\n            int digit = sum % 10;\n\n            current.next = new ListNode(digit);\n            current = current.next;\n        }\n\n        if(carry > 0) {\n            current.next = new ListNode(carry);\n        }\n\n        return dummy.next;\n    }\n}",
+          "language": "Java",
+          "status": "Accepted",
+          "runtime_ms": 1.0,
+          "memory_mb": 46.736,
+          "submitted_at": "2026-03-19T15:20:57Z",
+          "error_message": null,
+          "submission_hash": "efc3690036d6dcd6711586b92545a91e81bc09f2950e2289c9509d91ddeeadeb",
+          "source_provider": "leetcode",
+          "source_account": "jaypatil1229"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

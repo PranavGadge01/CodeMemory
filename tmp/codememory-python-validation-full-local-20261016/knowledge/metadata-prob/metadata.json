@@ -1,0 +1,46 @@
+{
+  "id": "metadata-prob",
+  "title": "Metadata Prob",
+  "slug": "metadata-prob",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "String"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:38.804963Z",
+  "updated_at": "2026-10-15T19:06:38.805963Z",
+  "attempts": [
+    {
+      "id": "b211c7f5-eba6-4490-8687-b01e6694128c",
+      "problem_id": "metadata-prob",
+      "attempt_number": 1,
+      "approach_summary": "Attempt",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:38.805963Z",
+      "updated_at": "2026-10-15T19:06:38.805963Z",
+      "submissions": [
+        {
+          "id": "eadd6030-1bfc-4959-84cb-e94591791887",
+          "problem_id": "metadata-prob",
+          "attempt_id": null,
+          "code": "",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-15T19:06:38.805963Z",
+          "error_message": null,
+          "submission_hash": "f6077ff0988519f8bbc93c7daa1b9a84a588762303fe251d38f7765838f651b4",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

@@ -1,0 +1,16 @@
+{
+  "id": "real-catalog-b",
+  "title": "Real Catalog B",
+  "slug": "real-catalog-b",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Two Pointers"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:39.797131Z",
+  "updated_at": "2026-10-15T19:06:39.797131Z",
+  "attempts": [],
+  "notes": []
+}

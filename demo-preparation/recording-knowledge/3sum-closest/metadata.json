@@ -1,0 +1,48 @@
+{
+  "id": "2be0bcd5-cb5a-4db7-9df9-89d0e0f2af4b",
+  "title": "3Sum Closest",
+  "slug": "3sum-closest",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/3sum-closest/",
+  "topics": [
+    "Array",
+    "Two Pointers",
+    "Sorting"
+  ],
+  "statement": "<p>You are given an integer array <code>nums</code> of length <code>n</code> and an integer <code>target</code>.</p>\n\n<p>Find three integers at <strong>distinct indices</strong> in <code>nums</code> such that the sum is <strong>closest</strong> to <code>target</code>.</p>\n\n<p>Return the sum of the three integers.</p>\n\n<p>You may assume that each input would have <strong>exactly</strong> one solution.</p>\n\n<p>&nbsp;</p>\n<p><strong class=\"example\">Example 1:</strong></p>\n\n<pre>\n<strong>Input:</strong> nums = [-1,2,1,-4], target = 1\n<strong>Output:</strong> 2\n<strong>Explanation:</strong> The sum that is closest to the target is 2. (-1 + 2 + 1 = 2).\n</pre>\n\n<p><strong class=\"example\">Example 2:</strong></p>\n\n<pre>\n<strong>Input:</strong> nums = [0,0,0], target = 1\n<strong>Output:</strong> 0\n<strong>Explanation:</strong> The sum that is closest to the target is 0. (0 + 0 + 0 = 0).\n</pre>\n\n<p>&nbsp;</p>\n<p><strong>Constraints:</strong></p>\n\n<ul>\n\t<li><code>3 &lt;= nums.length &lt;= 500</code></li>\n\t<li><code>-1000 &lt;= nums[i] &lt;= 1000</code></li>\n\t<li><code>-10<sup>4</sup> &lt;= target &lt;= 10<sup>4</sup></code></li>\n</ul>\n",
+  "created_at": "2026-10-19T12:56:20.343451Z",
+  "updated_at": "2026-10-19T12:56:20.343451Z",
+  "attempts": [
+    {
+      "id": "628794bb-cd85-4652-a6b4-fa7a2494fc84",
+      "problem_id": "2be0bcd5-cb5a-4db7-9df9-89d0e0f2af4b",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-19T12:56:20.378466Z",
+      "updated_at": "2026-10-19T12:56:20.378466Z",
+      "submissions": [
+        {
+          "id": "leetcode_1973053883",
+          "problem_id": "2be0bcd5-cb5a-4db7-9df9-89d0e0f2af4b",
+          "attempt_id": "628794bb-cd85-4652-a6b4-fa7a2494fc84",
+          "code": "import java.util.Arrays;\n\nclass Solution {\n    public int threeSumClosest(int[] nums, int target) {\n        Arrays.sort(nums);\n        int n = nums.length;\n\n        int closestSum = nums[0] + nums[1] + nums[2]; // initial sum\n\n        for (int i = 0; i < n - 2; i++) {\n            int left = i + 1;\n            int right = n - 1;\n\n            while (left < right) {\n                int currentSum = nums[i] + nums[left] + nums[right];\n\n                // Update closest sum\n                if (Math.abs(target - currentSum) < Math.abs(target - closestSum)) {\n                    closestSum = currentSum;\n                }\n\n                // Move pointers\n                if (currentSum < target) {\n                    left++;\n                } else if (currentSum > target) {\n                    right--;\n                } else {\n                    return currentSum; // exact match\n                }\n            }\n        }\n\n        return closestSum;\n    }\n}",
+          "language": "Java",
+          "status": "Accepted",
+          "runtime_ms": 17.0,
+          "memory_mb": 45.432,
+          "submitted_at": "2026-04-08T23:52:24Z",
+          "error_message": null,
+          "submission_hash": "6def6e26c6c8ee2fcbadc6bdd17a6909b0df3fe1becf905a69e878bf0d565cd1",
+          "source_provider": "leetcode",
+          "source_account": "jaypatil1229"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

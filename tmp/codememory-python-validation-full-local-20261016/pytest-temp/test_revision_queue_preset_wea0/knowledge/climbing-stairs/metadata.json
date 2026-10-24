@@ -1,0 +1,46 @@
+{
+  "id": "1f407b93-f9f4-4bdc-909e-32c587de03d9",
+  "title": "Climbing Stairs",
+  "slug": "climbing-stairs",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Dynamic Programming"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:19:14.309920Z",
+  "updated_at": "2026-10-15T19:19:14.309920Z",
+  "attempts": [
+    {
+      "id": "3c7dc451-f74c-4b49-b09e-e49a57f33664",
+      "problem_id": "1f407b93-f9f4-4bdc-909e-32c587de03d9",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:19:14.398158Z",
+      "updated_at": "2026-10-15T19:19:14.398158Z",
+      "submissions": [
+        {
+          "id": "ee284c74-9a98-4a3d-a936-e17c9b273eae",
+          "problem_id": "1f407b93-f9f4-4bdc-909e-32c587de03d9",
+          "attempt_id": "3c7dc451-f74c-4b49-b09e-e49a57f33664",
+          "code": "pass",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-15T19:19:14.395152Z",
+          "error_message": null,
+          "submission_hash": "2a887190d551e96ea642249f119df8c4b8d6de05e8d2d5445a76a965c41ac4bd",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

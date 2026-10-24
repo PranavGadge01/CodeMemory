@@ -1,0 +1,46 @@
+{
+  "id": "no-code",
+  "title": "No Code",
+  "slug": "no-code",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Tree"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:45.038849Z",
+  "updated_at": "2026-10-15T19:06:45.038849Z",
+  "attempts": [
+    {
+      "id": "f9ec1f42-23c4-4403-8648-3c88e69d0f4a",
+      "problem_id": "no-code",
+      "attempt_number": 1,
+      "approach_summary": "Attempt",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:45.038849Z",
+      "updated_at": "2026-10-15T19:06:45.038849Z",
+      "submissions": [
+        {
+          "id": "d7e9e656-2a1b-4c93-80a1-e7d2f6671a6e",
+          "problem_id": "no-code",
+          "attempt_id": null,
+          "code": "",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-01-01T00:00:00Z",
+          "error_message": null,
+          "submission_hash": "d5a61d82546b0cf8d1637c6ae359ca6ff8c92ae481631137565ed21114208659",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

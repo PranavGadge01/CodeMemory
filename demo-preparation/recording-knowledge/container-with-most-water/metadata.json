@@ -1,0 +1,106 @@
+{
+  "id": "6c54cc27-c06c-462f-9f62-e63ec8adfaaa",
+  "title": "Container With Most Water",
+  "slug": "container-with-most-water",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/container-with-most-water/",
+  "topics": [
+    "Array",
+    "Two Pointers",
+    "Greedy"
+  ],
+  "statement": "<p>You are given an integer array <code>height</code> of length <code>n</code>. There are <code>n</code> vertical lines drawn such that the two endpoints of the <code>i<sup>th</sup></code> line are <code>(i, 0)</code> and <code>(i, height[i])</code>.</p>\n\n<p>Find two lines that together with the x-axis form a container, such that the container contains the most water.</p>\n\n<p>Return <em>the maximum amount of water a container can store</em>.</p>\n\n<p><strong>Notice</strong> that you may not slant the container.</p>\n\n<p>&nbsp;</p>\n<p><strong class=\"example\">Example 1:</strong></p>\n<img alt=\"\" src=\"https://s3-lc-upload.s3.amazonaws.com/uploads/2018/07/17/question_11.jpg\" style=\"width: 600px; height: 287px;\" />\n<pre>\n<strong>Input:</strong> height = [1,8,6,2,5,4,8,3,7]\n<strong>Output:</strong> 49\n<strong>Explanation:</strong> The above vertical lines are represented by array [1,8,6,2,5,4,8,3,7]. In this case, the max area of water (blue section) the container can contain is 49.\n</pre>\n\n<p><strong class=\"example\">Example 2:</strong></p>\n\n<pre>\n<strong>Input:</strong> height = [1,1]\n<strong>Output:</strong> 1\n</pre>\n\n<p>&nbsp;</p>\n<p><strong>Constraints:</strong></p>\n\n<ul>\n\t<li><code>n == height.length</code></li>\n\t<li><code>2 &lt;= n &lt;= 10<sup>5</sup></code></li>\n\t<li><code>0 &lt;= height[i] &lt;= 10<sup>4</sup></code></li>\n</ul>\n",
+  "created_at": "2026-10-19T12:57:39.247821Z",
+  "updated_at": "2026-10-19T12:57:39.247821Z",
+  "attempts": [
+    {
+      "id": "98b372b5-6886-4a0e-94f1-9d9dcd44d42b",
+      "problem_id": "6c54cc27-c06c-462f-9f62-e63ec8adfaaa",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-19T12:57:39.285404Z",
+      "updated_at": "2026-10-19T12:57:39.285404Z",
+      "submissions": [
+        {
+          "id": "leetcode_1954136367",
+          "problem_id": "6c54cc27-c06c-462f-9f62-e63ec8adfaaa",
+          "attempt_id": "98b372b5-6886-4a0e-94f1-9d9dcd44d42b",
+          "code": "class Solution {\n    public int maxArea(int[] height) {\n        int left = 0, right = height.length - 1;\n        int maxArea = 0;\n\n        while(left < right){\n            int h = Math.min(height[left], height[right]);\n            int w = right - left;\n            int area = h * w;\n\n            maxArea = Math.max(maxArea, area);\n\n            if(height[left] < height[right]){\n                left++;\n            } else {\n                right--;\n            }\n        }\n\n        return maxArea;\n    }\n}",
+          "language": "Java",
+          "status": "Accepted",
+          "runtime_ms": 5.0,
+          "memory_mb": 77.264,
+          "submitted_at": "2026-03-20T17:17:07Z",
+          "error_message": null,
+          "submission_hash": "b4dcea1ae1ace79e85489090e474926de67252b0ec778336ae26898621065d1f",
+          "source_provider": "leetcode",
+          "source_account": "jaypatil1229"
+        }
+      ]
+    },
+    {
+      "id": "39158a24-d5aa-4ddb-9fcb-47047271a041",
+      "problem_id": "6c54cc27-c06c-462f-9f62-e63ec8adfaaa",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-19T12:57:39.928232Z",
+      "updated_at": "2026-10-19T12:57:39.928232Z",
+      "submissions": [
+        {
+          "id": "leetcode_1954135957",
+          "problem_id": "6c54cc27-c06c-462f-9f62-e63ec8adfaaa",
+          "attempt_id": "39158a24-d5aa-4ddb-9fcb-47047271a041",
+          "code": "class Solution {\n    public int maxArea(int[] height) {\n        int left = 0, right = height.length - 1;\n        int maxArea = 0;\n\n        while(left < right){\n            int area = Math.min(height[left], height[right]) * (right - left);\n            maxArea = Math.max(maxArea, area);\n\n            if(height[left] < height[right]){\n                left++;\n            } else {\n                right--;\n            }\n        }\n\n        return maxArea;\n    }\n}",
+          "language": "Java",
+          "status": "Accepted",
+          "runtime_ms": 5.0,
+          "memory_mb": 77.28,
+          "submitted_at": "2026-03-20T17:16:42Z",
+          "error_message": null,
+          "submission_hash": "79479204029c6bfb1dbf691d662e9fa2cb19b59520524ae1ef8d8d6c2428ab8e",
+          "source_provider": "leetcode",
+          "source_account": "jaypatil1229"
+        }
+      ]
+    },
+    {
+      "id": "feb26109-75b5-4ee0-adf4-0a8d936a363c",
+      "problem_id": "6c54cc27-c06c-462f-9f62-e63ec8adfaaa",
+      "attempt_number": 3,
+      "approach_summary": "Attempt 3",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-19T12:57:40.651269Z",
+      "updated_at": "2026-10-19T12:57:40.651269Z",
+      "submissions": [
+        {
+          "id": "leetcode_1954134988",
+          "problem_id": "6c54cc27-c06c-462f-9f62-e63ec8adfaaa",
+          "attempt_id": "feb26109-75b5-4ee0-adf4-0a8d936a363c",
+          "code": "class Solution {\n    public int maxArea(int[] height) {\n        int left = 0, right = height.length - 1;\n        int maxArea = 0;\n\n        while(left < right){\n            int h = Math.min(height[left], height[right]);\n            int w = right - left;\n            int area = h * w;\n\n            maxArea = Math.max(maxArea, area);\n\n            if(height[left] < height[right]){\n                left++;\n            } else {\n                right--;\n            }\n        }\n\n        return maxArea;\n    }\n}",
+          "language": "Java",
+          "status": "Accepted",
+          "runtime_ms": 5.0,
+          "memory_mb": 77.2,
+          "submitted_at": "2026-03-20T17:15:44Z",
+          "error_message": null,
+          "submission_hash": "3e4bc30691c8d4974ba47017b4632728cb3e6bbec35c40bbfff10aeed9aaccb6",
+          "source_provider": "leetcode",
+          "source_account": "jaypatil1229"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

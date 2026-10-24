@@ -1,0 +1,11 @@
+{
+   "extensiondescription": {
+      "message": "ເປີດໄຟລ໌ Drive ໂດຍກົງຈາກໂປຣແກຣມທ່ອງເວັບຂອງທ່ານໃນແອັບພລິເຄຊັນທີ່ເຂົ້າກັນໄດ້ທີ່ຕິດຕັ້ງໄວ້ຢູ່ຄອມພິວເຕີຂອງທ່ານ."
+   },
+   "extensionname": {
+      "message": "ຕົວເປີດໃຊ້ແອັບພລິເຄຊັນສຳລັບ Drive (ໂດຍ Google)"
+   },
+   "extensionshortname": {
+      "message": "ຕົວເປີດໃຊ້ແອັບ Google Drive"
+   }
+}

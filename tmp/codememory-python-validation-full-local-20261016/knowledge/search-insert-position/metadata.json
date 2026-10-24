@@ -1,0 +1,47 @@
+{
+  "id": "search-insert-position",
+  "title": "Search Insert Position",
+  "slug": "search-insert-position",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Binary Search",
+    "Array"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:45.825566Z",
+  "updated_at": "2026-10-15T19:06:45.825566Z",
+  "attempts": [
+    {
+      "id": "557bd7d3-961f-41b8-b2c0-9229ea736f64",
+      "problem_id": "search-insert-position",
+      "attempt_number": 1,
+      "approach_summary": "Attempt",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:45.825566Z",
+      "updated_at": "2026-10-15T19:06:45.825566Z",
+      "submissions": [
+        {
+          "id": "5cb46bd3-a9ff-4cea-b0be-29ac87790d5d",
+          "problem_id": "search-insert-position",
+          "attempt_id": null,
+          "code": "pass",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-01-04T00:00:00Z",
+          "error_message": null,
+          "submission_hash": "48b9d552837fc0165e6a8a3cba1146d91a297dfaec44df62bfa02a9ae9a54b12",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

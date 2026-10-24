@@ -1,0 +1,61 @@
+{
+  "id": "488a5a5e-a735-441c-a3d4-411d80776e23",
+  "title": "Word Ladder",
+  "slug": "word-ladder",
+  "difficulty": "Hard",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Breadth-First Search"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:19:12.750458Z",
+  "updated_at": "2026-10-15T19:19:12.750458Z",
+  "attempts": [
+    {
+      "id": "2e0c36a7-69ab-4041-87f1-a727476989db",
+      "problem_id": "488a5a5e-a735-441c-a3d4-411d80776e23",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Wrong Answer",
+      "created_at": "2026-10-15T19:19:12.864246Z",
+      "updated_at": "2026-10-15T19:19:12.864246Z",
+      "submissions": [
+        {
+          "id": "00c2d0c8-5f1f-4365-803d-cb94a8e408de",
+          "problem_id": "488a5a5e-a735-441c-a3d4-411d80776e23",
+          "attempt_id": "2e0c36a7-69ab-4041-87f1-a727476989db",
+          "code": "fail",
+          "language": "python",
+          "status": "Wrong Answer",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-15T19:19:12.861234Z",
+          "error_message": null,
+          "submission_hash": "f31f4e937e01d4d94044930551f72deea43b556eb33856b12b1c93c837207513",
+          "source_provider": null,
+          "source_account": null
+        },
+        {
+          "id": "b348edb0-271b-44f2-95a3-15137f328400",
+          "problem_id": "488a5a5e-a735-441c-a3d4-411d80776e23",
+          "attempt_id": "2e0c36a7-69ab-4041-87f1-a727476989db",
+          "code": "fail2",
+          "language": "python",
+          "status": "Wrong Answer",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-15T19:19:13.175883Z",
+          "error_message": null,
+          "submission_hash": "0edaf89a6ba102d80559bcd9f5d65389f7c56bf4022e2a00bfbaadb79749e1f3",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

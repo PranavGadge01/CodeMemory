@@ -1,6 +1,7 @@
 """Normalized import schema for CodeMemory data ingestion."""
 
 from datetime import datetime, timezone
+import math
 import re
 from typing import Any
 
@@ -46,6 +47,49 @@ def parse_memory(value: Any) -> float | None:
         if unit in ("b", "bytes"):
             return val / (1024.0 * 1024.0)
         return val
+    return None
+
+
+_EXPLICIT_MEMORY_UNIT_RE = re.compile(
+    r"^\s*[+-]?(?:\d+(?:\.\d*)?|\.\d+)\s*(?:mb|kb|gb|b|bytes|megabytes)\s*$",
+    re.IGNORECASE,
+)
+
+
+def normalize_leetcode_memory(value: Any) -> float | None:
+    """Normalize authenticated LeetCode ``submissionDetails.memory`` to MB.
+
+    The matching Find Peak Element UI/API record demonstrates a numeric scale
+    of 1,000,000 per displayed MB (44,192,000 -> 44.192 MB, shown as 44.19
+    MB). The raw GraphQL unit is not independently documented, so this
+    source-specific conversion is deliberately kept separate from
+    :func:`parse_memory`, whose numeric inputs continue to mean MB.
+
+    Numeric GraphQL values use the observed decimal-million scale. Strings are
+    accepted only when they carry an explicit supported unit and are delegated
+    to the generic parser. Untagged numeric strings and other representations
+    return ``None`` rather than guessing.
+    """
+    if value is None or value == "":
+        return None
+
+    if isinstance(value, bool):
+        return None
+
+    if isinstance(value, (int, float)):
+        numeric_value = float(value)
+        if not math.isfinite(numeric_value) or numeric_value < 0:
+            return None
+        return numeric_value / 1_000_000.0
+
+    if isinstance(value, str):
+        if not _EXPLICIT_MEMORY_UNIT_RE.fullmatch(value):
+            return None
+        parsed_value = parse_memory(value)
+        if parsed_value is None or not math.isfinite(parsed_value) or parsed_value < 0:
+            return None
+        return parsed_value
+
     return None
 
 

@@ -1,0 +1,18 @@
+{
+  "id": "container-with-most-water",
+  "title": "Container With Most Water",
+  "slug": "container-with-most-water",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array",
+    "Two Pointers",
+    "Greedy"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:45.951928Z",
+  "updated_at": "2026-10-15T19:06:45.951928Z",
+  "attempts": [],
+  "notes": []
+}

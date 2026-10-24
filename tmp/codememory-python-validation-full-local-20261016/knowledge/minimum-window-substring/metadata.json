@@ -1,0 +1,18 @@
+{
+  "id": "minimum-window-substring",
+  "title": "Minimum Window Substring",
+  "slug": "minimum-window-substring",
+  "difficulty": "Hard",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Hash Table",
+    "String",
+    "Sliding Window"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:45.980947Z",
+  "updated_at": "2026-10-15T19:06:45.980947Z",
+  "attempts": [],
+  "notes": []
+}

@@ -1,0 +1,49 @@
+{
+  "id": "7a628035-71a1-4303-aef0-9ccbc24769d2",
+  "title": "Add Binary",
+  "slug": "add-binary",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/add-binary/",
+  "topics": [
+    "Math",
+    "String",
+    "Bit Manipulation",
+    "Simulation"
+  ],
+  "statement": "<p>Given two binary strings <code>a</code> and <code>b</code>, return <em>their sum as a binary string</em>.</p>\n\n<p>&nbsp;</p>\n<p><strong class=\"example\">Example 1:</strong></p>\n<pre><strong>Input:</strong> a = \"11\", b = \"1\"\n<strong>Output:</strong> \"100\"\n</pre><p><strong class=\"example\">Example 2:</strong></p>\n<pre><strong>Input:</strong> a = \"1010\", b = \"1011\"\n<strong>Output:</strong> \"10101\"\n</pre>\n<p>&nbsp;</p>\n<p><strong>Constraints:</strong></p>\n\n<ul>\n\t<li><code>1 &lt;= a.length, b.length &lt;= 10<sup>4</sup></code></li>\n\t<li><code>a</code> and <code>b</code> consist&nbsp;only of <code>&#39;0&#39;</code> or <code>&#39;1&#39;</code> characters.</li>\n\t<li>Each string does not contain leading zeros except for the zero itself.</li>\n</ul>\n",
+  "created_at": "2026-10-19T12:56:24.783777Z",
+  "updated_at": "2026-10-19T12:56:24.783777Z",
+  "attempts": [
+    {
+      "id": "51b6ed29-1db6-40d2-abd8-c2e3c8d27660",
+      "problem_id": "7a628035-71a1-4303-aef0-9ccbc24769d2",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-19T12:56:24.820009Z",
+      "updated_at": "2026-10-19T12:56:24.820009Z",
+      "submissions": [
+        {
+          "id": "leetcode_1970067711",
+          "problem_id": "7a628035-71a1-4303-aef0-9ccbc24769d2",
+          "attempt_id": "51b6ed29-1db6-40d2-abd8-c2e3c8d27660",
+          "code": "class Solution {\n    public String addBinary(String a, String b) {\n        StringBuilder result = new StringBuilder();\n        \n        int i = a.length() - 1;\n        int j = b.length() - 1;\n        int carry = 0;\n\n        while(i >= 0 || j >= 0 || carry != 0) {\n            int sum = carry;\n\n            if(i >= 0) {\n                sum += a.charAt(i) - '0';\n                i--;\n            }\n\n            if(j >= 0) {\n                sum += b.charAt(j) - '0';\n                j--;\n            }\n\n            result.append(sum % 2);\n            carry = sum / 2;\n        }\n\n        return result.reverse().toString();\n    }\n}",
+          "language": "Java",
+          "status": "Accepted",
+          "runtime_ms": 1.0,
+          "memory_mb": 43.42,
+          "submitted_at": "2026-04-05T23:44:42Z",
+          "error_message": null,
+          "submission_hash": "420ac07a2e5803307887ca5ee4829417456eef092a9f17fab3f9c50d64ed2968",
+          "source_provider": "leetcode",
+          "source_account": "jaypatil1229"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

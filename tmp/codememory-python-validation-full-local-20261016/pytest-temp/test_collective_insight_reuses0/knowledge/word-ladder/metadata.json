@@ -1,0 +1,46 @@
+{
+  "id": "4d9c9765-a6f1-4f1c-8018-2b4a9752dd14",
+  "title": "Word Ladder",
+  "slug": "word-ladder",
+  "difficulty": "Hard",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Breadth-First Search"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:04.447580Z",
+  "updated_at": "2026-10-15T19:06:04.447580Z",
+  "attempts": [
+    {
+      "id": "afce174c-63df-4245-8853-2a781f68416d",
+      "problem_id": "4d9c9765-a6f1-4f1c-8018-2b4a9752dd14",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Wrong Answer",
+      "created_at": "2026-10-15T19:06:04.500562Z",
+      "updated_at": "2026-10-15T19:06:04.500562Z",
+      "submissions": [
+        {
+          "id": "70831955-bb71-46fa-8e79-977d6d69dc99",
+          "problem_id": "4d9c9765-a6f1-4f1c-8018-2b4a9752dd14",
+          "attempt_id": "afce174c-63df-4245-8853-2a781f68416d",
+          "code": "x",
+          "language": "python",
+          "status": "Wrong Answer",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-15T19:06:04.500058Z",
+          "error_message": null,
+          "submission_hash": "37dac67de8f4b437e4551c9a3d46e4f39f2c4ce289384babe3fbbc0adef0e4d1",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

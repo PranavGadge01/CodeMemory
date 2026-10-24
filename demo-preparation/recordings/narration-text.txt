@@ -1,0 +1,18 @@
+# CodeMemory Demo Narration - Voiceover Script
+# Voice: Roger (warm, professional, confident)
+# Model: eleven_v4
+# Total target duration: ~36 seconds (excluding intro/outro silence)
+
+CodeMemory turns every coding submission into searchable knowledge. Your coding history, remembered.
+
+Every failed attempt is preserved alongside the accepted one. A time-limit exceeded on attempt one becomes part of the story of attempt three.
+
+Each problem is a sequence, not just the final answer. See how your thinking evolved from the first brute-force approach to the optimized solution.
+
+Derived from your own submissions, the analytics show real progress — difficulty distribution, language usage, and solving patterns over time.
+
+Every problem links to the topics it uses, the approaches you tried, and the mistakes you made. Select a node to follow the connection back to practice history.
+
+The revision queue ranks what to revisit using deterministic priority scores — weighing difficulty, failure history, recency, and topic weakness.
+
+Import the submissions you already have. CodeMemory indexes them, connects them, and remembers the parts worth revisiting.

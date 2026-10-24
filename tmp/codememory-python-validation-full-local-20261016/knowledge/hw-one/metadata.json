@@ -1,0 +1,46 @@
+{
+  "id": "hw-one",
+  "title": "Hw One",
+  "slug": "hw-one",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Hash Table"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:31.685649Z",
+  "updated_at": "2026-10-15T19:06:31.685649Z",
+  "attempts": [
+    {
+      "id": "f5d59ea1-2d94-4cc6-a067-ae3acc83f879",
+      "problem_id": "hw-one",
+      "attempt_number": 1,
+      "approach_summary": "Attempt",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:31.685649Z",
+      "updated_at": "2026-10-15T19:06:31.685649Z",
+      "submissions": [
+        {
+          "id": "b8c14ce5-7c6f-46c6-8a5f-15f67f67aeb3",
+          "problem_id": "hw-one",
+          "attempt_id": null,
+          "code": "seen = {}\nfor i, n in enumerate(nums):\n    if target - n in seen:\n        return [seen[target - n], i]\n    seen[n] = i\nreturn []",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-01-01T00:00:00Z",
+          "error_message": null,
+          "submission_hash": "23e6a411eacd17f30722710d3e84e158108c4d3d4eec17d10429ea714c7f6fed",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

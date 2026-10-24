@@ -1,0 +1,48 @@
+{
+  "id": "8d137cab-b2a3-4b47-86f7-acf3cb53db04",
+  "title": "Median of Two Sorted Arrays",
+  "slug": "median-of-two-sorted-arrays",
+  "difficulty": "Hard",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/median-of-two-sorted-arrays/",
+  "topics": [
+    "Array",
+    "Binary Search",
+    "Divide and Conquer"
+  ],
+  "statement": "<p>Given two sorted arrays <code>nums1</code> and <code>nums2</code> of size <code>m</code> and <code>n</code> respectively, return <strong>the median</strong> of the two sorted arrays.</p>\n\n<p>The overall run time complexity should be <code>O(log (m+n))</code>.</p>\n\n<p>&nbsp;</p>\n<p><strong class=\"example\">Example 1:</strong></p>\n\n<pre>\n<strong>Input:</strong> nums1 = [1,3], nums2 = [2]\n<strong>Output:</strong> 2.00000\n<strong>Explanation:</strong> merged array = [1,2,3] and median is 2.\n</pre>\n\n<p><strong class=\"example\">Example 2:</strong></p>\n\n<pre>\n<strong>Input:</strong> nums1 = [1,2], nums2 = [3,4]\n<strong>Output:</strong> 2.50000\n<strong>Explanation:</strong> merged array = [1,2,3,4] and median is (2 + 3) / 2 = 2.5.\n</pre>\n\n<p>&nbsp;</p>\n<p><strong>Constraints:</strong></p>\n\n<ul>\n\t<li><code>nums1.length == m</code></li>\n\t<li><code>nums2.length == n</code></li>\n\t<li><code>0 &lt;= m &lt;= 1000</code></li>\n\t<li><code>0 &lt;= n &lt;= 1000</code></li>\n\t<li><code>1 &lt;= m + n &lt;= 2000</code></li>\n\t<li><code>-10<sup>6</sup> &lt;= nums1[i], nums2[i] &lt;= 10<sup>6</sup></code></li>\n</ul>\n",
+  "created_at": "2026-10-19T12:57:45.357696Z",
+  "updated_at": "2026-10-19T12:57:45.357696Z",
+  "attempts": [
+    {
+      "id": "05c9bd12-0070-43d9-8101-ad21292fe98c",
+      "problem_id": "8d137cab-b2a3-4b47-86f7-acf3cb53db04",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-19T12:57:45.393537Z",
+      "updated_at": "2026-10-19T12:57:45.393537Z",
+      "submissions": [
+        {
+          "id": "leetcode_1953906613",
+          "problem_id": "8d137cab-b2a3-4b47-86f7-acf3cb53db04",
+          "attempt_id": "05c9bd12-0070-43d9-8101-ad21292fe98c",
+          "code": "class Solution {\n    public double findMedianSortedArrays(int[] nums1, int[] nums2) {\n        int m = nums1.length;\n        int n = nums2.length;\n\n        if(m > n){\n            return findMedianSortedArrays(nums2, nums1);\n        }\n\n        int low = 0, high = m;\n        int left = (m + n + 1) / 2; \n        int totalLen = m + n;\n        \n        while(low <= high){\n            int mid1 = (low + high) / 2;\n            int mid2 = left - mid1;\n\n            int l1 = Integer.MIN_VALUE, l2 = Integer.MIN_VALUE;\n            int r1 = Integer.MAX_VALUE, r2 = Integer.MAX_VALUE;\n\n            if(mid1 < m) r1 = nums1[mid1];\n            if(mid2 < n) r2 = nums2[mid2];\n\n            if((mid1 - 1) >= 0) l1 = nums1[mid1 - 1];\n            if((mid2 - 1) >= 0) l2 = nums2[mid2 - 1];\n\n            if(l1 <= r2 && l2 <= r1){\n                if(totalLen % 2 == 0){\n                    return ((double) Math.max(l1, l2) + Math.min(r1, r2)) / 2.0;\n                }else{\n                    return Math.max(l1, l2);\n                }\n            }\n            else if(l1 > r2) high = mid1 - 1;\n            else low = mid1 + 1;\n        }\n        \n        return 0;\n    }\n}",
+          "language": "Java",
+          "status": "Accepted",
+          "runtime_ms": 1.0,
+          "memory_mb": 48.764,
+          "submitted_at": "2026-03-20T12:28:16Z",
+          "error_message": null,
+          "submission_hash": "d403c4c79704e01d94d3cc10855e1b8b2bb94efe3bb45fe7fcff728bad449493",
+          "source_provider": "leetcode",
+          "source_account": "jaypatil1229"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

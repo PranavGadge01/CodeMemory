@@ -1,0 +1,17 @@
+{
+  "id": "prob-b",
+  "title": "Two Sum B",
+  "slug": "two-sum-b",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array",
+    "Hash Table"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:18:01.768639Z",
+  "updated_at": "2026-10-15T19:18:01.768639Z",
+  "attempts": [],
+  "notes": []
+}

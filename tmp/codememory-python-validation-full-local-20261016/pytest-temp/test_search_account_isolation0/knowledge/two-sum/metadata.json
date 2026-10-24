@@ -1,0 +1,73 @@
+{
+  "id": "397649d5-da32-46de-a1bc-dbb5a5b88ba0",
+  "title": "Two Sum",
+  "slug": "two-sum",
+  "difficulty": "Unknown",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/two-sum/",
+  "topics": [],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:08.381778Z",
+  "updated_at": "2026-10-15T19:06:08.381778Z",
+  "attempts": [
+    {
+      "id": "3e7e2d0f-6b36-4a43-92b0-42cdcf701fae",
+      "problem_id": "397649d5-da32-46de-a1bc-dbb5a5b88ba0",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:08.397795Z",
+      "updated_at": "2026-10-15T19:06:08.397795Z",
+      "submissions": [
+        {
+          "id": "leetcode_1001",
+          "problem_id": "397649d5-da32-46de-a1bc-dbb5a5b88ba0",
+          "attempt_id": "3e7e2d0f-6b36-4a43-92b0-42cdcf701fae",
+          "code": "",
+          "language": "Python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-15T19:06:08Z",
+          "error_message": null,
+          "submission_hash": "c2462101bc35b2f9254092d8879172bf3aa9ed6086e9c57aef25c375fb8b5995",
+          "source_provider": "leetcode",
+          "source_account": "jaypatil1229"
+        }
+      ]
+    },
+    {
+      "id": "7c06d23c-966c-4ac0-98a1-6a03e277fad0",
+      "problem_id": "397649d5-da32-46de-a1bc-dbb5a5b88ba0",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:08.435384Z",
+      "updated_at": "2026-10-15T19:06:08.435384Z",
+      "submissions": [
+        {
+          "id": "leetcode_1002",
+          "problem_id": "397649d5-da32-46de-a1bc-dbb5a5b88ba0",
+          "attempt_id": "7c06d23c-966c-4ac0-98a1-6a03e277fad0",
+          "code": "",
+          "language": "Python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-14T19:06:08Z",
+          "error_message": null,
+          "submission_hash": "d132ab28118c6b2b93999b4f084fe1dfc996fcc36c01cdbc24c5b857fbcd814d",
+          "source_provider": "leetcode",
+          "source_account": "jaypatil1229"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

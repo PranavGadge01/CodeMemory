@@ -1,0 +1,44 @@
+{
+  "id": "ff3c33f3-d478-49ed-b2bf-5af0be20199a",
+  "title": "P",
+  "slug": "p",
+  "difficulty": "Unknown",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/p/",
+  "topics": [],
+  "statement": null,
+  "created_at": "2026-10-15T19:15:33.392809Z",
+  "updated_at": "2026-10-15T19:15:33.392809Z",
+  "attempts": [
+    {
+      "id": "a7b01895-d591-449d-8192-72b8e223839b",
+      "problem_id": "ff3c33f3-d478-49ed-b2bf-5af0be20199a",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:15:33.439801Z",
+      "updated_at": "2026-10-15T19:15:33.439801Z",
+      "submissions": [
+        {
+          "id": "leetcode_1",
+          "problem_id": "ff3c33f3-d478-49ed-b2bf-5af0be20199a",
+          "attempt_id": "a7b01895-d591-449d-8192-72b8e223839b",
+          "code": "original_code",
+          "language": "Python3",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2023-11-14T22:13:20Z",
+          "error_message": null,
+          "submission_hash": "1f41c9ae8e58619b8d5f70dfdc926b6f7d8197093b160f04a4cbf37d16a0be0d",
+          "source_provider": "leetcode",
+          "source_account": "alice"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

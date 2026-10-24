@@ -1,0 +1,49 @@
+{
+  "id": "25cb71d2-42ab-47b6-b64c-18f06185af29",
+  "title": "Two Sum",
+  "slug": "two-sum-test",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array",
+    "Hash Table"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:05:59.323450Z",
+  "updated_at": "2026-10-15T19:05:59.323450Z",
+  "attempts": [
+    {
+      "id": "9d654fd1-a76e-494d-9c29-2b1a7edb09b6",
+      "problem_id": "25cb71d2-42ab-47b6-b64c-18f06185af29",
+      "attempt_number": 1,
+      "approach_summary": "Hash Map Solution",
+      "reasoning": "Use a hash map for O(n) lookup",
+      "mistakes": [
+        "Forgot to check for empty input"
+      ],
+      "analysis": null,
+      "status": "Unknown",
+      "created_at": "2026-10-15T19:05:59.323450Z",
+      "updated_at": "2026-10-15T19:05:59.323450Z",
+      "submissions": [
+        {
+          "id": "84fc6bb3-deb3-4c4b-9ee5-46e71852c145",
+          "problem_id": "25cb71d2-42ab-47b6-b64c-18f06185af29",
+          "attempt_id": "9d654fd1-a76e-494d-9c29-2b1a7edb09b6",
+          "code": "def twoSum(nums, target): pass",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-15T19:05:59.323450Z",
+          "error_message": null,
+          "submission_hash": "29d663b30a5d17690e82109937b606f9ce1af099447411911edfe3e8a17038e7",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

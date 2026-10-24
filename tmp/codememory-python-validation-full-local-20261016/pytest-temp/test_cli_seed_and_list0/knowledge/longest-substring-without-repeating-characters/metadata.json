@@ -1,0 +1,68 @@
+{
+  "id": "1296fadb-6a21-402c-a4b0-af2637bf4939",
+  "title": "Longest Substring Without Repeating Characters",
+  "slug": "longest-substring-without-repeating-characters",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/longest-substring-without-repeating-characters/",
+  "topics": [
+    "Hash Table",
+    "String",
+    "Sliding Window"
+  ],
+  "statement": "Given a string s, find the length of the longest substring without repeating characters.",
+  "created_at": "2026-10-15T19:06:29.303351Z",
+  "updated_at": "2026-10-15T19:06:29.303351Z",
+  "attempts": [
+    {
+      "id": "bb458f0f-d320-4447-bd06-8d446de627ca",
+      "problem_id": "1296fadb-6a21-402c-a4b0-af2637bf4939",
+      "attempt_number": 1,
+      "approach_summary": "Sliding Window with Hash Map",
+      "reasoning": "Maintain left pointer and map of last seen indices.",
+      "mistakes": [],
+      "analysis": {
+        "approach_name": "Standard Approach",
+        "time_complexity": "O(N)",
+        "space_complexity": "O(min(M, N))",
+        "key_insights": [],
+        "trade_offs": null,
+        "bottleneck": null
+      },
+      "status": "Unknown",
+      "created_at": "2026-10-15T19:06:29.323948Z",
+      "updated_at": "2026-10-15T19:06:29.323948Z",
+      "submissions": []
+    },
+    {
+      "id": "10ecca46-d1e3-4a12-a714-74c1a2993911",
+      "problem_id": "1296fadb-6a21-402c-a4b0-af2637bf4939",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:29.349647Z",
+      "updated_at": "2026-10-15T19:06:29.349647Z",
+      "submissions": [
+        {
+          "id": "8c7f9d62-ff6d-4e15-a041-d2334bb90fd7",
+          "problem_id": "1296fadb-6a21-402c-a4b0-af2637bf4939",
+          "attempt_id": "10ecca46-d1e3-4a12-a714-74c1a2993911",
+          "code": "def lengthOfLongestSubstring(s: str) -> int:\n    seen = {}\n    left = max_len = 0\n    for right, char in enumerate(s):\n        if char in seen and seen[char] >= left:\n            left = seen[char] + 1\n        seen[char] = right\n        max_len = max(max_len, right - left + 1)\n    return max_len",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": 55.0,
+          "memory_mb": 16.1,
+          "submitted_at": "2026-10-15T19:06:29.348640Z",
+          "error_message": null,
+          "submission_hash": "54ef9c456ca827c68f1bc22c647632d0f4acfdc64e04363153e37922ef137fca",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

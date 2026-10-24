@@ -1,0 +1,49 @@
+{
+  "id": "a1a72b30-1dff-4eee-840e-3c0e494e00c1",
+  "title": "Number of Islands",
+  "slug": "number-of-islands",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Depth-First Search",
+    "Breadth-First Search",
+    "Graph",
+    "Matrix"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:18:34.989594Z",
+  "updated_at": "2026-10-15T19:18:34.989594Z",
+  "attempts": [
+    {
+      "id": "c6f29c93-5c31-4e1b-a046-bc4f412fd262",
+      "problem_id": "a1a72b30-1dff-4eee-840e-3c0e494e00c1",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2024-01-20T09:00:00Z",
+      "updated_at": "2024-01-20T09:00:00Z",
+      "submissions": [
+        {
+          "id": "58e5dfdd-c54e-4046-8418-a574b588ba69",
+          "problem_id": "a1a72b30-1dff-4eee-840e-3c0e494e00c1",
+          "attempt_id": "c6f29c93-5c31-4e1b-a046-bc4f412fd262",
+          "code": "class Solution:\n    def numIslands(self, grid):\n        if not grid: return 0\n        count = 0\n        def dfs(r, c):\n            if r < 0 or c < 0 or r >= len(grid) or c >= len(grid[0]) or grid[r][c] == '0': return\n            grid[r][c] = '0'\n            for dr, dc in [(0,1),(0,-1),(1,0),(-1,0)]: dfs(r+dr, c+dc)\n        for r in range(len(grid)):\n            for c in range(len(grid[0])):\n                if grid[r][c] == '1':\n                    dfs(r, c); count += 1\n        return count",
+          "language": "Python",
+          "status": "Accepted",
+          "runtime_ms": 189.0,
+          "memory_mb": 17.5,
+          "submitted_at": "2024-01-20T09:00:00Z",
+          "error_message": null,
+          "submission_hash": "ee833ce2b2832c9f172b4d97d8ad1f030908359e83f8bfb50fe53df16d56c362",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

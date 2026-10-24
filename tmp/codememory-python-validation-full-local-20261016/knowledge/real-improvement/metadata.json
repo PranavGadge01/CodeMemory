@@ -1,0 +1,61 @@
+{
+  "id": "real-improvement",
+  "title": "Real Improvement",
+  "slug": "real-improvement",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:38.272199Z",
+  "updated_at": "2026-10-15T19:06:38.272199Z",
+  "attempts": [
+    {
+      "id": "5eb2f11c-56a8-4713-acc2-2da373703355",
+      "problem_id": "real-improvement",
+      "attempt_number": 1,
+      "approach_summary": "Attempt",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:38.272199Z",
+      "updated_at": "2026-10-15T19:06:38.272199Z",
+      "submissions": [
+        {
+          "id": "9c33711d-1863-4f49-93c0-55c004349756",
+          "problem_id": "real-improvement",
+          "attempt_id": null,
+          "code": "x",
+          "language": "python",
+          "status": "Wrong Answer",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-15T19:06:38.272199Z",
+          "error_message": null,
+          "submission_hash": "7e45f366ced4646898d93302683c7e9bf0f1bf21132af66245b37846d222d7e1",
+          "source_provider": null,
+          "source_account": null
+        },
+        {
+          "id": "0d62b78e-06d9-47ad-b9f6-7ea3dc08ca9d",
+          "problem_id": "real-improvement",
+          "attempt_id": null,
+          "code": "x",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-15T19:06:38.272199Z",
+          "error_message": null,
+          "submission_hash": "383f505b4f02d0bd318928a00c8759e704649479b06e4060989de0d1f860b02b",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

@@ -1,0 +1,18 @@
+{
+  "id": "valid-anagram",
+  "title": "Valid Anagram",
+  "slug": "valid-anagram",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Hash Table",
+    "String",
+    "Sorting"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:46.142143Z",
+  "updated_at": "2026-10-15T19:06:46.142143Z",
+  "attempts": [],
+  "notes": []
+}

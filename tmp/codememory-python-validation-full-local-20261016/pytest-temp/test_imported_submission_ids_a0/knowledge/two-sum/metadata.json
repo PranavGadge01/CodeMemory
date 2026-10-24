@@ -1,0 +1,105 @@
+{
+  "id": "d0d3e371-5fab-42cd-890a-c731b2f04ba9",
+  "title": "Two Sum",
+  "slug": "two-sum",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/two-sum/",
+  "topics": [
+    "Array",
+    "Hash Table"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:16:55.933587Z",
+  "updated_at": "2026-10-15T19:16:55.933587Z",
+  "attempts": [
+    {
+      "id": "4cb5cb3d-0a21-4210-926e-a225e5b1c550",
+      "problem_id": "d0d3e371-5fab-42cd-890a-c731b2f04ba9",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Wrong Answer",
+      "created_at": "2023-11-14T22:13:20Z",
+      "updated_at": "2023-11-14T22:13:20Z",
+      "submissions": [
+        {
+          "id": "leetcode_1001",
+          "problem_id": "d0d3e371-5fab-42cd-890a-c731b2f04ba9",
+          "attempt_id": "4cb5cb3d-0a21-4210-926e-a225e5b1c550",
+          "code": "class Solution:\n    def twoSum(self, nums: list[int], target: int) -> list[int]:\n        return [0, 1]",
+          "language": "Python",
+          "status": "Wrong Answer",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2023-11-14T22:13:20Z",
+          "error_message": null,
+          "submission_hash": "1b884bbca45c970f0f5c2d819619d223819acc655f6f7b1e73d487c93da69763",
+          "source_provider": "leetcode",
+          "source_account": null
+        }
+      ]
+    },
+    {
+      "id": "ef0e5a94-16be-49ce-a630-734ee95da2f6",
+      "problem_id": "d0d3e371-5fab-42cd-890a-c731b2f04ba9",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Time Limit Exceeded",
+      "created_at": "2023-11-14T23:13:20Z",
+      "updated_at": "2023-11-14T23:13:20Z",
+      "submissions": [
+        {
+          "id": "leetcode_1002",
+          "problem_id": "d0d3e371-5fab-42cd-890a-c731b2f04ba9",
+          "attempt_id": "ef0e5a94-16be-49ce-a630-734ee95da2f6",
+          "code": "class Solution:\n    def twoSum(self, nums: list[int], target: int) -> list[int]:\n        for i in range(len(nums)):\n            for j in range(len(nums)):\n                if i != j and nums[i] + nums[j] == target:\n                    return [i, j]",
+          "language": "Python",
+          "status": "Time Limit Exceeded",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2023-11-14T23:13:20Z",
+          "error_message": null,
+          "submission_hash": "43a4698c697034f82f7bc8298c595180ada4d5a091013d296f06cdaacc8100fa",
+          "source_provider": "leetcode",
+          "source_account": null
+        }
+      ]
+    },
+    {
+      "id": "b6a9d926-a8d8-42b3-9bfe-e8ca9750b0e5",
+      "problem_id": "d0d3e371-5fab-42cd-890a-c731b2f04ba9",
+      "attempt_number": 3,
+      "approach_summary": "Attempt 3",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2023-11-15T00:13:20Z",
+      "updated_at": "2023-11-15T00:13:20Z",
+      "submissions": [
+        {
+          "id": "leetcode_1003",
+          "problem_id": "d0d3e371-5fab-42cd-890a-c731b2f04ba9",
+          "attempt_id": "b6a9d926-a8d8-42b3-9bfe-e8ca9750b0e5",
+          "code": "class Solution:\n    def twoSum(self, nums: list[int], target: int) -> list[int]:\n        seen = {}\n        for i, n in enumerate(nums):\n            diff = target - n\n            if diff in seen:\n                return [seen[diff], i]\n            seen[n] = i",
+          "language": "Python",
+          "status": "Accepted",
+          "runtime_ms": 45.0,
+          "memory_mb": 17.2,
+          "submitted_at": "2023-11-15T00:13:20Z",
+          "error_message": null,
+          "submission_hash": "4730b7e2f5d501c025baae78e5a709b67271ce0658aed8310e9179e246be33dc",
+          "source_provider": "leetcode",
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

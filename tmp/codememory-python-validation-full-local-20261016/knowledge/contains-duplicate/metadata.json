@@ -1,0 +1,47 @@
+{
+  "id": "contains-duplicate",
+  "title": "Contains Duplicate",
+  "slug": "contains-duplicate",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array",
+    "Hash Table"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:45.778061Z",
+  "updated_at": "2026-10-15T19:06:45.778061Z",
+  "attempts": [
+    {
+      "id": "99e22488-79a5-4711-afbf-0a0c38b173ef",
+      "problem_id": "contains-duplicate",
+      "attempt_number": 1,
+      "approach_summary": "Attempt",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:45.778061Z",
+      "updated_at": "2026-10-15T19:06:45.778061Z",
+      "submissions": [
+        {
+          "id": "6d7df80f-2afe-4d56-b362-d718b09bee4d",
+          "problem_id": "contains-duplicate",
+          "attempt_id": null,
+          "code": "pass",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-01-02T00:00:00Z",
+          "error_message": null,
+          "submission_hash": "0bbf9cb1d7b2745d6814ee62129ce68c61ac38f1eb1a19efd12f735868f22b1a",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

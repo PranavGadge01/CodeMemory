@@ -1,0 +1,19 @@
+{
+  "id": "course-schedule",
+  "title": "Course Schedule",
+  "slug": "course-schedule",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Depth-First Search",
+    "Breadth-First Search",
+    "Graph",
+    "Topological Sort"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:46.129131Z",
+  "updated_at": "2026-10-15T19:06:46.129131Z",
+  "attempts": [],
+  "notes": []
+}

@@ -1,0 +1,47 @@
+{
+  "id": "6818ec29-1807-4aae-9578-c04c178b5e9f",
+  "title": "Merge Two Sorted Lists",
+  "slug": "merge-two-sorted-lists",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/merge-two-sorted-lists/",
+  "topics": [
+    "Linked List",
+    "Recursion"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:16:46.006688Z",
+  "updated_at": "2026-10-15T19:16:46.006688Z",
+  "attempts": [
+    {
+      "id": "387d40ff-c36b-48ef-a89a-5c499e12216a",
+      "problem_id": "6818ec29-1807-4aae-9578-c04c178b5e9f",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Time Limit Exceeded",
+      "created_at": "2023-11-19T13:20:00Z",
+      "updated_at": "2023-11-19T13:20:00Z",
+      "submissions": [
+        {
+          "id": "leetcode_2002",
+          "problem_id": "6818ec29-1807-4aae-9578-c04c178b5e9f",
+          "attempt_id": "387d40ff-c36b-48ef-a89a-5c499e12216a",
+          "code": "struct ListNode { int val; ListNode *next; };\\nclass Solution { public: ListNode* mergeTwoLists(ListNode* list1, ListNode* list2) { while(true){} } };",
+          "language": "C++",
+          "status": "Time Limit Exceeded",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2023-11-19T13:20:00Z",
+          "error_message": null,
+          "submission_hash": "5b5782a652438fe4d9c86615669d403f18eacf7656e91e069b6abadc87bd0b2d",
+          "source_provider": "leetcode",
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

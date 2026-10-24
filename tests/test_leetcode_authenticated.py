@@ -24,6 +24,54 @@ from codememory.core.service import CodeMemoryService
 class TestCredentialVault:
     """Test the CredentialVault class for secure credential storage."""
 
+    def test_demo_vault_uses_isolated_keyring_namespace_and_file(self, tmp_path, monkeypatch):
+        from codememory.connectors.leetcode.vault import KEYRING_USERNAME_PREFIX
+
+        demo_service = "CodeMemory-Demo-Test"
+        demo_vault_base = tmp_path / "isolated" / "leetcode_vault.json"
+        monkeypatch.setenv("CODEMEMORY_LEETCODE_KEYRING_SERVICE", demo_service)
+        monkeypatch.setenv("CODEMEMORY_LEETCODE_VAULT_FILE", str(demo_vault_base))
+
+        with patch("codememory.connectors.leetcode.vault.HAS_CRYPTO_DEPS", True), \
+             patch("codememory.connectors.leetcode.vault.keyring") as mock_keyring, \
+             patch("codememory.connectors.leetcode.vault.Fernet") as mock_fernet:
+            keyring_entries = {}
+
+            def get_password(service, username):
+                return keyring_entries.get((service, username))
+
+            def set_password(service, username, value):
+                keyring_entries[(service, username)] = value
+
+            def delete_password(service, username):
+                keyring_entries.pop((service, username), None)
+
+            mock_keyring.get_password.side_effect = get_password
+            mock_keyring.set_password.side_effect = set_password
+            mock_keyring.delete_password.side_effect = delete_password
+            mock_fernet.generate_key.return_value = b"test-only-fernet-key"
+            mock_fernet.return_value.encrypt.return_value = b"encrypted-test-value"
+            mock_fernet.return_value.decrypt.return_value = b"decrypted-test-value"
+
+            vault = CredentialVault(account_identifier="demo-user")
+
+            assert vault.keyring_service == demo_service
+            assert vault.vault_file_path == str(
+                tmp_path / "isolated" / "leetcode_vault_demo-user.json"
+            )
+            vault.store("synthetic-session", "synthetic-csrf")
+            assert vault.retrieve() == ("decrypted-test-value", "decrypted-test-value")
+            assert [call.args[1] for call in mock_keyring.get_password.call_args_list] == [
+                f"{KEYRING_USERNAME_PREFIX}demo-user",
+                f"{KEYRING_USERNAME_PREFIX}demo-user_vault",
+            ]
+            vault.revoke()
+            assert all(
+                call.args[0] == demo_service
+                for call in mock_keyring.method_calls
+                if call.args
+            )
+
     def test_vault_initialization_without_dependencies(self):
         """Test vault initialization when cryptography dependencies are missing."""
         with patch('codememory.connectors.leetcode.vault.HAS_CRYPTO_DEPS', False):
@@ -818,7 +866,7 @@ class TestAuthenticatedSyncEndToEnd:
             "code": "def twoSum(nums, target): return [0, 1]",
             "language": "python3",
             "runtime": 45.0,
-            "memory": 16.5,
+            "memory": 44_192_000,
         }
 
         orchestrator = AuthenticatedSyncOrchestrator(
@@ -846,6 +894,7 @@ class TestAuthenticatedSyncEndToEnd:
         assert ac_sub.status == SubmissionStatus.ACCEPTED
         assert ac_sub.source_account == "alice"
         assert ac_sub.source_provider == "leetcode"
+        assert ac_sub.memory_mb == 44.192
 
         wa_sub = next(s for s in subs if s.id == "leetcode_1002")
         assert wa_sub.status == SubmissionStatus.WRONG_ANSWER
@@ -1894,7 +1943,7 @@ class TestDeduplicationByExternalId:
         assert subs2[0].id == "leetcode_2"
 
     @patch("codememory.connectors.leetcode.auth_sync.AuthenticatedLeetCodeClient")
-    def test_code_enriched_for_previously_code_less_submission(self, mock_client_cls, tmp_path):
+    def test_code_enriched_for_previously_code_less_submission(self, mock_client_cls, tmp_path, monkeypatch):
         """A submission that previously had no code can be enriched when a later fetch succeeds.
 
         Scenario:
@@ -1903,7 +1952,17 @@ class TestDeduplicationByExternalId:
         - Sync 3: submissionDetails returns code successfully again
         - The existing record should be updated with the new code
         """
-        from codememory.connectors.leetcode.models import LeetCodeSubmissionRaw
+        from codememory.connectors.leetcode.models import LeetCodeProblemRaw, LeetCodeSubmissionRaw
+        from codememory.connectors.leetcode.client import LeetCodeClient
+
+        # A new submission also needs public problem metadata. Keep this test
+        # focused on authenticated code enrichment and independent of LeetCode.
+        fetch_problem_details = Mock(
+            return_value=LeetCodeProblemRaw(
+                title="P", title_slug="p", difficulty="Easy", topics=[]
+            )
+        )
+        monkeypatch.setattr(LeetCodeClient, "fetch_problem_details", fetch_problem_details)
 
         service, account_service, vault = self._make_env(tmp_path, username="alice")
         mock_client = Mock()
@@ -1914,22 +1973,26 @@ class TestDeduplicationByExternalId:
             ([sub], False, None),
             ([sub], False, None),
             ([sub], False, None),
+            ([sub], False, None),
         ]
-        # First: success with code A, second: null (fail), third: success with code B
+        # First: success with code A, second: null (fail), third/fourth: code updates.
         mock_client.fetch_submission_code.side_effect = [
-            {"code": "code_A", "language": "Python3"},
+            {"code": "code_A", "language": "Python3", "memory": 44_192_000},
             None,
-            {"code": "code_B", "language": "Python3"},  # Re-fetch succeeds
+            {"code": "code_B", "language": "Python3", "memory": 44_192_000},
+            {"code": "code_C", "language": "Python3"},  # Missing memory preserves prior value.
         ]
 
         orch = AuthenticatedSyncOrchestrator(account_service=account_service, credential_vault=vault, rate_limit_delay=0.0)
 
         r1 = orch.sync_full_history(service, username="alice")
+        fetch_problem_details.assert_called_once_with("p")
         assert r1.records_added == 1
         assert r1.details["code_fetched"] == 1
         prob = service.get_problem("p")
         stored = [s for a in prob.attempts for s in a.submissions]
         assert stored[0].code == "code_A"
+        assert stored[0].memory_mb == 44.192
 
         r2 = orch.sync_full_history(service, username="alice")
         assert r2.records_skipped == 1
@@ -1947,6 +2010,14 @@ class TestDeduplicationByExternalId:
         stored = [s for a in prob.attempts for s in a.submissions]
         assert len(stored) == 1  # Still only 1 submission
         assert stored[0].code == "code_B"  # Updated with new code
+        assert stored[0].memory_mb == 44.192
+
+        r4 = orch.sync_full_history(service, username="alice")
+        assert r4.records_skipped == 1
+        prob = service.get_problem("p")
+        stored = [s for a in prob.attempts for s in a.submissions]
+        assert stored[0].code == "code_C"
+        assert stored[0].memory_mb == 44.192
 
 
 if __name__ == "__main__":

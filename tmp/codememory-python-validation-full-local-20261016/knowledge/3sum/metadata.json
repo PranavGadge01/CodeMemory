@@ -1,0 +1,18 @@
+{
+  "id": "3sum",
+  "title": "3Sum",
+  "slug": "3sum",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array",
+    "Two Pointers",
+    "Sorting"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:45.935946Z",
+  "updated_at": "2026-10-15T19:06:45.935946Z",
+  "attempts": [],
+  "notes": []
+}

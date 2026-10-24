@@ -1,0 +1,47 @@
+{
+  "id": "02bc0b1a-12a4-4585-a5f3-105512f05955",
+  "title": "Find First and Last Position of Element in Sorted Array",
+  "slug": "find-first-and-last-position-of-element-in-sorted-array",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/find-first-and-last-position-of-element-in-sorted-array/",
+  "topics": [
+    "Array",
+    "Binary Search"
+  ],
+  "statement": "<p>Given an array of integers <code>nums</code> sorted in non-decreasing order, find the starting and ending position of a given <code>target</code> value.</p>\n\n<p>If <code>target</code> is not found in the array, return <code>[-1, -1]</code>.</p>\n\n<p>You must&nbsp;write an algorithm with&nbsp;<code>O(log n)</code> runtime complexity.</p>\n\n<p>&nbsp;</p>\n<p><strong class=\"example\">Example 1:</strong></p>\n<pre><strong>Input:</strong> nums = [5,7,7,8,8,10], target = 8\n<strong>Output:</strong> [3,4]\n</pre><p><strong class=\"example\">Example 2:</strong></p>\n<pre><strong>Input:</strong> nums = [5,7,7,8,8,10], target = 6\n<strong>Output:</strong> [-1,-1]\n</pre><p><strong class=\"example\">Example 3:</strong></p>\n<pre><strong>Input:</strong> nums = [], target = 0\n<strong>Output:</strong> [-1,-1]\n</pre>\n<p>&nbsp;</p>\n<p><strong>Constraints:</strong></p>\n\n<ul>\n\t<li><code>0 &lt;= nums.length &lt;= 10<sup>5</sup></code></li>\n\t<li><code>-10<sup>9</sup>&nbsp;&lt;= nums[i]&nbsp;&lt;= 10<sup>9</sup></code></li>\n\t<li><code>nums</code> is a non-decreasing array.</li>\n\t<li><code>-10<sup>9</sup>&nbsp;&lt;= target&nbsp;&lt;= 10<sup>9</sup></code></li>\n</ul>\n",
+  "created_at": "2026-10-19T17:52:15.023797Z",
+  "updated_at": "2026-10-19T17:52:15.023797Z",
+  "attempts": [
+    {
+      "id": "31b28a75-ff62-40cf-af19-743a2535e655",
+      "problem_id": "02bc0b1a-12a4-4585-a5f3-105512f05955",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-19T17:52:15.063323Z",
+      "updated_at": "2026-10-19T17:52:15.063323Z",
+      "submissions": [
+        {
+          "id": "leetcode_1974008868",
+          "problem_id": "02bc0b1a-12a4-4585-a5f3-105512f05955",
+          "attempt_id": "31b28a75-ff62-40cf-af19-743a2535e655",
+          "code": "",
+          "language": "Java",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-04-09T23:51:15Z",
+          "error_message": null,
+          "submission_hash": "d2884d3e943a146234fdf83ae0518ae1fa1a2c57f4e58fd2ec90ea4b711b2afe",
+          "source_provider": "leetcode",
+          "source_account": "jaypatil1229"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

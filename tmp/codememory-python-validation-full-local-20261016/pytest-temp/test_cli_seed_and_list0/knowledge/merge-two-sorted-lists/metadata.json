@@ -1,0 +1,67 @@
+{
+  "id": "07b4e4a9-12ce-41ea-b417-16cd5c1e833e",
+  "title": "Merge Two Sorted Lists",
+  "slug": "merge-two-sorted-lists",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/merge-two-sorted-lists/",
+  "topics": [
+    "Linked List",
+    "Recursion"
+  ],
+  "statement": "Merge two sorted linked lists into one sorted list.",
+  "created_at": "2026-10-15T19:06:29.622342Z",
+  "updated_at": "2026-10-15T19:06:29.622342Z",
+  "attempts": [
+    {
+      "id": "09d49299-b7ee-4bfa-ac8e-e673c1ef65d3",
+      "problem_id": "07b4e4a9-12ce-41ea-b417-16cd5c1e833e",
+      "attempt_number": 1,
+      "approach_summary": "Dummy Node Iterative Merge",
+      "reasoning": "Compare heads of list1 and list2, appending smaller node to dummy tail.",
+      "mistakes": [],
+      "analysis": {
+        "approach_name": "Standard Approach",
+        "time_complexity": "O(N + M)",
+        "space_complexity": "O(1)",
+        "key_insights": [],
+        "trade_offs": null,
+        "bottleneck": null
+      },
+      "status": "Unknown",
+      "created_at": "2026-10-15T19:06:29.643952Z",
+      "updated_at": "2026-10-15T19:06:29.643952Z",
+      "submissions": []
+    },
+    {
+      "id": "27ee12bb-5952-4aa6-bcba-03dd06b8abd2",
+      "problem_id": "07b4e4a9-12ce-41ea-b417-16cd5c1e833e",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:29.668654Z",
+      "updated_at": "2026-10-15T19:06:29.668654Z",
+      "submissions": [
+        {
+          "id": "a793cd6b-5bdf-42a0-b97a-f0787d4f412e",
+          "problem_id": "07b4e4a9-12ce-41ea-b417-16cd5c1e833e",
+          "attempt_id": "27ee12bb-5952-4aa6-bcba-03dd06b8abd2",
+          "code": "def mergeTwoLists(l1, l2):\n    dummy = curr = ListNode(0)\n    while l1 and l2:\n        if l1.val < l2.val:\n            curr.next, l1 = l1, l1.next\n        else:\n            curr.next, l2 = l2, l2.next\n        curr = curr.next\n    curr.next = l1 or l2\n    return dummy.next",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": 38.0,
+          "memory_mb": 15.0,
+          "submitted_at": "2026-10-15T19:06:29.668125Z",
+          "error_message": null,
+          "submission_hash": "4f5c33e36647f0cdc5cef9496fb225ad9f855db33e4401a07fddcf7d3eb2ba68",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

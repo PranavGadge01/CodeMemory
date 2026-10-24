@@ -1,0 +1,46 @@
+{
+  "id": "e4e724dc-d700-4b19-a28b-92f9324e6381",
+  "title": "Inorder Traversal",
+  "slug": "inorder-traversal",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Tree"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:18:16.622325Z",
+  "updated_at": "2026-10-15T19:18:16.622325Z",
+  "attempts": [
+    {
+      "id": "9f9c5a31-917b-44de-9125-a1d99d885db0",
+      "problem_id": "e4e724dc-d700-4b19-a28b-92f9324e6381",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:18:16.685864Z",
+      "updated_at": "2026-10-15T19:18:16.685864Z",
+      "submissions": [
+        {
+          "id": "dfdf3f22-fd28-45a1-9117-e51756de1fdf",
+          "problem_id": "e4e724dc-d700-4b19-a28b-92f9324e6381",
+          "attempt_id": "9f9c5a31-917b-44de-9125-a1d99d885db0",
+          "code": "tree code",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-15T19:18:16.682864Z",
+          "error_message": null,
+          "submission_hash": "e72ecc44ec27faa204d811fc144a28e53a7bbcbb397440a23e8b235f0d8bcb55",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

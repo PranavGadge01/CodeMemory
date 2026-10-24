@@ -1,0 +1,77 @@
+{
+  "id": "cb8c5b64-6ce6-45b0-909d-b68f1cec9284",
+  "title": "3Sum",
+  "slug": "3sum",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array",
+    "Two Pointers",
+    "Sorting"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:18:28.256656Z",
+  "updated_at": "2026-10-15T19:18:28.256656Z",
+  "attempts": [
+    {
+      "id": "0572af07-1660-4abd-b70d-ecb172b8ebc1",
+      "problem_id": "cb8c5b64-6ce6-45b0-909d-b68f1cec9284",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Time Limit Exceeded",
+      "created_at": "2024-01-16T09:00:00Z",
+      "updated_at": "2024-01-16T09:00:00Z",
+      "submissions": [
+        {
+          "id": "e10e2631-87d0-4a8c-8d45-88519cfea470",
+          "problem_id": "cb8c5b64-6ce6-45b0-909d-b68f1cec9284",
+          "attempt_id": "0572af07-1660-4abd-b70d-ecb172b8ebc1",
+          "code": "class Solution:\n    def threeSum(self, nums):\n        nums.sort()\n        res = []\n        for i in range(len(nums) - 2):\n            if i > 0 and nums[i] == nums[i-1]:\n                continue\n            l, r = i+1, len(nums)-1\n            while l < r:\n                total = nums[i] + nums[l] + nums[r]\n                if total == 0:\n                    res.append([nums[i], nums[l], nums[r]])\n                    while l < r and nums[l] == nums[l+1]: l += 1\n                    while l < r and nums[r] == nums[r-1]: r -= 1\n                    l += 1; r -= 1\n                elif total < 0: l += 1\n                else: r -= 1\n        return res",
+          "language": "Python",
+          "status": "Time Limit Exceeded",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2024-01-16T09:00:00Z",
+          "error_message": null,
+          "submission_hash": "b566398c05382162ddd17b17ee726db217506d9e7563d9c755357fb6520a3c74",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    },
+    {
+      "id": "b98f5a9c-b4f5-4afa-a7fe-116a8b278ef4",
+      "problem_id": "cb8c5b64-6ce6-45b0-909d-b68f1cec9284",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2024-01-16T14:00:00Z",
+      "updated_at": "2024-01-16T14:00:00Z",
+      "submissions": [
+        {
+          "id": "a7f891e7-cd8b-4cd4-921d-71ceb17694c4",
+          "problem_id": "cb8c5b64-6ce6-45b0-909d-b68f1cec9284",
+          "attempt_id": "b98f5a9c-b4f5-4afa-a7fe-116a8b278ef4",
+          "code": "class Solution:\n    def threeSum(self, nums):\n        nums.sort()\n        res = []\n        for i in range(len(nums) - 2):\n            if nums[i] > 0: break\n            if i > 0 and nums[i] == nums[i-1]: continue\n            l, r = i+1, len(nums)-1\n            while l < r:\n                total = nums[i] + nums[l] + nums[r]\n                if total == 0:\n                    res.append([nums[i], nums[l], nums[r]])\n                    while l < r and nums[l] == nums[l+1]: l += 1\n                    while l < r and nums[r] == nums[r-1]: r -= 1\n                    l += 1; r -= 1\n                elif total < 0: l += 1\n                else: r -= 1\n        return res",
+          "language": "Python",
+          "status": "Accepted",
+          "runtime_ms": 320.0,
+          "memory_mb": 20.1,
+          "submitted_at": "2024-01-16T14:00:00Z",
+          "error_message": null,
+          "submission_hash": "b2695c9d5fc6659ad749e4f179fc3baec1eb0dede486b8132276b3b4b20ee01c",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

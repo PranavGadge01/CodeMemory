@@ -1,0 +1,47 @@
+{
+  "leetcode": {
+    "provider": "LeetCode",
+    "username": "alice",
+    "display_name": "alice",
+    "user_avatar": null,
+    "status": "Connected",
+    "connected_at": "2026-10-15T19:16:54.108319Z",
+    "last_sync_at": "2026-10-15T19:16:54.398074Z",
+    "last_sync_status": "Success",
+    "last_sync_error": null,
+    "capabilities": {
+      "profile_sync": true,
+      "progress_sync": true,
+      "recent_submissions": true,
+      "private_code_scraping": false
+    },
+    "metadata": {
+      "solved_all": 1,
+      "solved_easy": 1,
+      "solved_medium": 0,
+      "solved_hard": 0,
+      "ranking": 9999,
+      "latest_persisted_timestamp": "2023-11-14T22:13:20+00:00",
+      "latest_external_id": "leetcode_8001",
+      "last_sync_summary": {
+        "started_at": "2026-10-15T19:16:54.386083+00:00",
+        "finished_at": "2026-10-15T19:16:54.398074+00:00",
+        "records_discovered": 1,
+        "records_imported": 0,
+        "records_skipped": 1,
+        "records_failed": 0,
+        "coverage": "recent-window",
+        "window_limit": 100,
+        "records_in_window": 1,
+        "window_truncated": false,
+        "gap_detected": false,
+        "unavailable_fields": [
+          "code",
+          "runtime_ms",
+          "memory_mb"
+        ]
+      },
+      "last_successful_sync_at": "2026-10-15T19:16:54.398074+00:00"
+    }
+  }
+}

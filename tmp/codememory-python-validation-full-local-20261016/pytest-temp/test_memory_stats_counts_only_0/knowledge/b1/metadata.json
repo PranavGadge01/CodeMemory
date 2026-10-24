@@ -1,0 +1,46 @@
+{
+  "id": "pb1",
+  "title": "B1",
+  "slug": "b1",
+  "difficulty": "Hard",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Graph"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:18:03.886110Z",
+  "updated_at": "2026-10-15T19:18:03.886110Z",
+  "attempts": [
+    {
+      "id": "09606dc8-36bb-4745-b8c5-6fefd560024d",
+      "problem_id": "pb1",
+      "attempt_number": 1,
+      "approach_summary": "Graph approach",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:18:03.886110Z",
+      "updated_at": "2026-10-15T19:18:03.886110Z",
+      "submissions": [
+        {
+          "id": "d2d42537-d490-4d87-8df3-3b5f19b0238b",
+          "problem_id": "pb1",
+          "attempt_id": null,
+          "code": "z",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-15T19:18:03.886110Z",
+          "error_message": null,
+          "submission_hash": "bc56f15afb52e0ddac2f669a5377b5d382cf061e1b7697fa70cdcd76eccfa628",
+          "source_provider": "leetcode",
+          "source_account": "account_b"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

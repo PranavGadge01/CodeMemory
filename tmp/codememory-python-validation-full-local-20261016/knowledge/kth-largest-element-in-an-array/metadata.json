@@ -1,0 +1,19 @@
+{
+  "id": "kth-largest-element-in-an-array",
+  "title": "Kth Largest Element In An Array",
+  "slug": "kth-largest-element-in-an-array",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array",
+    "Divide and Conquer",
+    "Sorting",
+    "Heap (Priority Queue)"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:46.072599Z",
+  "updated_at": "2026-10-15T19:06:46.072599Z",
+  "attempts": [],
+  "notes": []
+}

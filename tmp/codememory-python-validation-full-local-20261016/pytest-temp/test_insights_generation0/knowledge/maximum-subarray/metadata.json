@@ -1,0 +1,68 @@
+{
+  "id": "8cdcf6a7-2795-4867-be34-5a162851f90b",
+  "title": "Maximum Subarray",
+  "slug": "maximum-subarray",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/maximum-subarray/",
+  "topics": [
+    "Array",
+    "Divide and Conquer",
+    "Dynamic Programming"
+  ],
+  "statement": "Given an integer array nums, find the subarray with the largest sum, and return its sum.",
+  "created_at": "2026-10-15T19:06:36.789582Z",
+  "updated_at": "2026-10-15T19:06:36.789582Z",
+  "attempts": [
+    {
+      "id": "8f601bc4-9e1c-47c3-a0a7-7f5da4606cdc",
+      "problem_id": "8cdcf6a7-2795-4867-be34-5a162851f90b",
+      "attempt_number": 1,
+      "approach_summary": "Kadane's Algorithm",
+      "reasoning": "Track max sub-sum ending at current index: curr = max(num, curr + num).",
+      "mistakes": [],
+      "analysis": {
+        "approach_name": "Standard Approach",
+        "time_complexity": "O(N)",
+        "space_complexity": "O(1)",
+        "key_insights": [],
+        "trade_offs": null,
+        "bottleneck": null
+      },
+      "status": "Unknown",
+      "created_at": "2026-10-15T19:06:36.816380Z",
+      "updated_at": "2026-10-15T19:06:36.816380Z",
+      "submissions": []
+    },
+    {
+      "id": "0879abce-7a5d-498f-a146-0bc80eaf37d0",
+      "problem_id": "8cdcf6a7-2795-4867-be34-5a162851f90b",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:36.842449Z",
+      "updated_at": "2026-10-15T19:06:36.842449Z",
+      "submissions": [
+        {
+          "id": "c7a6455d-f7a1-4b9e-99d4-d650637b724c",
+          "problem_id": "8cdcf6a7-2795-4867-be34-5a162851f90b",
+          "attempt_id": "0879abce-7a5d-498f-a146-0bc80eaf37d0",
+          "code": "def maxSubArray(nums: list[int]) -> int:\n    max_sum = curr_sum = nums[0]\n    for num in nums[1:]:\n        curr_sum = max(num, curr_sum + num)\n        max_sum = max(max_sum, curr_sum)\n    return max_sum",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": 65.0,
+          "memory_mb": 28.4,
+          "submitted_at": "2026-10-15T19:06:36.842449Z",
+          "error_message": null,
+          "submission_hash": "2725021c0bd3daa39047db4b94c6d6ef6dba49d90f1f93d2bc0038ad24778e9d",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

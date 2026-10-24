@@ -1,0 +1,46 @@
+{
+  "id": "partial-prob",
+  "title": "Partial Prob",
+  "slug": "partial-prob",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Graph"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:39.365441Z",
+  "updated_at": "2026-10-15T19:06:39.365441Z",
+  "attempts": [
+    {
+      "id": "6b9559c0-659a-49c1-8edb-1017a57d25f0",
+      "problem_id": "partial-prob",
+      "attempt_number": 1,
+      "approach_summary": "Attempt",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Wrong Answer",
+      "created_at": "2026-10-15T19:06:39.365441Z",
+      "updated_at": "2026-10-15T19:06:39.365441Z",
+      "submissions": [
+        {
+          "id": "068fb960-5485-4c8a-bc84-fde48f3ec2fd",
+          "problem_id": "partial-prob",
+          "attempt_id": null,
+          "code": "x",
+          "language": "python",
+          "status": "Wrong Answer",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-10-15T19:06:39.365441Z",
+          "error_message": null,
+          "submission_hash": "50d6cb93d5a124db71f6e78073951dd4cb4cbf95be5625a4e72298183c021bdf",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

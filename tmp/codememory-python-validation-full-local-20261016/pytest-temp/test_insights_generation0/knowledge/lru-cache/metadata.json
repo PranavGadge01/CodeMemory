@@ -1,0 +1,69 @@
+{
+  "id": "dafc4e4c-f118-4985-a291-ed957c804d2d",
+  "title": "LRU Cache",
+  "slug": "lru-cache",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/lru-cache/",
+  "topics": [
+    "Hash Table",
+    "Linked List",
+    "Design",
+    "Doubly-Linked List"
+  ],
+  "statement": "Design a data structure that follows the constraints of a Least Recently Used (LRU) cache.",
+  "created_at": "2026-10-15T19:06:36.207248Z",
+  "updated_at": "2026-10-15T19:06:36.207248Z",
+  "attempts": [
+    {
+      "id": "c6b73c63-3b76-4b6e-902b-8b0cc036ec47",
+      "problem_id": "dafc4e4c-f118-4985-a291-ed957c804d2d",
+      "attempt_number": 1,
+      "approach_summary": "Doubly Linked List + Hash Map",
+      "reasoning": "Use hash map for O(1) key-to-node lookup and DLL for O(1) eviction/insertion.",
+      "mistakes": [],
+      "analysis": {
+        "approach_name": "Standard Approach",
+        "time_complexity": "O(1)",
+        "space_complexity": "O(capacity)",
+        "key_insights": [],
+        "trade_offs": null,
+        "bottleneck": null
+      },
+      "status": "Unknown",
+      "created_at": "2026-10-15T19:06:36.229273Z",
+      "updated_at": "2026-10-15T19:06:36.229273Z",
+      "submissions": []
+    },
+    {
+      "id": "ab4280c6-cb90-4258-9800-e6a4bfbac590",
+      "problem_id": "dafc4e4c-f118-4985-a291-ed957c804d2d",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:36.252246Z",
+      "updated_at": "2026-10-15T19:06:36.252246Z",
+      "submissions": [
+        {
+          "id": "853207d3-4e6e-4616-92dc-4648995dacbe",
+          "problem_id": "dafc4e4c-f118-4985-a291-ed957c804d2d",
+          "attempt_id": "ab4280c6-cb90-4258-9800-e6a4bfbac590",
+          "code": "class LRUCache:\n    def __init__(self, capacity: int):\n        self.cap = capacity\n        self.cache = {}\n",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": 120.0,
+          "memory_mb": 75.4,
+          "submitted_at": "2026-10-15T19:06:36.251246Z",
+          "error_message": null,
+          "submission_hash": "3c371ef7255856956f96e62691c622ed3aeef63c1006a0a5de5323652134f5a4",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

@@ -50,8 +50,16 @@ class CredentialVault:
             vault_file_path: Path to store encrypted credentials (fallback if keyring unavailable)
         """
         self.account_identifier = account_identifier
-        # Make vault file path account-specific if using default path
-        if vault_file_path == VAULT_FILE_PATH:
+        # Demo and other isolated installations can select a separate keyring
+        # namespace and encrypted-file base path without changing legacy defaults.
+        self.keyring_service = os.getenv("CODEMEMORY_LEETCODE_KEYRING_SERVICE") or KEYRING_SERVICE
+        configured_vault_path = os.getenv("CODEMEMORY_LEETCODE_VAULT_FILE")
+        if configured_vault_path and vault_file_path == VAULT_FILE_PATH:
+            vault_file_path = configured_vault_path
+        # Make vault file path account-specific for either default base path.
+        if vault_file_path == VAULT_FILE_PATH or (
+            configured_vault_path is not None and vault_file_path == configured_vault_path
+        ):
             # Insert account identifier before the file extension
             base_path, ext = os.path.splitext(vault_file_path)
             self.vault_file_path = f"{base_path}_{account_identifier}{ext}"
@@ -81,13 +89,13 @@ class CredentialVault:
             keyring_username = f"{KEYRING_USERNAME_PREFIX}{self.account_identifier}"
 
             # Try to get existing master key from keyring
-            master_key = keyring.get_password(KEYRING_SERVICE, keyring_username)
+            master_key = keyring.get_password(self.keyring_service, keyring_username)
 
             if master_key is None:
                 # Generate a new master key
                 master_key = Fernet.generate_key()
                 # Store it in keyring
-                keyring.set_password(KEYRING_SERVICE, keyring_username, master_key.decode('utf-8'))
+                keyring.set_password(self.keyring_service, keyring_username, master_key.decode('utf-8'))
                 logger.info("Generated and stored new master encryption key in keyring for account %s", self.account_identifier)
             else:
                 logger.info("Retrieved master encryption key from keyring for account %s", self.account_identifier)
@@ -178,7 +186,7 @@ class CredentialVault:
             # Try to store in keyring first, fall back to file
             try:
                 keyring.set_password(
-                    KEYRING_SERVICE,
+                    self.keyring_service,
                     f"{KEYRING_USERNAME_PREFIX}{self.account_identifier}_vault",
                     json.dumps(vault_data)
                 )
@@ -220,7 +228,7 @@ class CredentialVault:
             vault_json = None
             try:
                 vault_json = keyring.get_password(
-                    KEYRING_SERVICE,
+                    self.keyring_service,
                     f"{KEYRING_USERNAME_PREFIX}{self.account_identifier}_vault"
                 )
             except Exception:
@@ -268,7 +276,7 @@ class CredentialVault:
             # Remove from keyring
             if keyring is not None:
                 try:
-                    keyring.delete_password(KEYRING_SERVICE, f"{KEYRING_USERNAME_PREFIX}{self.account_identifier}_vault")
+                    keyring.delete_password(self.keyring_service, f"{KEYRING_USERNAME_PREFIX}{self.account_identifier}_vault")
                     logger.info("Removed credentials from keyring for account %s", self.account_identifier)
                 except Exception as e:
                     logger.warning("Failed to delete from keyring for account %s: %s", self.account_identifier, e)

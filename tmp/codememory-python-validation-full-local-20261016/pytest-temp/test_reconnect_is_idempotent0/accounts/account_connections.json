@@ -1,0 +1,26 @@
+{
+  "leetcode": {
+    "provider": "LeetCode",
+    "username": "syncuser",
+    "display_name": "Sync User",
+    "user_avatar": "https://leetcode.com/a.png",
+    "status": "Connected",
+    "connected_at": "2026-10-15T19:17:03.868493Z",
+    "last_sync_at": null,
+    "last_sync_status": null,
+    "last_sync_error": null,
+    "capabilities": {
+      "profile_sync": true,
+      "progress_sync": true,
+      "recent_submissions": true,
+      "private_code_scraping": false
+    },
+    "metadata": {
+      "solved_all": 42,
+      "solved_easy": 20,
+      "solved_medium": 15,
+      "solved_hard": 7,
+      "ranking": 1234
+    }
+  }
+}

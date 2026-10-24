@@ -1,0 +1,44 @@
+{
+  "id": "c590d3a2-bfd3-4763-93a6-9b5582c98377",
+  "title": "Valid Anagram",
+  "slug": "valid-anagram",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/valid-anagram/",
+  "topics": [],
+  "statement": null,
+  "created_at": "2026-10-15T19:16:33.737537Z",
+  "updated_at": "2026-10-15T19:16:33.737537Z",
+  "attempts": [
+    {
+      "id": "c9b4e869-65ba-470b-b838-b3ae61ac80f4",
+      "problem_id": "c590d3a2-bfd3-4763-93a6-9b5582c98377",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:16:33.774060Z",
+      "updated_at": "2026-10-15T19:16:33.774060Z",
+      "submissions": [
+        {
+          "id": "leetcode_901",
+          "problem_id": "c590d3a2-bfd3-4763-93a6-9b5582c98377",
+          "attempt_id": "c9b4e869-65ba-470b-b838-b3ae61ac80f4",
+          "code": "",
+          "language": "Python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2025-10-09T08:53:20Z",
+          "error_message": null,
+          "submission_hash": "ac2b05eb0947a9fa8f5b5cbdf91b9bbeb5e90c1c23c02fa48338e12e18cfebc5",
+          "source_provider": "leetcode",
+          "source_account": "autosyncuser"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

@@ -1,0 +1,47 @@
+{
+  "id": "binary-search",
+  "title": "Binary Search",
+  "slug": "binary-search",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Binary Search",
+    "Array"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:45.799563Z",
+  "updated_at": "2026-10-15T19:06:45.799563Z",
+  "attempts": [
+    {
+      "id": "beeab92a-6db5-41e4-b534-00890f50b2f7",
+      "problem_id": "binary-search",
+      "attempt_number": 1,
+      "approach_summary": "Attempt",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:06:45.799563Z",
+      "updated_at": "2026-10-15T19:06:45.799563Z",
+      "submissions": [
+        {
+          "id": "4de3c8dd-e4a5-41b6-bd18-3b021f50f030",
+          "problem_id": "binary-search",
+          "attempt_id": null,
+          "code": "pass",
+          "language": "python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2026-01-03T00:00:00Z",
+          "error_message": null,
+          "submission_hash": "428bf72a993a7bc748b6424a15e17cbcc8b478ec3c51c8c83b9558f5baa68803",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

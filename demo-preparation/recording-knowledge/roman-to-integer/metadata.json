@@ -1,0 +1,77 @@
+{
+  "id": "4a831603-974a-45de-8420-ba4133628922",
+  "title": "Roman to Integer",
+  "slug": "roman-to-integer",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/roman-to-integer/",
+  "topics": [
+    "Hash Table",
+    "Math",
+    "String"
+  ],
+  "statement": "<p>Roman numerals are represented by seven different symbols:&nbsp;<code>I</code>, <code>V</code>, <code>X</code>, <code>L</code>, <code>C</code>, <code>D</code> and <code>M</code>.</p>\n\n<pre>\n<strong>Symbol</strong>       <strong>Value</strong>\nI             1\nV             5\nX             10\nL             50\nC             100\nD             500\nM             1000</pre>\n\n<p>For example,&nbsp;<code>2</code> is written as <code>II</code>&nbsp;in Roman numeral, just two ones added together. <code>12</code> is written as&nbsp;<code>XII</code>, which is simply <code>X + II</code>. The number <code>27</code> is written as <code>XXVII</code>, which is <code>XX + V + II</code>.</p>\n\n<p>Roman numerals are usually written largest to smallest from left to right. However, the numeral for four is not <code>IIII</code>. Instead, the number four is written as <code>IV</code>. Because the one is before the five we subtract it making four. The same principle applies to the number nine, which is written as <code>IX</code>. There are six instances where subtraction is used:</p>\n\n<ul>\n\t<li><code>I</code> can be placed before <code>V</code> (5) and <code>X</code> (10) to make 4 and 9.&nbsp;</li>\n\t<li><code>X</code> can be placed before <code>L</code> (50) and <code>C</code> (100) to make 40 and 90.&nbsp;</li>\n\t<li><code>C</code> can be placed before <code>D</code> (500) and <code>M</code> (1000) to make 400 and 900.</li>\n</ul>\n\n<p>Given a roman numeral, convert it to an integer.</p>\n\n<p>&nbsp;</p>\n<p><strong class=\"example\">Example 1:</strong></p>\n\n<pre>\n<strong>Input:</strong> s = &quot;III&quot;\n<strong>Output:</strong> 3\n<strong>Explanation:</strong> III = 3.\n</pre>\n\n<p><strong class=\"example\">Example 2:</strong></p>\n\n<pre>\n<strong>Input:</strong> s = &quot;LVIII&quot;\n<strong>Output:</strong> 58\n<strong>Explanation:</strong> L = 50, V= 5, III = 3.\n</pre>\n\n<p><strong class=\"example\">Example 3:</strong></p>\n\n<pre>\n<strong>Input:</strong> s = &quot;MCMXCIV&quot;\n<strong>Output:</strong> 1994\n<strong>Explanation:</strong> M = 1000, CM = 900, XC = 90 and IV = 4.\n</pre>\n\n<p>&nbsp;</p>\n<p><strong>Constraints:</strong></p>\n\n<ul>\n\t<li><code>1 &lt;= s.length &lt;= 15</code></li>\n\t<li><code>s</code> contains only&nbsp;the characters <code>(&#39;I&#39;, &#39;V&#39;, &#39;X&#39;, &#39;L&#39;, &#39;C&#39;, &#39;D&#39;, &#39;M&#39;)</code>.</li>\n\t<li>It is <strong>guaranteed</strong>&nbsp;that <code>s</code> is a valid roman numeral in the range <code>[1, 3999]</code>.</li>\n</ul>\n",
+  "created_at": "2026-10-19T12:56:45.750572Z",
+  "updated_at": "2026-10-19T12:56:45.750572Z",
+  "attempts": [
+    {
+      "id": "308a6370-f5cb-4679-9908-9282c9587af9",
+      "problem_id": "4a831603-974a-45de-8420-ba4133628922",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-19T12:56:45.785587Z",
+      "updated_at": "2026-10-19T12:56:45.785587Z",
+      "submissions": [
+        {
+          "id": "leetcode_1961767939",
+          "problem_id": "4a831603-974a-45de-8420-ba4133628922",
+          "attempt_id": "308a6370-f5cb-4679-9908-9282c9587af9",
+          "code": "class Solution {\n    private int getVal(char ch) {\n        switch(ch) {\n            case 'I': return 1;\n            case 'V': return 5;\n            case 'X': return 10;\n            case 'L': return 50;\n            case 'C': return 100;\n            case 'D': return 500;\n            case 'M': return 1000;\n            default: return 0;\n        }\n    }\n\n    public int romanToInt(String s) {\n        int total = 0;\n        int n = s.length();\n\n        for (int i = 0; i < n; i++) {\n            int curr = getVal(s.charAt(i));\n\n            if (i < n - 1 && curr < getVal(s.charAt(i + 1))) {\n                total -= curr;\n            } else {\n                total += curr;\n            }\n        }\n\n        return total;\n    }\n}",
+          "language": "Java",
+          "status": "Accepted",
+          "runtime_ms": 3.0,
+          "memory_mb": 46.176,
+          "submitted_at": "2026-03-28T13:28:12Z",
+          "error_message": null,
+          "submission_hash": "0f6bc6218f21637ddfb31863114a8e6bcf9165e283e59704bc8d02aaf76c5939",
+          "source_provider": "leetcode",
+          "source_account": "jaypatil1229"
+        }
+      ]
+    },
+    {
+      "id": "04383053-7083-4fb6-a59d-5281fe9ee2a9",
+      "problem_id": "4a831603-974a-45de-8420-ba4133628922",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-19T12:56:46.422792Z",
+      "updated_at": "2026-10-19T12:56:46.422792Z",
+      "submissions": [
+        {
+          "id": "leetcode_1961765600",
+          "problem_id": "4a831603-974a-45de-8420-ba4133628922",
+          "attempt_id": "04383053-7083-4fb6-a59d-5281fe9ee2a9",
+          "code": "import java.util.*;\n\nclass Solution {\n    private static int getSymbolVal(char symbol){\n        switch(symbol){\n            case 'I': return 1;\n            case 'V': return 5;\n            case 'X': return 10;\n            case 'L': return 50;\n            case 'C': return 100;\n            case 'D': return 500;\n            case 'M': return 1000;\n            default : return 0;\n        }\n    }\n\n    public int romanToInt(String s) {\n        char prevSymbol = '0';\n        int intValue = 0;\n\n        for(char symbol: s.toCharArray()){\n            int val = getSymbolVal(symbol);\n            int prevVal = getSymbolVal(prevSymbol);\n\n            if(val > prevVal){\n                intValue = intValue - prevVal;\n                val = val - prevVal;\n            }\n\n            intValue = intValue + val;\n            prevSymbol = symbol;\n        }\n\n        return intValue;\n    }\n}",
+          "language": "Java",
+          "status": "Accepted",
+          "runtime_ms": 3.0,
+          "memory_mb": 46.204,
+          "submitted_at": "2026-03-28T13:24:51Z",
+          "error_message": null,
+          "submission_hash": "a9ea1801564d179ac093c584b4f067328641f0f3f20eb6ed652c5a7f27c8b6aa",
+          "source_provider": "leetcode",
+          "source_account": "jaypatil1229"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

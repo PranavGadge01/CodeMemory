@@ -1,0 +1,73 @@
+{
+  "id": "b9e993d1-ae04-4dd9-8fc4-07c87046171e",
+  "title": "Gamma",
+  "slug": "gamma",
+  "difficulty": "Unknown",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [],
+  "statement": null,
+  "created_at": "2026-10-15T19:16:57.309407Z",
+  "updated_at": "2026-10-15T19:16:57.309407Z",
+  "attempts": [
+    {
+      "id": "8962c73b-8291-43e9-8e87-780e0af0c7ac",
+      "problem_id": "b9e993d1-ae04-4dd9-8fc4-07c87046171e",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Wrong Answer",
+      "created_at": "2026-10-15T19:16:57.359417Z",
+      "updated_at": "2026-10-15T19:16:57.359417Z",
+      "submissions": [
+        {
+          "id": "870c1419-1947-4061-8395-ff1e43cdf09a",
+          "problem_id": "b9e993d1-ae04-4dd9-8fc4-07c87046171e",
+          "attempt_id": "8962c73b-8291-43e9-8e87-780e0af0c7ac",
+          "code": "",
+          "language": "Python",
+          "status": "Wrong Answer",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2023-11-01T10:00:00Z",
+          "error_message": null,
+          "submission_hash": "48f0fe3dd3db1cc0c8e939e2a2cdb94d0051b1a53e9b1680a2eda0877b2354ff",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    },
+    {
+      "id": "f972860b-8cbc-449b-8ffa-8a50e9ab0604",
+      "problem_id": "b9e993d1-ae04-4dd9-8fc4-07c87046171e",
+      "attempt_number": 2,
+      "approach_summary": "Attempt 2",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-15T19:16:57.673091Z",
+      "updated_at": "2026-10-15T19:16:57.673091Z",
+      "submissions": [
+        {
+          "id": "04cea363-e542-46a9-802d-1cd474e71b94",
+          "problem_id": "b9e993d1-ae04-4dd9-8fc4-07c87046171e",
+          "attempt_id": "f972860b-8cbc-449b-8ffa-8a50e9ab0604",
+          "code": "",
+          "language": "Python",
+          "status": "Accepted",
+          "runtime_ms": null,
+          "memory_mb": null,
+          "submitted_at": "2023-11-02T10:00:00Z",
+          "error_message": null,
+          "submission_hash": "52463016b7b2d032525f4da0ae7bdbcad96be187bfa30fcd9eea3c356569b71a",
+          "source_provider": null,
+          "source_account": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

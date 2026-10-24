@@ -1,0 +1,49 @@
+{
+  "id": "9b71d1c4-6ef9-4dc6-9bc2-9075963fa9df",
+  "title": "Generate Parentheses",
+  "slug": "generate-parentheses",
+  "difficulty": "Medium",
+  "platform": "LeetCode",
+  "url": "https://leetcode.com/problems/generate-parentheses/",
+  "topics": [
+    "String",
+    "Dynamic Programming",
+    "Backtracking",
+    "Bracket Sequences"
+  ],
+  "statement": "<p>Given <code>n</code> pairs of parentheses, write a function to <em>generate all combinations of well-formed parentheses</em>.</p>\n\n<p>&nbsp;</p>\n<p><strong class=\"example\">Example 1:</strong></p>\n<pre><strong>Input:</strong> n = 3\n<strong>Output:</strong> [\"((()))\",\"(()())\",\"(())()\",\"()(())\",\"()()()\"]\n</pre><p><strong class=\"example\">Example 2:</strong></p>\n<pre><strong>Input:</strong> n = 1\n<strong>Output:</strong> [\"()\"]\n</pre>\n<p>&nbsp;</p>\n<p><strong>Constraints:</strong></p>\n\n<ul>\n\t<li><code>1 &lt;= n &lt;= 8</code></li>\n</ul>\n",
+  "created_at": "2026-10-19T12:56:29.666523Z",
+  "updated_at": "2026-10-19T12:56:29.666523Z",
+  "attempts": [
+    {
+      "id": "ca2d1e7d-5520-4242-b03d-ad6aa5f3bfea",
+      "problem_id": "9b71d1c4-6ef9-4dc6-9bc2-9075963fa9df",
+      "attempt_number": 1,
+      "approach_summary": "Attempt 1",
+      "reasoning": null,
+      "mistakes": [],
+      "analysis": null,
+      "status": "Accepted",
+      "created_at": "2026-10-19T12:56:29.701057Z",
+      "updated_at": "2026-10-19T12:56:29.701057Z",
+      "submissions": [
+        {
+          "id": "leetcode_1967298923",
+          "problem_id": "9b71d1c4-6ef9-4dc6-9bc2-9075963fa9df",
+          "attempt_id": "ca2d1e7d-5520-4242-b03d-ad6aa5f3bfea",
+          "code": "class Solution {\n    private void build(int o, int c, List<String> res, String pattern) {\n        if (o == 0 && c == 0) {\n            res.add(pattern);\n            return;\n        }\n\n        if (o > 0) {\n            build(o - 1, c, res, pattern + \"(\");\n        }\n\n        if (c > o) {\n            build(o, c - 1, res, pattern + \")\");\n        }\n    }\n\n    public List<String> generateParenthesis(int n) {\n        List<String> res = new ArrayList<>();\n        build(n, n, res, \"\");\n        return res;\n    }\n}",
+          "language": "Java",
+          "status": "Accepted",
+          "runtime_ms": 3.0,
+          "memory_mb": 44.984,
+          "submitted_at": "2026-04-03T02:34:10Z",
+          "error_message": null,
+          "submission_hash": "2316b2aa0bf6aeab339ac05a2bc817b03990b078fb59cbc7c448a49f18cb4e67",
+          "source_provider": "leetcode",
+          "source_account": "jaypatil1229"
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

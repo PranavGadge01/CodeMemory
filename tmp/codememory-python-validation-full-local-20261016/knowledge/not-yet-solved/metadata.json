@@ -1,0 +1,16 @@
+{
+  "id": "not-yet-solved",
+  "title": "Not Yet Solved",
+  "slug": "not-yet-solved",
+  "difficulty": "Easy",
+  "platform": "LeetCode",
+  "url": null,
+  "topics": [
+    "Array"
+  ],
+  "statement": null,
+  "created_at": "2026-10-15T19:06:39.288271Z",
+  "updated_at": "2026-10-15T19:06:39.288271Z",
+  "attempts": [],
+  "notes": []
+}
